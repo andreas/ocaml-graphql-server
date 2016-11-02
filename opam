@@ -1,0 +1,21 @@
+opam-version: "1.2"
+name: "ocaml-graph-server"
+maintainer: "Andreas Garnaes <andras.garnaes@gmail.com>"
+authors: "Andreas Garnaes <andreas.garnaes@gmail.com>"
+homepage: "https://github.com/andreas/ocaml-graphql-server"
+bug-reports: "https://github.com/andreas/ocaml-graphql-server"
+dev-repo: "https://github.com/andreas/ocaml-graphql-server"
+build: [
+  "ocaml" "pkg/pkg.ml" "build"
+          "--pinned" "%{pinned}%" ]
+depends: [
+  "ocamlfind" {build}
+  "ocamlbuild" {build}
+  "topkg" {build}
+  "angstrom"
+  "sexplib"
+  "ppx_sexp_conv"
+  "ppx_sexp_value"
+  "yojson"
+  "cohttp"
+]

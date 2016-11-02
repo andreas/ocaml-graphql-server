@@ -1,0 +1,2 @@
+true: package(angstrom,sexplib,ppx_sexp_conv,ppx_sexp_value,yojson,cohttp.lwt)
+true: bin_annot
