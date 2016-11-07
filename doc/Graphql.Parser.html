@@ -1,0 +1,431 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="previous" href="Graphql.Schema.html">
+<link rel="Up" href="Graphql.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="Graphql" rel="Chapter" href="Graphql.html"><title>Graphql.Parser</title>
+</head>
+<body>
+<div class="navbar"><a class="pre" href="Graphql.Schema.html" title="Graphql.Schema">Previous</a>
+&nbsp;<a class="up" href="Graphql.html" title="Graphql">Up</a>
+&nbsp;</div>
+<h1>Module <a href="type_Graphql.Parser.html">Graphql.Parser</a></h1>
+
+<pre><span class="keyword">module</span> Parser: <code class="code"><span class="keyword">sig</span></code> <a href="Graphql.Parser.html">..</a> <code class="code"><span class="keyword">end</span></code></pre><div class="info module top">
+Parsing of GraphQL documents.<br>
+</div>
+<hr width="100%">
+
+<pre><code><span id="TYPEvalue"><span class="keyword">type</span> <code class="type"></code>value</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvalue.Variable"><span class="constructor">Variable</span></span> <span class="keyword">of</span> <code class="type">string</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvalue.Int"><span class="constructor">Int</span></span> <span class="keyword">of</span> <code class="type">int</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvalue.Float"><span class="constructor">Float</span></span> <span class="keyword">of</span> <code class="type">float</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvalue.String"><span class="constructor">String</span></span> <span class="keyword">of</span> <code class="type">string</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvalue.Boolean"><span class="constructor">Boolean</span></span> <span class="keyword">of</span> <code class="type">bool</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvalue.Enum"><span class="constructor">Enum</span></span> <span class="keyword">of</span> <code class="type">string</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvalue.List"><span class="constructor">List</span></span> <span class="keyword">of</span> <code class="type"><a href="Graphql.Parser.html#TYPEvalue">value</a> list</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvalue.Object"><span class="constructor">Object</span></span> <span class="keyword">of</span> <code class="type"><a href="Graphql.Parser.html#TYPEkey_value">key_value</a> list</code></code></td>
+
+</tr></table>
+
+
+
+<pre><code><span id="TYPEkey_value"><span class="keyword">type</span> <code class="type"></code>key_value</span> = {</code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTkey_value.name">name</span>&nbsp;: <code class="type">string</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTkey_value.value">value</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEvalue">value</a></code>;</code></td>
+
+</tr></table>
+}
+
+
+
+<pre><span id="VALvalue_of_sexp"><span class="keyword">val</span> value_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEvalue">value</a></code></pre>
+<pre><span id="VALkey_value_of_sexp"><span class="keyword">val</span> key_value_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEkey_value">key_value</a></code></pre>
+<pre><span id="VALsexp_of_value"><span class="keyword">val</span> sexp_of_value</span> : <code class="type"><a href="Graphql.Parser.html#TYPEvalue">value</a> -> Sexplib.Sexp.t</code></pre>
+<pre><span id="VALsexp_of_key_value"><span class="keyword">val</span> sexp_of_key_value</span> : <code class="type"><a href="Graphql.Parser.html#TYPEkey_value">key_value</a> -> Sexplib.Sexp.t</code></pre>
+<pre><code><span id="TYPEdirective"><span class="keyword">type</span> <code class="type"></code>directive</span> = {</code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdirective.name">name</span>&nbsp;: <code class="type">string</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdirective.arguments">arguments</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEkey_value">key_value</a> list</code>;</code></td>
+
+</tr></table>
+}
+
+
+
+<pre><span id="VALdirective_of_sexp"><span class="keyword">val</span> directive_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEdirective">directive</a></code></pre>
+<pre><span id="VALsexp_of_directive"><span class="keyword">val</span> sexp_of_directive</span> : <code class="type"><a href="Graphql.Parser.html#TYPEdirective">directive</a> -> Sexplib.Sexp.t</code></pre>
+<pre><code><span id="TYPEfragment_spread"><span class="keyword">type</span> <code class="type"></code>fragment_spread</span> = {</code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfragment_spread.name">name</span>&nbsp;: <code class="type">string</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfragment_spread.directives">directives</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEdirective">directive</a> list</code>;</code></td>
+
+</tr></table>
+}
+
+
+
+<pre><span id="VALfragment_spread_of_sexp"><span class="keyword">val</span> fragment_spread_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEfragment_spread">fragment_spread</a></code></pre>
+<pre><span id="VALsexp_of_fragment_spread"><span class="keyword">val</span> sexp_of_fragment_spread</span> : <code class="type"><a href="Graphql.Parser.html#TYPEfragment_spread">fragment_spread</a> -> Sexplib.Sexp.t</code></pre>
+<pre><code><span id="TYPEselection"><span class="keyword">type</span> <code class="type"></code>selection</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTselection.Field"><span class="constructor">Field</span></span> <span class="keyword">of</span> <code class="type"><a href="Graphql.Parser.html#TYPEfield">field</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTselection.FragmentSpread"><span class="constructor">FragmentSpread</span></span> <span class="keyword">of</span> <code class="type"><a href="Graphql.Parser.html#TYPEfragment_spread">fragment_spread</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTselection.InlineFragment"><span class="constructor">InlineFragment</span></span> <span class="keyword">of</span> <code class="type"><a href="Graphql.Parser.html#TYPEinline_fragment">inline_fragment</a></code></code></td>
+
+</tr></table>
+
+
+
+<pre><code><span id="TYPEfield"><span class="keyword">type</span> <code class="type"></code>field</span> = {</code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfield.alias">alias</span>&nbsp;: <code class="type">string option</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfield.name">name</span>&nbsp;: <code class="type">string</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfield.arguments">arguments</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEkey_value">key_value</a> list</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfield.directives">directives</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEdirective">directive</a> list</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfield.selection_set">selection_set</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEselection">selection</a> list</code>;</code></td>
+
+</tr></table>
+}
+
+
+
+<pre><code><span id="TYPEinline_fragment"><span class="keyword">type</span> <code class="type"></code>inline_fragment</span> = {</code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTinline_fragment.type_condition">type_condition</span>&nbsp;: <code class="type">string option</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTinline_fragment.directives">directives</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEdirective">directive</a> list</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTinline_fragment.selection_set">selection_set</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEselection">selection</a> list</code>;</code></td>
+
+</tr></table>
+}
+
+
+
+<pre><span id="VALselection_of_sexp"><span class="keyword">val</span> selection_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEselection">selection</a></code></pre>
+<pre><span id="VALfield_of_sexp"><span class="keyword">val</span> field_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEfield">field</a></code></pre>
+<pre><span id="VALinline_fragment_of_sexp"><span class="keyword">val</span> inline_fragment_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEinline_fragment">inline_fragment</a></code></pre>
+<pre><span id="VALsexp_of_selection"><span class="keyword">val</span> sexp_of_selection</span> : <code class="type"><a href="Graphql.Parser.html#TYPEselection">selection</a> -> Sexplib.Sexp.t</code></pre>
+<pre><span id="VALsexp_of_field"><span class="keyword">val</span> sexp_of_field</span> : <code class="type"><a href="Graphql.Parser.html#TYPEfield">field</a> -> Sexplib.Sexp.t</code></pre>
+<pre><span id="VALsexp_of_inline_fragment"><span class="keyword">val</span> sexp_of_inline_fragment</span> : <code class="type"><a href="Graphql.Parser.html#TYPEinline_fragment">inline_fragment</a> -> Sexplib.Sexp.t</code></pre>
+<pre><code><span id="TYPEfragment"><span class="keyword">type</span> <code class="type"></code>fragment</span> = {</code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfragment.name">name</span>&nbsp;: <code class="type">string</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfragment.type_condition">type_condition</span>&nbsp;: <code class="type">string</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfragment.directives">directives</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEdirective">directive</a> list</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTfragment.selection_set">selection_set</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEselection">selection</a> list</code>;</code></td>
+
+</tr></table>
+}
+
+
+
+<pre><span id="VALfragment_of_sexp"><span class="keyword">val</span> fragment_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEfragment">fragment</a></code></pre>
+<pre><span id="VALsexp_of_fragment"><span class="keyword">val</span> sexp_of_fragment</span> : <code class="type"><a href="Graphql.Parser.html#TYPEfragment">fragment</a> -> Sexplib.Sexp.t</code></pre>
+<pre><code><span id="TYPEtyp"><span class="keyword">type</span> <code class="type"></code>typ</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyp.NamedType"><span class="constructor">NamedType</span></span> <span class="keyword">of</span> <code class="type">string</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyp.ListType"><span class="constructor">ListType</span></span> <span class="keyword">of</span> <code class="type"><a href="Graphql.Parser.html#TYPEtyp">typ</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyp.NonNullType"><span class="constructor">NonNullType</span></span> <span class="keyword">of</span> <code class="type"><a href="Graphql.Parser.html#TYPEtyp">typ</a></code></code></td>
+
+</tr></table>
+
+
+
+<pre><span id="VALtyp_of_sexp"><span class="keyword">val</span> typ_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEtyp">typ</a></code></pre>
+<pre><span id="VALsexp_of_typ"><span class="keyword">val</span> sexp_of_typ</span> : <code class="type"><a href="Graphql.Parser.html#TYPEtyp">typ</a> -> Sexplib.Sexp.t</code></pre>
+<pre><code><span id="TYPEvariable_definition"><span class="keyword">type</span> <code class="type"></code>variable_definition</span> = {</code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvariable_definition.name">name</span>&nbsp;: <code class="type">string</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvariable_definition.typ">typ</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEtyp">typ</a></code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvariable_definition.default_value">default_value</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEvalue">value</a> option</code>;</code></td>
+
+</tr></table>
+}
+
+
+
+<pre><span id="VALvariable_definition_of_sexp"><span class="keyword">val</span> variable_definition_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEvariable_definition">variable_definition</a></code></pre>
+<pre><span id="VALsexp_of_variable_definition"><span class="keyword">val</span> sexp_of_variable_definition</span> : <code class="type"><a href="Graphql.Parser.html#TYPEvariable_definition">variable_definition</a> -> Sexplib.Sexp.t</code></pre>
+<pre><code><span id="TYPEoptype"><span class="keyword">type</span> <code class="type"></code>optype</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELToptype.Query"><span class="constructor">Query</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELToptype.Mutation"><span class="constructor">Mutation</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELToptype.Subscription"><span class="constructor">Subscription</span></span></code></td>
+
+</tr></table>
+
+
+
+<pre><span id="VALoptype_of_sexp"><span class="keyword">val</span> optype_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEoptype">optype</a></code></pre>
+<pre><span id="VALsexp_of_optype"><span class="keyword">val</span> sexp_of_optype</span> : <code class="type"><a href="Graphql.Parser.html#TYPEoptype">optype</a> -> Sexplib.Sexp.t</code></pre>
+<pre><code><span id="TYPEoperation"><span class="keyword">type</span> <code class="type"></code>operation</span> = {</code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELToperation.optype">optype</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEoptype">optype</a></code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELToperation.name">name</span>&nbsp;: <code class="type">string option</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELToperation.variable_definitions">variable_definitions</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEvariable_definition">variable_definition</a> list</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELToperation.directives">directives</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEdirective">directive</a> list</code>;</code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code>&nbsp;&nbsp;</code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELToperation.selection_set">selection_set</span>&nbsp;: <code class="type"><a href="Graphql.Parser.html#TYPEselection">selection</a> list</code>;</code></td>
+
+</tr></table>
+}
+
+
+
+<pre><span id="VALoperation_of_sexp"><span class="keyword">val</span> operation_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEoperation">operation</a></code></pre>
+<pre><span id="VALsexp_of_operation"><span class="keyword">val</span> sexp_of_operation</span> : <code class="type"><a href="Graphql.Parser.html#TYPEoperation">operation</a> -> Sexplib.Sexp.t</code></pre>
+<pre><code><span id="TYPEdefinition"><span class="keyword">type</span> <code class="type"></code>definition</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdefinition.Operation"><span class="constructor">Operation</span></span> <span class="keyword">of</span> <code class="type"><a href="Graphql.Parser.html#TYPEoperation">operation</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdefinition.Fragment"><span class="constructor">Fragment</span></span> <span class="keyword">of</span> <code class="type"><a href="Graphql.Parser.html#TYPEfragment">fragment</a></code></code></td>
+
+</tr></table>
+
+
+
+<pre><span id="VALdefinition_of_sexp"><span class="keyword">val</span> definition_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEdefinition">definition</a></code></pre>
+<pre><span id="VALsexp_of_definition"><span class="keyword">val</span> sexp_of_definition</span> : <code class="type"><a href="Graphql.Parser.html#TYPEdefinition">definition</a> -> Sexplib.Sexp.t</code></pre>
+<pre><span id="TYPEdocument"><span class="keyword">type</span> <code class="type"></code>document</span> = <code class="type"><a href="Graphql.Parser.html#TYPEdefinition">definition</a> list</code> </pre>
+
+
+<pre><span id="VALdocument_of_sexp"><span class="keyword">val</span> document_of_sexp</span> : <code class="type">Sexplib.Sexp.t -> <a href="Graphql.Parser.html#TYPEdocument">document</a></code></pre>
+<pre><span id="VALsexp_of_document"><span class="keyword">val</span> sexp_of_document</span> : <code class="type"><a href="Graphql.Parser.html#TYPEdocument">document</a> -> Sexplib.Sexp.t</code></pre>
+<pre><span id="VALparse"><span class="keyword">val</span> parse</span> : <code class="type">string -> (<a href="Graphql.Parser.html#TYPEdocument">document</a>, string) Pervasives.result</code></pre></body></html>

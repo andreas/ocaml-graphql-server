@@ -1,0 +1,41 @@
+<html><head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="Graphql" rel="Chapter" href="Graphql.html"><title>Graphql.Schema</title>
+</head>
+<body>
+<code class="code"><span class="keyword">sig</span>
+&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;<span class="keywordsign">'</span>ctx&nbsp;schema
+&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src)&nbsp;field
+&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src)&nbsp;typ
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;schema&nbsp;:
+&nbsp;&nbsp;&nbsp;&nbsp;fields:(<span class="keywordsign">'</span>ctx,&nbsp;unit)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.field&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">'</span>ctx&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.schema
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;obj&nbsp;:
+&nbsp;&nbsp;&nbsp;&nbsp;name:string&nbsp;<span class="keywordsign">-&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;fields:(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.field&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src&nbsp;option)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;field&nbsp;:
+&nbsp;&nbsp;&nbsp;&nbsp;name:string&nbsp;<span class="keywordsign">-&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;typ:(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>a)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ&nbsp;<span class="keywordsign">-&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;resolve:(<span class="keywordsign">'</span>ctx&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="keywordsign">'</span>src&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="keywordsign">'</span>a)&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.field
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;enum&nbsp;:
+&nbsp;&nbsp;&nbsp;&nbsp;name:string&nbsp;<span class="keywordsign">-&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;values:(<span class="keywordsign">'</span>a&nbsp;*&nbsp;string)&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>a&nbsp;option)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;scalar&nbsp;:
+&nbsp;&nbsp;&nbsp;&nbsp;name:string&nbsp;<span class="keywordsign">-&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;coerce:(<span class="keywordsign">'</span>a&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Yojson</span>.<span class="constructor">Basic</span>.json)&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>a&nbsp;option)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;list&nbsp;:
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ&nbsp;<span class="keywordsign">-&gt;</span>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src&nbsp;list&nbsp;option)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;non_null&nbsp;:
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src&nbsp;option)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;int&nbsp;:&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;int&nbsp;option)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;string&nbsp;:&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;string&nbsp;option)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;bool&nbsp;:&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;bool&nbsp;option)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;float&nbsp;:&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;float&nbsp;option)&nbsp;<span class="constructor">Graphql</span>.<span class="constructor">Schema</span>.typ
+<span class="keyword">end</span></code></body></html>
