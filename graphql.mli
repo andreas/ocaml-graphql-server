@@ -1,8 +1,17 @@
-(* Schema constructors *)
+(** GraphQL schema constructor, document parser and query executer *)
+
+(** Constructing GraphQL schemas. *)
 module Schema : sig
+
+  (** {3 Base types } *)
+
   type 'ctx schema
-  type ('ctx, 'a) field
-  type ('ctx, 'a) typ
+
+  type ('ctx, 'src) field
+
+  type ('ctx, 'src) typ
+
+  (** {3 Constructors } *)
 
   val schema : fields:('ctx, unit) field list ->
                'ctx schema
@@ -28,14 +37,15 @@ module Schema : sig
 
   val non_null : ('ctx, 'src option) typ -> ('ctx, 'src) typ
 
-  (* Built-in scalars *)
+  (** {3 Built-in scalars} *)
+
   val int    : ('ctx, int option) typ
   val string : ('ctx, string option) typ
   val bool   : ('ctx, bool option) typ
   val float  : ('ctx, float option) typ
 end
 
-(* Parsing *)
+(** Parsing of GraphQL documents. *)
 module Parser : sig
   type value =
     | Variable of string
@@ -143,5 +153,6 @@ module Parser : sig
   val parse : string -> (document, string) result
 end
 
-(* Execution *)
 val execute : 'ctx Schema.schema -> 'ctx -> Parser.document -> Yojson.Basic.json
+(** [execute schema ctx doc] evaluates the [doc] against [schema] with the
+    given context [ctx]. *)

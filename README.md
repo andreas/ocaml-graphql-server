@@ -11,6 +11,10 @@ Current feature set:
 
 ![GraphiQL Example](https://cloud.githubusercontent.com/assets/2518/20041922/403ed918-a471-11e6-8178-1cd22dbc4658.png)
 
+## Documentation
+
+[API documentation](https://andreas.github.io/ocaml-graphql-server/)
+
 ## Examples
 
 ### GraphiQL

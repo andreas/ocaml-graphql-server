@@ -3,6 +3,7 @@ name: "ocaml-graph-server"
 maintainer: "Andreas Garnaes <andras.garnaes@gmail.com>"
 authors: "Andreas Garnaes <andreas.garnaes@gmail.com>"
 homepage: "https://github.com/andreas/ocaml-graphql-server"
+doc: "https://andreas.github.io/ocaml-graphql-server/"
 bug-reports: "https://github.com/andreas/ocaml-graphql-server"
 dev-repo: "https://github.com/andreas/ocaml-graphql-server"
 build: [
