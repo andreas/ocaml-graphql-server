@@ -1,5 +1,3 @@
-open Sexplib.Std
-
 type value =
   | Variable of string
   | Int of int
@@ -102,3 +100,5 @@ type definition =
 type document =
   definition list
   [@@deriving sexp]
+
+val parse : string -> (document, string) result

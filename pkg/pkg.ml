@@ -4,5 +4,5 @@
 open Topkg
 
 let () =
-  Pkg.describe "graphql" @@ fun c ->
-  Ok [ Pkg.mllib "graphql.mllib" ]
+  Pkg.describe "graphql-server" @@ fun c ->
+  Ok [ Pkg.mllib "src/graphql.mllib" ]
