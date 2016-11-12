@@ -1,2 +1,9 @@
-true: package(angstrom,sexplib,ppx_sexp_conv,ppx_sexp_value,yojson,lwt,cohttp.lwt)
-true: bin_annot
+true: bin_annot, debug, safe_string
+true: short_paths
+
+true: package(angstrom,sexplib,ppx_sexp_conv,ppx_sexp_value,yojson,lwt)
+
+<src>: include
+<test>: include
+
+<test/*>: package(alcotest)
