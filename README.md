@@ -19,7 +19,17 @@ Current feature set:
 
 ### GraphiQL
 
-See `examples/server.ml` for a HTTP server accepting GraphQL requests and serving GraphiQL.
+To run a sample GraphQL server also serving GraphiQL, do the following:
+
+```bash
+git checkout git@github.com/andreas/ocaml-graphql-server.git
+cd ocaml-graphql-server
+opam pin add graphql-server .
+cd examples
+ocamlbuild -use-ocamlfind server.native && ./server.native
+```
+
+Now open [http://localhost:8080](http://localhost:8080).
 
 ### Defining a Schema
 
