@@ -7,8 +7,7 @@
    (selection_set
     ((Field
       ((alias (whoever123is)) (name node)
-       (arguments (((name id) (value (List ((Int 123) (Int 456)))))))
-       (directives ())
+       (arguments ((id (List ((Int 123) (Int 456)))))) (directives ())
        (selection_set
         ((Field
           ((alias ()) (name id) (arguments ()) (directives ())
@@ -25,12 +24,9 @@
                    (selection_set ())))
                  (Field
                   ((alias (alias)) (name field1)
-                   (arguments
-                    (((name first) (value (Int 10)))
-                     ((name after) (value (Variable foo)))))
+                   (arguments ((first (Int 10)) (after (Variable foo))))
                    (directives
-                    (((name include)
-                      (arguments (((name if) (value (Variable foo))))))))
+                    (((name include) (arguments ((if (Variable foo)))))))
                    (selection_set
                     ((Field
                       ((alias ()) (name id) (arguments ()) (directives ())
@@ -38,9 +34,7 @@
                      (FragmentSpread ((name frag) (directives ())))))))))))))))
          (InlineFragment
           ((type_condition ())
-           (directives
-            (((name skip)
-              (arguments (((name unless) (value (Variable foo))))))))
+           (directives (((name skip) (arguments ((unless (Variable foo)))))))
            (selection_set
             ((Field
               ((alias ()) (name id) (arguments ()) (directives ())
@@ -56,7 +50,7 @@
    (directives ())
    (selection_set
     ((Field
-      ((alias ()) (name like) (arguments (((name story) (value (Int 123)))))
+      ((alias ()) (name like) (arguments ((story (Int 123))))
        (directives (((name defer) (arguments ()))))
        (selection_set
         ((Field
@@ -74,7 +68,7 @@
    (selection_set
     ((Field
       ((alias ()) (name storyLikeSubscribe)
-       (arguments (((name input) (value (Variable input))))) (directives ())
+       (arguments ((input (Variable input)))) (directives ())
        (selection_set
         ((Field
           ((alias ()) (name story) (arguments ()) (directives ())
@@ -97,7 +91,17 @@
     ((Field
       ((alias ()) (name foo)
        (arguments
-        (((name size) (value (Variable size)))
-         ((name bar) (value (Variable b)))
-         ((name obj) (value (Object (((name key) (value (String value)))))))))
-       (directives ()) (selection_set ()))))))))
+        ((size (Variable size)) (bar (Variable b))
+         (obj (Object ((key (String value)))))))
+       (directives ()) (selection_set ())))))))
+ (Operation
+  ((optype Query) (name ()) (variable_definitions ()) (directives ())
+   (selection_set
+    ((Field
+      ((alias ()) (name unnamed)
+       (arguments
+        ((truthy (Boolean true)) (falsey (Boolean false)) (nullish Null)))
+       (directives ()) (selection_set ())))
+     (Field
+      ((alias ()) (name query) (arguments ()) (directives ())
+       (selection_set ()))))))))

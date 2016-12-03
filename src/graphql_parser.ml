@@ -15,11 +15,7 @@ type value =
   | Object of key_value list
   [@@deriving sexp]
 
-and key_value = {
-    name : string;
-    value : value
-  }
-  [@@deriving sexp]
+and key_value = string * value [@@deriving sexp]
 
 type directive =
   {
@@ -171,7 +167,7 @@ let enum_value = name >>= function
 let value = fix (fun value' ->
   let list_value = lbrack *> rbrack *> return (List []) <|>
                    lift (fun l -> List l) (lbrack *> many value' <* rbrack)
-  and object_field = lift2 (fun name value -> { name; value }) (name <* colon) value'
+  and object_field = lift2 (fun name value -> name, value) (name <* colon) value'
   in
   let object_value = lbrace *> rbrace *> return (Object []) <|>
                      lift (fun p -> Object p) (lbrace *> many object_field <* rbrace)
@@ -187,7 +183,7 @@ let value = fix (fun value' ->
     object_value
 )
 
-let argument = lift2 (fun name value -> {name; value})
+let argument = lift2 (fun name value -> name, value)
                (name <* colon) value
 
 let arguments = lparen *> many argument <* rparen

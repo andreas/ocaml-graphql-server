@@ -59,11 +59,7 @@ module Parser : sig
     | Object of key_value list
     [@@deriving sexp]
 
-  and key_value = {
-      name : string;
-      value : value
-    }
-    [@@deriving sexp]
+  and key_value = string * value [@@deriving sexp]
 
   type directive =
     {
