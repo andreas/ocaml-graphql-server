@@ -21,16 +21,19 @@ let user = Schema.(obj
     field
       ~name:"id"
       ~typ:(non_null int)
+      ~args:Arg.[]
       ~resolve:(fun () p -> p.id)
     ;
     field
       ~name:"name"
       ~typ:(non_null string)
+      ~args:Arg.[]
       ~resolve:(fun () p -> p.name)
     ;
     field
       ~name:"role"
       ~typ:(non_null role)
+      ~args:Arg.[]
       ~resolve:(fun () p -> p.role)
   ]
 )
@@ -40,6 +43,7 @@ let schema = Schema.(schema
       field
         ~name:"users"
         ~typ:(non_null (list (non_null user)))
+        ~args:Arg.[]
         ~resolve:(fun () () -> users)
     ]
 )
