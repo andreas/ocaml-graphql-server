@@ -120,10 +120,7 @@ let string s = lex (Angstrom.string s)
 let is_name_char =
   function | '0' .. '9' | 'a' .. 'z' | 'A' .. 'Z' | '_'  -> true | _ -> false
 
-let is_int_char =
-  function | '0' .. '9' | '-' -> true | _ -> false
-
-let is_float_char =
+let is_number_char =
   function | '0' .. '9' | 'e' | 'E' | '.' | '-' | '+' -> true | _ -> false
 
 let optional p = option None (lift (fun x -> Some x) p)
@@ -147,17 +144,19 @@ let dash   = char '-'
 let quote  = char '"'
 
 let string_chars = ignored *> take_while1 is_name_char
-let int_chars    = ignored *> take_while1 is_int_char
-let float_chars  = ignored *> take_while1 is_float_char
+let number_chars = ignored *> take_while1 is_number_char
 let name         = ignored *> take_while1 is_name_char 
 
 let null = string "null" *> return Null
 let variable = lift (fun n -> Variable n) (dollar *> name)
-let int_value = lift (fun i -> Int (int_of_string i)) int_chars
-let float_value = lift (fun f -> Float (float_of_string f)) float_chars
 let string_value = lift (fun s -> String s) (quote *> string_chars <* quote)
 let boolean_value = string "true"  *> return (Boolean true) <|>
                     string "false" *> return (Boolean false)
+let number_value = lift (fun n ->
+  try
+    Int (int_of_string n)
+  with Failure _ ->
+    Float (float_of_string n)) number_chars
 let enum_value = name >>= function
   | "true"
   | "false"
@@ -174,8 +173,7 @@ let value = fix (fun value' ->
   in
     null <|>
     variable <|>
-    int_value <|>
-    float_value <|>
+    number_value <|>
     string_value <|>
     boolean_value <|>
     enum_value <|>
