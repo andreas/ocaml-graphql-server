@@ -4,6 +4,7 @@ open Angstrom
 (* Language type definitions *)
 
 type value =
+  | Null
   | Variable of string
   | Int of int
   | Float of float
@@ -154,6 +155,7 @@ let int_chars    = ignored *> take_while1 is_int_char
 let float_chars  = ignored *> take_while1 is_float_char
 let name         = ignored *> take_while1 is_name_char 
 
+let null = string "null" *> return Null
 let variable = lift (fun n -> Variable n) (dollar *> name)
 let int_value = lift (fun i -> Int (int_of_string i)) int_chars
 let float_value = lift (fun f -> Float (float_of_string f)) float_chars
@@ -174,6 +176,7 @@ let value = fix (fun value' ->
   let object_value = lbrace *> rbrace *> return (Object []) <|>
                      lift (fun p -> Object p) (lbrace *> many object_field <* rbrace)
   in
+    null <|>
     variable <|>
     int_value <|>
     float_value <|>

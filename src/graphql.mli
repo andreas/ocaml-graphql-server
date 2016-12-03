@@ -48,6 +48,7 @@ end
 (** Parsing of GraphQL documents. *)
 module Parser : sig
   type value =
+    | Null
     | Variable of string
     | Int of int
     | Float of float
