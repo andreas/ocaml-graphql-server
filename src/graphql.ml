@@ -20,7 +20,138 @@ module List = struct
   end
 end
 
+(* Parsing *)
+module Parser = Graphql_parser
+
+(* Schema *)
 module Schema = struct
+  module Arg = struct
+    type (_, _) arg_typ =
+      | Scalar : {
+          name   : string;
+          coerce : Parser.value -> ('b, string) result;
+        } -> ('a, 'b option -> 'a) arg_typ
+      | Object : {
+          name   : string;
+          fields : ('a, 'b) arg_list;
+          coerce : 'b;
+        } -> ('c, 'a option -> 'c) arg_typ
+      | Enum : {
+          name   : string;
+          values : (string * 'b) list;
+        } -> ('a, 'b option -> 'a) arg_typ
+      | List : ('a, 'b -> 'a) arg_typ -> ('a, 'b list option -> 'a) arg_typ
+      | NonNullable : ('a, 'b option -> 'a) arg_typ -> ('a, 'b -> 'a) arg_typ
+    and ('a, 'b) arg = {
+      name : string;
+      typ : ('a, 'b) arg_typ;
+      default : 'a option;
+    }
+    and (_, _) arg_list =
+      | [] : ('a, 'a) arg_list
+      | (::) : ('b, 'c -> 'b) arg * ('a, 'b) arg_list -> ('a, 'c -> 'b) arg_list
+
+    let arg ?default:(default=None) name ~typ = { name; typ; default }
+    let scalar ~name ~coerce = Scalar { name; coerce }
+    let enum ~name ~values = Enum { name; values }
+    let obj ~name ~fields ~coerce = Object { name; fields; coerce }
+
+    (* Built-in argument types *)
+    let int = Scalar {
+      name = "Int";
+      coerce = function
+        | Parser.Int n -> Ok n
+        | _ -> Error "Invalid int"
+    }
+
+    let string = Scalar {
+      name = "String";
+      coerce = function
+        | Parser.String s -> Ok s
+        | _ -> Error "Invalid string"
+    }
+
+    let float = Scalar {
+      name = "Float";
+      coerce = function
+        | Parser.Float f -> Ok f
+        | Parser.Int n -> Ok (float_of_int n)
+        | _ -> Error "Invalid float"
+    }
+
+    let bool = Scalar {
+      name = "Boolean";
+      coerce = function
+        | Parser.Boolean b -> Ok b
+        | _ -> Error "Invalid boolean"
+    }
+
+    let guid = Scalar {
+      name = "ID";
+      coerce = function
+        | Parser.String s -> Ok s
+        | Parser.Int n -> Ok (string_of_int n)
+        | _ -> Error "Invalid ID"
+    }
+
+    let non_null typ = NonNullable typ
+    let list typ = List typ
+
+    let rec eval_arglist : type a b. (a, b) arg_list -> Parser.key_value list -> b -> (a, string) result =
+      fun arglist key_values f ->
+        match arglist with
+        | [] -> Ok f
+        | arg::arglist' ->
+            let value = List.assoc arg.name key_values in
+            eval_arg arg.typ value >>= fun coerced ->
+            eval_arglist arglist' key_values (f coerced)
+
+    and eval_arg : type a b. (a, b -> a) arg_typ -> Parser.value option -> (b, string) result = fun typ value ->
+      match (typ, value) with
+      | NonNullable _, None -> Error "Missing required argument"
+      | NonNullable _, Some Parser.Null -> Error "Missing required argument"
+      | Scalar _, None -> Ok None
+      | Scalar _, Some Parser.Null -> Ok None
+      | Object _, None -> Ok None
+      | Object _, Some Parser.Null -> Ok None
+      | List _, None -> Ok None
+      | List _, Some Parser.Null -> Ok None
+      | Enum _, None -> Ok None
+      | Enum _, Some Parser.Null -> Ok None
+      | Scalar s, Some value ->
+          s.coerce value >>| fun coerced ->
+          Some coerced
+      | Object o, Some value ->
+          begin match value with
+          | Parser.Object key_values ->
+              eval_arglist o.fields key_values o.coerce >>| fun coerced ->
+              Some coerced
+          | _ -> Error "Expected object"
+          end
+     | List typ, Some value ->
+          begin match value with
+          | Parser.List values ->
+              let option_values = List.map (fun x -> Some x) values in
+              List.Result.map_join (eval_arg typ) option_values >>| fun coerced ->
+              Some coerced
+          | value -> eval_arg typ (Some value) >>| fun coerced ->
+              (Some [coerced] : b)
+          end
+      | NonNullable typ, value ->
+          eval_arg typ value >>= (function
+          | Some value -> Ok value
+          | None -> Error "Missing required argument")
+      | Enum e, Some value ->
+          begin match value with
+          | Parser.Enum v ->
+              begin match List.assoc v e.values with
+              | Some _ as value -> Ok value
+              | None -> Error "Invalid enum value"
+              end
+          | _ -> Error "Expected enum"
+          end
+  end
+
   (* Schema data types *)
   type 'a scalar = {
     name    : string;
@@ -32,11 +163,6 @@ module Schema = struct
     values  : ('a * string) list;
   }
 
-  type 'a arg = {
-    name   : string;
-    coerce : string -> ('a, string) result
-  }
-
   type ('ctx, 'src) obj = {
     name   : string;
     fields : ('ctx, 'src) field list;
@@ -44,8 +170,9 @@ module Schema = struct
   and ('ctx, 'src) field =
     Field : {
       name    : string;
+      args    : ('a, 'b) Arg.arg_list;
       typ     : ('ctx, 'a) typ;
-      resolve : 'ctx -> 'src -> 'a;
+      resolve : 'ctx -> 'src -> 'b;
     } -> ('ctx, 'src) field
   and ('ctx, 'src) typ =
     | Object      : ('ctx, 'src) obj -> ('ctx, 'src option) typ
@@ -67,7 +194,7 @@ module Schema = struct
 
   (* Constructor functions *)
   let obj ~name ~fields = Object { name; fields }
-  let field ~name ~typ ~resolve = Field { name; typ; resolve }
+  let field ~name ~typ ~args ~resolve = Field { name; typ; args; resolve }
   let enum ~name ~values = Enum { name; values }
   let scalar ~name ~coerce = Scalar { name; coerce }
   let list typ = List typ
@@ -75,34 +202,42 @@ module Schema = struct
 
   (* Built-in scalars *)
   let int : 'ctx. ('ctx, int option) typ = Scalar {
-    name   = "int";
+    name   = "Int";
     coerce = fun i -> `Int i;
   }
 
   let string : 'ctx. ('ctx, string option) typ = Scalar {
-    name   = "string";
+    name   = "String";
     coerce = fun s ->`String s;
   }
 
   let bool : 'ctx. ('ctx, bool option) typ = Scalar {
-    name = "boolean";
+    name = "Boolean";
     coerce = fun b -> `Bool b;
   }
 
   let float : 'ctx. ('ctx, float option) typ = Scalar {
-    name = "float";
+    name = "Float";
     coerce = fun f -> `Float f;
+  }
+
+  let guid : 'ctx. ('ctx, string option) typ = Scalar {
+    name = "ID";
+    coerce = fun x -> `String x;
   }
 end
 
 module Introspection = struct
   open Schema
 
-  (* ityp hides type parameters to avoid scope escaping errors *)
-  type ityp = ITyp : ('ctx, 'src) typ -> ityp
-
-  (* ifield hides the type parameters to avoid scope escaping errors *)
-  type ifield = IField : ('ctx, 'src) field -> ifield
+  (* ityp, ifield and iarg hide type parameters to avoid scope escaping errors *)
+  type ityp =
+    | ITyp : (_, _) typ -> ityp
+    | IArgTyp : (_, _) Arg.arg_typ -> ityp
+  type ifield =
+    | IField : (_, _) field -> ifield
+    | IArgField : (_, _) Arg.arg -> ifield
+  type iarg = IArg : (_, _) Arg.arg -> iarg
 
   (* Extracts all types contained in a single type *)
   let rec types : type src. ityp list -> ('ctx, src) typ -> ityp list = fun memo typ -> match typ with
@@ -111,10 +246,38 @@ module Introspection = struct
     | Scalar _ as scalar -> (ITyp scalar)::memo 
     | Enum _ as enum -> (ITyp enum)::memo
     | Object o as obj ->
-        let memo'   = ((ITyp obj)::memo) in
-        let reducer = fun memo (Field f) -> types memo f.typ in
-        List.fold_left reducer memo' o.fields 
+        let memo'   = (ITyp obj)::memo in
+        let reducer = fun memo (Field f) ->
+          let memo' = types memo f.typ in
+          arg_list_types memo' f.args
+        in
+        List.fold_left reducer memo' o.fields
+  and arg_types : type a b. ityp list -> (a, b) Arg.arg_typ -> ityp list = fun memo argtyp ->
+    match argtyp with
+    | Arg.Scalar _ as scalar -> (IArgTyp scalar)::memo
+    | Arg.Enum _ as enum -> (IArgTyp enum)::memo
+    | Arg.List typ -> arg_types memo typ
+    | Arg.NonNullable typ -> arg_types memo typ
+    | Arg.Object o as obj ->
+        let memo' = (IArgTyp obj)::memo in
+        arg_list_types memo' o.fields
+  and arg_list_types : type a b. ityp list -> (a, b) Arg.arg_list -> ityp list = fun memo arglist ->
+    let open Arg in
+    match arglist with
+    | [] -> memo
+    | arg::args ->
+        let memo' = arg_types memo arg.typ in
+        arg_list_types memo' args
 
+  let rec args_to_list : type a b. ?memo:iarg list -> (a, b) Arg.arg_list -> iarg list = fun ?memo:(memo=[]) arglist ->
+    let open Arg in
+    match arglist with
+    | [] ->
+        memo
+    | arg::args ->
+        let memo' = List.cons (IArg arg) memo in
+        args_to_list ~memo:memo' args
+  ;;
   let __type_kind = Enum {
     name = "__TypeKind";
     values = [
@@ -133,92 +296,153 @@ module Introspection = struct
     name = "__EnumValue";
     fields = [
       Field {
-        name = "string";
+        name = "name";
         typ = NonNullable string;
+        args = Arg.[];
         resolve = fun _ name -> name
       };
       Field {
         name = "description";
         typ = string;
+        args = Arg.[];
         resolve = fun _ e -> None
       };
       Field {
         name = "isDeprecated";
         typ = NonNullable bool;
+        args = Arg.[];
         resolve = fun _ e -> false
       };
       Field {
         name = "deprecationReason";
         typ = string;
+        args = Arg.[];
         resolve = fun _ e -> None
       }
     ]
   }
 
-  let __input_value = Object {
+  let rec __input_value : 'ctx. ('ctx, iarg option) typ = Object {
     name = "__InputValue";
-    fields = []
+    fields = [
+      Field {
+        name = "name";
+        typ = NonNullable string;
+        args = Arg.[];
+        resolve = fun _ (IArg v) -> v.name
+      };
+      Field {
+        name = "description";
+        typ = string;
+        args = Arg.[];
+        resolve = fun _ _ -> None;
+      };
+      Field {
+        name = "type";
+        typ = NonNullable __type;
+        args = Arg.[];
+        resolve = fun _ (IArg v) -> IArgTyp v.typ;
+      };
+      Field {
+        name = "defaultValue";
+        typ = string;
+        args = Arg.[];
+        resolve = fun _ v -> None;
+      }
+    ]
   }
 
-  let rec __type : 'ctx. ('ctx, ityp option) typ = Object {
+  and __type : 'ctx. ('ctx, ityp option) typ = Object {
     name = "__Type";
     fields = [
       Field {
         name = "kind";
         typ = NonNullable __type_kind;
-        resolve = fun _ (ITyp t) -> match t with
-          | Object _  -> `Object
-          | List _    -> `List
-          | Scalar _  -> `Scalar
-          | Enum _    -> `Enum
-          | NonNullable _ -> `NonNull
+        args = Arg.[];
+        resolve = fun _ t -> match t with
+          | ITyp (Object _) -> `Object
+          | ITyp (List _) -> `List
+          | ITyp (Scalar _) -> `Scalar
+          | ITyp (Enum _) -> `Enum
+          | ITyp (NonNullable _) -> `NonNull
+          | IArgTyp (Arg.Object _) -> `InputObject
+          | IArgTyp (Arg.List _) -> `List
+          | IArgTyp (Arg.Scalar _) -> `Scalar
+          | IArgTyp (Arg.Enum _) -> `Enum
+          | IArgTyp (Arg.NonNullable _) -> `NonNull
       };
       Field {
         name = "name";
         typ = string;
-        resolve = fun _ (ITyp t) -> match t with
-          | Object o -> Some o.name
-          | Scalar s -> Some s.name
-          | Enum e -> Some e.name
+        args = Arg.[];
+        resolve = fun _ t -> match t with
+          | ITyp (Object o) -> Some o.name
+          | ITyp (Scalar s) -> Some s.name
+          | ITyp (Enum e) -> Some e.name
+          | IArgTyp (Arg.Object o) -> Some o.name;
+          | IArgTyp (Arg.Scalar s) -> Some s.name;
+          | IArgTyp (Arg.Enum e) -> Some e.name
           | _ -> None;
       };
       Field {
         name = "description";
         typ = string;
+        args = Arg.[];
         resolve = fun _ t -> None;
       };
       Field {
         name = "fields";
         typ = List (NonNullable __field);
-        resolve = fun _ (ITyp t) -> match t with
-          | Object o -> Some (List.map (fun f -> IField f) o.fields)
+        args = Arg.[];
+        resolve = fun _ t -> match t with
+          | ITyp (Object o) ->
+              Some (List.map (fun f -> IField f) o.fields)
+          | IArgTyp (Arg.Object o) ->
+              let arg_list = args_to_list o.fields in
+              Some (List.map (fun (IArg f) -> IArgField f) arg_list)
           | _ -> None
       };
       Field {
         name = "interfaces";
         typ = List __type;
-        resolve = fun _ (ITyp t) -> match t with
-          | Object _ -> Some []
+        args = Arg.[];
+        resolve = fun _ t -> match t with
+          | ITyp (Object _) -> Some []
           | _ -> None
       };
       Field {
         name = "possibleTypes";
         typ = List __type;
+        args = Arg.[];
         resolve = fun _ t -> None
       };
       Field {
         name = "ofType";
         typ = __type;
-        resolve = fun _ (ITyp t) -> match t with
-          | NonNullable typ -> Some (ITyp typ)
-          | List typ     -> Some (ITyp typ)
-          | _        -> None
+        args = Arg.[];
+        resolve = fun _ t -> match t with
+          | ITyp (NonNullable typ) -> Some (ITyp typ)
+          | ITyp (List typ) -> Some (ITyp typ)
+          | IArgTyp (Arg.NonNullable typ) -> Some (IArgTyp typ)
+          | IArgTyp (Arg.List typ) -> Some (IArgTyp typ)
+          | _ -> None
+      };
+      Field {
+        name = "inputFields";
+        typ = List (NonNullable __input_value);
+        args = Arg.[];
+        resolve = fun _ t -> match t with
+          | IArgTyp (Arg.Object o) ->
+              Some (args_to_list o.fields)
+          | _ -> None
       };
       Field {
         name = "enumValues";
         typ = List (NonNullable __enum_value);
-        resolve = fun _ (ITyp t) -> match t with
-          | Enum e -> Some (List.map snd e.values)
+        args = Arg.[];
+        resolve = fun _ t -> match t with
+          | ITyp (Enum e) -> Some (List.map snd e.values)
+          | IArgTyp (Arg.Enum e) -> Some (List.map fst e.values)
           | _      -> None
       }
     ]
@@ -230,31 +454,43 @@ module Introspection = struct
       Field {
         name = "name";
         typ = NonNullable string;
-        resolve = fun _ (IField (Field f)) -> f.name
+        args = Arg.[];
+        resolve = fun _ f -> match f with
+          | IField (Field f) -> f.name
+          | IArgField a -> a.name
       };
       Field {
         name = "description";
         typ = string;
+        args = Arg.[];
         resolve = fun _ f -> None
       };
       Field {
         name = "args";
-        typ = NonNullable (List __input_value);
-        resolve = fun _ f -> [];
+        typ = NonNullable (List (NonNullable __input_value));
+        args = Arg.[];
+        resolve = fun _ f -> match f with
+          | IField (Field f) -> args_to_list f.args
+          | IArgField _ -> []
       };
       Field {
         name = "type";
         typ = NonNullable __type;
-        resolve = fun _ (IField (Field f)) -> ITyp f.typ
+        args = Arg.[];
+        resolve = fun _ f -> match f with
+          | IField (Field f) -> ITyp f.typ
+          | IArgField a -> IArgTyp a.typ
       };
       Field {
         name = "isDeprecated";
         typ = NonNullable bool;
+        args = Arg.[];
         resolve = fun _ f -> false
       };
       Field {
         name = "deprecationReason";
         typ = string;
+        args = Arg.[];
         resolve = fun _ f -> None
       }
     ]
@@ -266,6 +502,7 @@ module Introspection = struct
       Field {
         name = "name";
         typ = NonNullable string;
+        args = Arg.[];
         resolve = fun _ d -> d.name
       }
     ]
@@ -277,21 +514,25 @@ module Introspection = struct
       Field {
         name = "types";
         typ = NonNullable (List (NonNullable __type));
+        args = Arg.[];
         resolve = fun _ s -> types [] (Object s.query);
       };
       Field {
         name = "queryType";
         typ = NonNullable __type;
+        args = Arg.[];
         resolve = fun _ s -> ITyp (Object s.query);
       };
       Field {
         name = "mutationType";
         typ = __type;
+        args = Arg.[];
         resolve = fun _ s -> None;
       };
       Field {
         name = "directives";
         typ = NonNullable (List (NonNullable __directive));
+        args = Arg.[];
         resolve = fun _ s -> []
       }
     ]
@@ -301,13 +542,11 @@ module Introspection = struct
     let schema_field = Field {
       name = "__schema";
       typ = NonNullable __schema;
+      args = Arg.[];
       resolve = fun _ _ -> s
     } in
     { query = { s.query with fields = schema_field::s.query.fields } }
 end
-
-(* Parsing *)
-module Parser = Graphql_parser
 
 (* Execution *)
 module StringMap = struct
@@ -373,11 +612,12 @@ let rec present : type src. 'ctx -> src -> fragment_map -> Parser.field -> ('ctx
         | None -> Ok `Null
       )
 
-and resolve_field : type src. 'ctx -> src -> fragment_map -> Parser.field -> ('ctx, src) Schema.field -> (string * Yojson.Basic.json, string) result = fun ctx src fragment_map query_field (Schema.Field field) ->
+and resolve_field : type src. 'ctx -> src -> fragment_map -> Parser.field -> ('ctx, src) Schema.field -> ((string * Yojson.Basic.json), string) result = fun ctx src fragment_map query_field (Schema.Field field) ->
   let name     = alias_or_name query_field in
-  let resolved = field.resolve ctx src in
-  present ctx resolved fragment_map query_field field.typ >>| fun value' ->
-  name, value'
+  let resolver = field.resolve ctx src in
+  Schema.Arg.eval_arglist field.args query_field.arguments resolver >>= fun resolved ->
+  present ctx resolved fragment_map query_field field.typ >>| fun value ->
+  name, value
 
 and resolve_fields : type src. 'ctx -> src -> fragment_map -> ('ctx, src) Schema.obj -> Parser.field list -> ((string * Yojson.Basic.json) list, string) result = fun ctx src fragment_map obj fields ->
   List.Result.map_join (fun (query_field : Parser.field) ->
