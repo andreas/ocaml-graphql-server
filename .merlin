@@ -3,6 +3,7 @@ PKG sexplib
 PKG yojson
 PKG cohttp.lwt
 PKG alcotest
+PKG rresult
 B _build/*
 S test
 S src

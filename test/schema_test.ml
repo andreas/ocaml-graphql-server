@@ -7,7 +7,7 @@ let test_query schema ctx query expected =
       failwith (Format.sprintf "Failed to parse query (%s): %s" err query)
 
 let test_simple () =
-  test_query Test_schema.schema () "{ users { id } }" "{\"users\":[{\"id\":1},{\"id\":2}]}"
+  test_query Test_schema.schema () "{ users { id } }" "{\"data\":{\"users\":[{\"id\":1},{\"id\":2}]}}"
 
 let suite = [
   "simple", `Quick, test_simple;

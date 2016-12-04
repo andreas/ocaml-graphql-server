@@ -1,3 +1,25 @@
+open Rresult
+
+(* Helper modules *)
+module List = struct
+  include List
+  let assoc_exn = assoc
+  let assoc x ys = try Some (assoc_exn x ys) with Not_found -> None
+
+  let find_exn = find
+  let find cond xs = try Some (find_exn cond xs) with Not_found -> None
+
+  module Result = struct
+    let rec join ?memo:(memo=[]) = function
+      | [] -> Ok (List.rev memo)
+      | (Error _ as err)::_ -> err
+      | (Ok x)::xs -> join ~memo:(x::memo) xs
+
+    let map_join f xs =
+      List.map f xs |> join
+  end
+end
+
 module Schema = struct
   (* Schema data types *)
   type 'a scalar = {
@@ -288,7 +310,11 @@ end
 module Parser = Graphql_parser
 
 (* Execution *)
-module StringMap = Map.Make(String)
+module StringMap = struct
+  include Map.Make(String)
+  let find_exn = find
+  let find k t = try Some(find_exn k t) with Not_found -> None
+end
 type fragment_map = Parser.fragment StringMap.t
 
 let rec collect_fields : fragment_map -> ('ctx, 'src) Schema.obj -> Parser.selection list -> Parser.field list = fun fragment_map obj fields -> 
@@ -296,82 +322,83 @@ let rec collect_fields : fragment_map -> ('ctx, 'src) Schema.obj -> Parser.selec
   | Parser.Field field ->
       [field]
   | Parser.FragmentSpread spread ->
-      (try
-        let fragment = StringMap.find spread.name fragment_map in
-        if obj.name = fragment.type_condition then
+      begin match StringMap.find spread.name fragment_map with
+      | Some fragment when obj.name = fragment.type_condition ->
           collect_fields fragment_map obj fragment.selection_set
-        else
+      | _ ->
           []
-      with Not_found -> [])
+      end
   | Parser.InlineFragment fragment ->
       match fragment.type_condition with
       | None ->
           collect_fields fragment_map obj fragment.selection_set
-      | Some condition ->
-          if condition = obj.name then
-            collect_fields fragment_map obj fragment.selection_set
-          else
-            []
+      | Some condition when condition = obj.name ->
+          collect_fields fragment_map obj fragment.selection_set
+      | _ -> []
   ) fields |> List.concat
 
-let alias_or_name (field : Parser.field) =
+let alias_or_name : Parser.field -> string = fun field ->
   match field.alias with
   | Some alias -> alias
   | None       -> field.name
 
 let field_from_object : ('ctx, 'src) Schema.obj -> string -> ('ctx, 'src) Schema.field option = fun obj field_name ->
-  try
-    let field = List.find (fun (Schema.Field field) -> field.name = field_name) obj.fields in 
-    Some field
-  with Not_found -> None
+  List.find (fun (Schema.Field field) -> field.name = field_name) obj.fields
 
-let option_map opt default f =
-  match opt with
-  | None -> default
-  | Some x -> f x
+let coerce_or_null : 'a option -> ('a -> (Yojson.Basic.json, string) result) -> (Yojson.Basic.json, string) result = fun src f ->
+  match src with
+  | None -> Ok `Null
+  | Some src' -> f src'
 
-let rec present : type src. 'ctx -> src -> fragment_map -> Parser.field -> ('ctx, src) Schema.typ -> Yojson.Basic.json = fun ctx src fragment_map query_field typ ->
+let rec present : type src. 'ctx -> src -> fragment_map -> Parser.field -> ('ctx, src) Schema.typ -> (Yojson.Basic.json, string) result = fun ctx src fragment_map query_field typ ->
   match typ with
-  | Schema.Scalar s -> option_map src `Null s.coerce
+  | Schema.Scalar s -> coerce_or_null src (fun x -> Ok (s.coerce x))
   | Schema.List t ->
-      option_map src `Null (fun src' ->
-        `List (List.map (fun x -> present ctx x fragment_map query_field t) src'))
+      coerce_or_null src (fun src' ->
+        List.Result.map_join (fun x ->
+          present ctx x fragment_map query_field t
+        ) src' >>| fun field_values ->
+        `List field_values
+      )
   | Schema.NonNullable t -> present ctx (Some src) fragment_map query_field t
   | Schema.Object o ->
-      option_map src `Null (fun src' ->
+      coerce_or_null src (fun src' ->
         let fields = collect_fields fragment_map o query_field.selection_set in
-        `Assoc (resolve_fields ctx src' fragment_map o fields))
+        resolve_fields ctx src' fragment_map o fields >>| fun field_values ->
+        `Assoc field_values)
   | Schema.Enum e ->
-      option_map src `Null (fun src' ->
-        try
-          let _, s = List.find (fun (v, s) -> src' == v) e.values in
-          `String s
-        with Not_found -> `Null)
+      coerce_or_null src (fun src' ->
+        match List.find (fun (v, s) -> src' == v) e.values with
+        | Some (_, s) -> Ok (`String s)
+        | None -> Ok `Null
+      )
 
-and resolve_field : type src. 'ctx -> src -> fragment_map -> Parser.field -> ('ctx, src) Schema.field -> (string * Yojson.Basic.json) = fun ctx src fragment_map query_field (Schema.Field field) ->
+and resolve_field : type src. 'ctx -> src -> fragment_map -> Parser.field -> ('ctx, src) Schema.field -> (string * Yojson.Basic.json, string) result = fun ctx src fragment_map query_field (Schema.Field field) ->
   let name     = alias_or_name query_field in
   let resolved = field.resolve ctx src in
-  let value    = present ctx resolved fragment_map query_field field.typ in
-  (name, value)
+  present ctx resolved fragment_map query_field field.typ >>| fun value' ->
+  name, value'
 
-and resolve_fields : type src. 'ctx -> src -> fragment_map -> ('ctx, src) Schema.obj -> Parser.field list -> (string * Yojson.Basic.json) list = fun ctx src fragment_map obj fields ->
-  List.map (fun (query_field : Parser.field) ->
+and resolve_fields : type src. 'ctx -> src -> fragment_map -> ('ctx, src) Schema.obj -> Parser.field list -> ((string * Yojson.Basic.json) list, string) result = fun ctx src fragment_map obj fields ->
+  List.Result.map_join (fun (query_field : Parser.field) ->
     match field_from_object obj query_field.name with
-    | Some field -> resolve_field ctx src fragment_map query_field field
-    | None       -> (alias_or_name query_field, `Null)
+    | Some field ->
+        resolve_field ctx src fragment_map query_field field
+    | None ->
+        Ok (alias_or_name query_field, `Null)
   ) fields
 
-let execute_operation (schema : 'ctx Schema.schema) fragment_map (operation : Parser.operation) ctx =
+let execute_operation : 'ctx Schema.schema -> fragment_map -> Parser.operation -> 'ctx -> (Yojson.Basic.json, string) result = fun schema fragment_map operation ctx ->
   match operation.optype with
   | Parser.Query ->
       let query  = schema.query in
       let fields = collect_fields fragment_map query operation.selection_set in
-      let props  = resolve_fields ctx () fragment_map query fields in
+      resolve_fields ctx () fragment_map query fields >>| fun props ->
       (`Assoc props)
   | Parser.Mutation ->
-      `String "Mutation is not implemented"
+      Error "Mutation is not implemented"
   | Parser.Subscription ->
-      `String "Subscription is not implemented"
+      Error "Subscription is not implemented"
 
 let collect_fragments doc =
   List.fold_left (fun memo -> function
@@ -379,18 +406,18 @@ let collect_fragments doc =
     | Parser.Fragment f -> StringMap.add f.name f memo
   ) StringMap.empty doc
 
-let select_operation doc =
-  try
-    let Parser.Operation op = List.find (function
-      | Parser.Operation _ -> true
-      | Parser.Fragment _ -> false
-    ) doc in
-    Some op
-  with Not_found -> None
+let rec select_operation = function
+  | [] -> Error "No operation found"
+  | (Parser.Operation op)::defs -> Ok op
+  | _::defs -> select_operation defs
 
 let execute schema ctx doc =
-  let fragment_map = collect_fragments doc in
-  let schema' = Introspection.add_schema_field schema in
-  match select_operation doc with
-  | None -> `String "No operation found"
-  | Some op -> execute_operation schema' fragment_map op ctx
+  let execute' schema ctx doc =
+    let fragment_map = collect_fragments doc in
+    let schema' = Introspection.add_schema_field schema in
+    select_operation doc >>= fun op ->
+    execute_operation schema' fragment_map op ctx
+  in
+  match execute' schema ctx doc with
+  | Ok data   -> `Assoc ["data", data]
+  | Error err -> `Assoc ["errors", `List [`Assoc ["message", `String err]]]
