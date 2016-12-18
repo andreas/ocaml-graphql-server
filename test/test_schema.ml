@@ -1,37 +1,36 @@
 open Graphql
 
+type role = User | Admin
+
 type user = {
   id   : int;
   name : string;
-  role : [`user | `admin];
+  role : role;
 }
 
 let users = [
-  { id = 1; name = "Alice"; role = `admin };
-  { id = 2; name = "Bob"; role = `user };
+  { id = 1; name = "Alice"; role = Admin };
+  { id = 2; name = "Bob"; role = User };
 ]
 
 let role = Schema.enum
   ~name:"role"
-  ~values:[(`user, "user"); (`admin, "admin")]
+  ~values:[(User, "user"); (Admin, "admin")]
 
 let user = Schema.(obj
   ~name:"user"
   ~fields:[
-    field
-      ~name:"id"
+    field "id"
       ~typ:(non_null int)
       ~args:Arg.[]
       ~resolve:(fun () p -> p.id)
     ;
-    field
-      ~name:"name"
+    field "name"
       ~typ:(non_null string)
       ~args:Arg.[]
       ~resolve:(fun () p -> p.name)
     ;
-    field
-      ~name:"role"
+    field "role"
       ~typ:(non_null role)
       ~args:Arg.[]
       ~resolve:(fun () p -> p.role)
@@ -40,8 +39,7 @@ let user = Schema.(obj
 
 let schema = Schema.(schema 
     ~fields:[
-      field
-        ~name:"users"
+      field "users"
         ~typ:(non_null (list (non_null user)))
         ~args:Arg.[]
         ~resolve:(fun () () -> users)

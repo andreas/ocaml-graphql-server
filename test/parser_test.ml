@@ -1,5 +1,4 @@
 open Sexplib.Std
-open Graphql
 
 let read_all path =
   let file = open_in path in
@@ -12,9 +11,9 @@ let read_all path =
 let test_query_file filename () =
   let query    = read_all ("test/data/"^filename^".graphql") in
   let expected = read_all ("test/data/"^filename^".sexp") |> String.trim in
-  match Parser.parse query with
+  match Graphql_parser.parse query with
   | Ok doc ->
-      let sexp = Parser.sexp_of_document doc |> Sexplib.Sexp.to_string_hum in
+      let sexp = Graphql_parser.sexp_of_document doc |> Sexplib.Sexp.to_string_hum in
       Alcotest.(check string) "invalid parse result" expected sexp
   | Error err -> failwith (Format.sprintf "Failed to parse %s: %s" filename err)
 
