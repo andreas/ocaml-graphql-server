@@ -1,40 +1,39 @@
 open Lwt
 module C = Cohttp_lwt_unix
 
-open Graphql
+open Graphql_lwt
+
+type role = User | Admin
 
 type user = {
   id   : int;
   name : string;
-  role : [`user | `admin];
+  role : role;
 }
 
 let users = [
-  { id = 1; name = "Alice"; role = `admin };
-  { id = 2; name = "Bob"; role = `user }
+  { id = 1; name = "Alice"; role = Admin };
+  { id = 2; name = "Bob"; role = User }
 ]
 
 let role = Schema.enum
   ~name:"role"
-  ~values:[(`user, "user"); (`admin, "admin")]
+  ~values:[(User, "user"); (Admin, "admin")]
 
 let user = Schema.(obj
   ~name:"user"
   ~fields:[
-    field
-      ~name:"id"
+    field "id"
       ~args:Arg.[]
       ~typ:(non_null int)
       ~resolve:(fun () p -> p.id)
     ;
-    field
-      ~name:"name"
+    field "name"
       ~args:Arg.[]
       ~typ:(non_null string)
       ~resolve:(fun () p -> p.name)
     ;
-    field
-      ~name:"role"
+    field "role"
       ~args:Arg.[]
       ~typ:(non_null role)
       ~resolve:(fun () p -> p.role)
@@ -43,14 +42,12 @@ let user = Schema.(obj
 
 let schema = Schema.(schema 
     ~fields:[
-      field
-        ~name:"users"
+      io_field "users"
         ~args:Arg.[]
         ~typ:(non_null (list (non_null user)))
-        ~resolve:(fun () () -> users)
+        ~resolve:(fun () () -> Lwt.return users)
       ;
-      field
-        ~name:"greeter"
+      field "greeter"
         ~typ:string
         ~args:Arg.[
           arg "config" ~typ:(non_null (obj ~name:"greeter_config" ~coerce:(fun greeting name -> (greeting, name)) ~fields:[
@@ -65,10 +62,14 @@ let schema = Schema.(schema
     ]
 )
 
+let json_err = function
+  | Ok _ as ok -> ok
+  | Error err -> Error (`String err)
+
 let execute query =
-  let open Rresult in
-  Graphql.Parser.parse query >>| fun doc ->
-  Graphql.execute schema () doc
+  let open Lwt_result in
+  Lwt.return @@ json_err @@ Graphql_parser.parse query >>= fun doc ->
+  Schema.execute schema () doc
 
 let callback conn (req : Cohttp.Request.t) body =
   Lwt_io.printf "Req: %s\n" req.resource;
@@ -80,12 +81,13 @@ let callback conn (req : Cohttp.Request.t) body =
       Lwt_io.printf "Body: %s\n" query_json;
       let query = Yojson.Basic.from_string query_json |> Yojson.Basic.Util.member "query" |> Yojson.Basic.Util.to_string in
       Lwt_io.printf "Query: %s\n" query;
-      match execute query with
+      execute query >>= function
       | Ok data ->
-          let rsp = Yojson.Basic.to_string data in
-          C.Server.respond_string ~status:`OK ~body:rsp ()
+          let body = Yojson.Basic.to_string data in
+          C.Server.respond_string ~status:`OK ~body ()
       | Error err ->
-          C.Server.respond_string ~status:`Internal_server_error ~body:err ()
+          let body = Yojson.Basic.to_string err in
+          C.Server.respond_error ~body ()
     end
   | _ -> C.Server.respond_string ~status:`Not_found ~body:"" ()
 
