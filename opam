@@ -7,7 +7,10 @@ bug-reports: "https://github.com/andreas/ocaml-graphql-server"
 dev-repo: "https://github.com/andreas/ocaml-graphql-server"
 build: [
   "ocaml" "pkg/pkg.ml" "build"
-          "--pinned" "%{pinned}%" ]
+          "--pinned" "%{pinned}%"
+          "--with-lwt" "%{lwt:installed}%"
+          "--with-async" "%{async_kernel:installed}%"
+]
 depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
@@ -17,6 +20,4 @@ depends: [
   "ppx_sexp_conv"
   "ppx_sexp_value"
   "yojson"
-  "cohttp"
-  "lwt"
 ]

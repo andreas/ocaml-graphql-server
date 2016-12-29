@@ -1,9 +1,9 @@
 true: bin_annot, debug, safe_string
 true: short_paths
 
-true: package(angstrom,sexplib,ppx_sexp_conv,ppx_sexp_value,yojson,lwt,rresult)
+true: package(angstrom,sexplib,ppx_sexp_conv,ppx_sexp_value,yojson,lwt,rresult,async_kernel)
 
 <src>: include
 <test>: include
 
-<test/*>: package(alcotest)
+<test/*>: package(alcotest,async_unix,lwt.unix), thread

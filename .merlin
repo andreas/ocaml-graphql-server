@@ -4,6 +4,8 @@ PKG yojson
 PKG cohttp.lwt
 PKG alcotest
 PKG rresult
+PKG lwt
+PKG async_kernel
 B _build/*
 S test
 S src
