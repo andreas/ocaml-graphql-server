@@ -10,13 +10,13 @@
 <link title="Graphql_parser" rel="Chapter" href="Graphql_parser.html">
 <link title="Graphql_schema" rel="Chapter" href="Graphql_schema.html">
 <link title="Graphql_async" rel="Chapter" href="Graphql_async.html">
-<link title="Graphql_lwt" rel="Chapter" href="Graphql_lwt.html"><title>Graphql</title>
+<link title="Graphql_lwt" rel="Chapter" href="Graphql_lwt.html"><title>Graphql_async</title>
 </head>
 <body>
 <code class="code"><span class="keyword">sig</span>
 &nbsp;&nbsp;<span class="keyword">module</span>&nbsp;<span class="constructor">Schema</span>&nbsp;:
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">sig</span>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;<span class="keywordsign">'</span>a&nbsp;io&nbsp;=&nbsp;<span class="keywordsign">'</span>a
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;<span class="keywordsign">'</span>a&nbsp;io&nbsp;=&nbsp;<span class="keywordsign">'</span>a&nbsp;<span class="constructor">Async_kernel</span>.<span class="constructor">Deferred</span>.t
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;<span class="keywordsign">'</span>ctx&nbsp;schema
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src)&nbsp;field
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;(<span class="keywordsign">'</span>ctx,&nbsp;<span class="keywordsign">'</span>src)&nbsp;typ

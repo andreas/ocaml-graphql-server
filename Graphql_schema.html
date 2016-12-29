@@ -1,0 +1,30 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="previous" href="Graphql_parser.html">
+<link rel="next" href="Graphql_async.html">
+<link rel="Up" href="index.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="Index of module types" rel=Appendix href="index_module_types.html">
+<link title="Graphql" rel="Chapter" href="Graphql.html">
+<link title="Graphql_parser" rel="Chapter" href="Graphql_parser.html">
+<link title="Graphql_schema" rel="Chapter" href="Graphql_schema.html">
+<link title="Graphql_async" rel="Chapter" href="Graphql_async.html">
+<link title="Graphql_lwt" rel="Chapter" href="Graphql_lwt.html"><title>Graphql_schema</title>
+</head>
+<body>
+<div class="navbar"><a class="pre" href="Graphql_parser.html" title="Graphql_parser">Previous</a>
+&nbsp;<a class="up" href="index.html" title="Index">Up</a>
+&nbsp;<a class="post" href="Graphql_async.html" title="Graphql_async">Next</a>
+</div>
+<h1>Module <a href="type_Graphql_schema.html">Graphql_schema</a></h1>
+
+<pre><span class="keyword">module</span> Graphql_schema: <code class="code"><span class="keyword">sig</span></code> <a href="Graphql_schema.html">..</a> <code class="code"><span class="keyword">end</span></code></pre><hr width="100%">
+
+<pre><span class="keyword">module type</span> <a href="Graphql_schema.IO.html">IO</a> = <code class="code"><span class="keyword">sig</span></code> <a href="Graphql_schema.IO.html">..</a> <code class="code"><span class="keyword">end</span></code></pre>
+<pre><span class="keyword">module</span> <a href="Graphql_schema.Make.html">Make</a>: <div class="sig_block"><code class="code"><span class="keyword">functor</span> (</code><code class="code"><span class="constructor">Io</span></code><code class="code"> : </code><code class="type"><a href="Graphql_schema.IO.html">IO</a></code><code class="code">) <span class="keywordsign">-&gt;</span> </code><code class="type">Graphql_intf.Schema</code><code class="type">  with type 'a io = 'a Io.t</code></div></pre></body></html>
