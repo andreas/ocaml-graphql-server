@@ -7,9 +7,12 @@ let test_query schema ctx query expected =
     match Graphql_parser.parse query with
     | Error err -> failwith err
     | Ok doc ->
-        Graphql_async.Schema.execute schema ctx doc >>| fun result ->
-        let result' = Yojson.Basic.to_string result in
-        Alcotest.(check string) "invalid execution result" expected result'
+      Graphql_async.Schema.execute schema ctx doc >>| fun result ->
+      let result' = match result with
+      | Ok data -> data
+      | Error err -> err
+      in
+      Alcotest.(check string) "invalid execution result" expected (Yojson.Basic.to_string result')
   end
 
 let schema = Graphql_async.Schema.(schema
