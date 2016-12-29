@@ -4,7 +4,7 @@ open Test_common
 let echo : 'a. unit -> unit -> 'a -> 'a = fun _ _ x -> x
 
 let echo_field name field_typ arg_typ = Schema.(
-      field ~name
+      field name
             ~typ:field_typ
             ~args:Arg.[
               arg "x" ~typ:arg_typ
@@ -33,7 +33,7 @@ let echo_schema =
       echo_field "enum" color_enum color_enum_arg;
       echo_field "id" guid Arg.guid;
       echo_field "bool_list" (list bool) Arg.(list bool);
-      field ~name:"input_obj"
+      field "input_obj"
             ~typ:(non_null string)
             ~args:Arg.[
               arg "x" ~typ:(non_null person_arg)

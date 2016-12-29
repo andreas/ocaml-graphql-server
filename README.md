@@ -7,6 +7,9 @@ Current feature set:
 - [x] GraphQL parser in pure OCaml using [angstrom](https://github.com/inhabitedtype/angstrom) (April 2016 RFC draft)
 - [x] Basic execution
 - [x] Basic introspection
+- [x] Argument support
+- [x] Lwt support
+- [x] Async support
 - [x] Example with HTTP server and GraphiQL
 
 ![GraphiQL Example](https://cloud.githubusercontent.com/assets/2518/20041922/403ed918-a471-11e6-8178-1cd22dbc4658.png)
@@ -36,46 +39,47 @@ Now open [http://localhost:8080](http://localhost:8080).
 ```ocaml
 open Graphql
 
+type role = User | Admin
 type user = {
   id   : int;
   name : string;
-  role : [`user | `admin];
+  role : role;
 }
 
 let users = [
-  { id = 1; name = "Alice"; role = `admin };
-  { id = 2; name = "Bob"; role = `user }
+  { id = 1; name = "Alice"; role = Admin };
+  { id = 2; name = "Bob"; role = User }
 ]
 
 let role = Schema.enum
   ~name:"role"
-  ~values:[(`user, "user"); (`admin, "admin")]
+  ~values:[(User, "user"); (Admin, "admin")]
 
 let user = Schema.(obj
   ~name:"user"
   ~fields:[
-    field
-      ~name:"id"
+    field "id"
       ~typ:(non_null int)
+      ~args:Arg.[]
       ~resolve:(fun () p -> p.id)
     ;
-    field
-      ~name:"name"
+    field "name"
       ~typ:(non_null string)
+      ~args:Arg.[]
       ~resolve:(fun () p -> p.name)
     ;
-    field
-      ~name:"role"
+    field "role"
       ~typ:(non_null role)
+      ~args:Arg.[]
       ~resolve:(fun () p -> p.role)
   ]
 )
 
 let schema = Schema.(schema 
     ~fields:[
-      field
-        ~name:"users"
+      field "users"
         ~typ:(non_null (list (non_null user)))
+        ~args:Arg.[]
         ~resolve:(fun () () -> users)
     ]
 )
@@ -84,17 +88,18 @@ let schema = Schema.(schema
 ### Running a Query
 
 ```ocaml
-let query = Graphql.Parser.parse some_string in
-Graphql.execute schema ctx query
+let query = Graphql_parser.parse some_string in
+Graphql.Schema.execute schema ctx query
 ```
 
 ## Design
 
-Only valid schemas should pass the type checker. If a schema compiles, the following should hold:
+Only valid schemas should pass the type checker. If a schema compiles, the following holds:
 
-1. The type of a field should agree with the return type of the resolver function.
-2. The source of a field should agree with the type of the object to which it belongs.
-3. The context argument for all resolver functions in a schema should agree.
+1. The type of a field agrees with the return type of the resolve function.
+2. The arguments of a field agrees with the accepted arguments of the resolve function.
+3. The source of a field agrees with the type of the object to which it belongs.
+4. The context argument for all resolver functions in a schema agree.
 
 The following types ensure this:
 
@@ -106,8 +111,9 @@ type ('ctx, 'src) obj = {
 and ('ctx, 'src) field =
   Field : {
     name    : string;
-    typ     : ('ctx, 'a) typ;
-    resolve : 'ctx -> 'src -> 'a;
+    typ     : ('ctx, 'out) typ;
+    args    : ('out, 'args) Arg.arg_list;
+    resolve : 'ctx -> 'src -> 'args;
   } -> ('ctx, 'src) field
 and ('ctx, 'src) typ =
   | Object      : ('ctx, 'src) obj -> ('ctx, 'src option) typ
@@ -120,18 +126,22 @@ and ('ctx, 'src) typ =
 The type parameters can be interpreted as follows:
 
 - `'ctx` is a value that is passed all resolvers when executing a query against a schema,
-- ``src` is the domain-specific value, e.g. a user record,
-- `'a` is the result of the resolver, which must agree with the type of the field. 
+- `'src` is the domain-specific source value, e.g. a user record,
+- `'args`
+- `'out` is the result of the resolver, which must agree with the type of the field.
 
-(note that arguments are currently not handled)
+Particularly noteworthy is `('ctx, 'src) field`, which hides the type `'out`. The type `'out` is used to ensure that the output of a resolver function agrees with the input type of the field's type.
 
-Particularly noteworthy is `('ctx, 'src) field`, which hides the type `'a`. The type `'a` is used to ensure that the output of a resolver function agrees with the input type of the fields type.
-
-For introspection, two additional types are used to hide the type parameters `'ctx` and `src`:
+For introspection, three additional types are used to hide the type parameters `'ctx` and `src`:
 
 ```ocaml
-type ityp = ITyp : ('ctx, 'src) typ -> ityp
-type ifield = IField : ('ctx, 'src) field -> ifield
+  type any_typ =
+    | AnyTyp : (_, _) typ -> any_typ
+    | AnyArgTyp : (_, _) Arg.arg_typ -> any_typ
+  type any_field =
+    | AnyField : (_, _) field -> any_field
+    | AnyArgField : (_, _) Arg.arg -> any_field
+  type any_arg = AnyArg : (_, _) Arg.arg -> any_ar
 ```
 
 This is to avoid "type parameter would avoid it's scope"-errors.
