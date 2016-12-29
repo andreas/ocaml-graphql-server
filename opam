@@ -1,5 +1,5 @@
 opam-version: "1.2"
-maintainer: "Andreas Garnaes <andras.garnaes@gmail.com>"
+maintainer: "Andreas Garnaes <andreas.garnaes@gmail.com>"
 authors: "Andreas Garnaes <andreas.garnaes@gmail.com>"
 homepage: "https://github.com/andreas/ocaml-graphql-server"
 doc: "https://andreas.github.io/ocaml-graphql-server/"
