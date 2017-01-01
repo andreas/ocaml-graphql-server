@@ -92,6 +92,43 @@ let query = Graphql_parser.parse some_string in
 Graphql.Schema.execute schema ctx query
 ```
 
+### Lwt Support
+
+```ocaml
+open Lwt.Infix
+open Graphql_lwt
+
+let schema = Schema.(schema
+  ~fields:[
+    field "wait"
+    ~typ:(non_null float)
+    ~args:Arg.[
+      arg "duration" ~typ:float;
+    ]
+    ~resolve:(fun () () -> Lwt_unix.sleep duration >|= fun () -> duration)
+  ]
+)
+```
+
+### Async Support
+
+```ocaml
+open Core.Std
+open Async.Std
+open Graphql_async
+
+let schema = Schema.(schema
+  ~fields:[
+    field "wait"
+    ~typ:(non_null float)
+    ~args:Arg.[
+      arg "duration" ~typ:float;
+    ]
+    ~resolve:(fun () () -> after (Time.Span.of_float duration) >>| fun () -> duration)
+  ]
+)
+```
+
 ## Design
 
 Only valid schemas should pass the type checker. If a schema compiles, the following holds:
