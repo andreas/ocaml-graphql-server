@@ -1,6 +1,6 @@
 # `ocaml-graphql-server`
 
-`ocaml-graphql-server` is a library for creating GraphQL servers. It's currently in a very early, experimental stage.
+`ocaml-graphql-server` is a library for creating GraphQL servers. It's currently in an early, experimental stage.
 
 Current feature set:
 
@@ -27,7 +27,7 @@ To run a sample GraphQL server also serving GraphiQL, do the following:
 ```bash
 git checkout git@github.com/andreas/ocaml-graphql-server.git
 cd ocaml-graphql-server
-opam pin add graphql-server .
+opam pin add graphql .
 cd examples
 ocamlbuild -use-ocamlfind server.native && ./server.native
 ```
@@ -100,7 +100,7 @@ open Graphql_lwt
 
 let schema = Schema.(schema
   ~fields:[
-    field "wait"
+    io_field "wait"
     ~typ:(non_null float)
     ~args:Arg.[
       arg "duration" ~typ:float;
@@ -119,7 +119,7 @@ open Graphql_async
 
 let schema = Schema.(schema
   ~fields:[
-    field "wait"
+    io_field "wait"
     ~typ:(non_null float)
     ~args:Arg.[
       arg "duration" ~typ:float;
@@ -164,7 +164,7 @@ The type parameters can be interpreted as follows:
 
 - `'ctx` is a value that is passed all resolvers when executing a query against a schema,
 - `'src` is the domain-specific source value, e.g. a user record,
-- `'args`
+- `'args` is the arguments of the resolver, and will be of the type `'arg¹ -> ... -> 'argⁿ -> 'out`,
 - `'out` is the result of the resolver, which must agree with the type of the field.
 
 Particularly noteworthy is `('ctx, 'src) field`, which hides the type `'out`. The type `'out` is used to ensure that the output of a resolver function agrees with the input type of the field's type.
