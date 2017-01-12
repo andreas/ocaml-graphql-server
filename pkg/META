@@ -1,6 +1,6 @@
 description = "Library for writing GraphQL servers"
 version = "%%VERSION_NUM%%"
-requires = "angstrom sexplib ppx_sexp_conv ppx_sexp_value yojson cohttp.lwt rresult"
+requires = "angstrom sexplib ppx_sexp_conv ppx_sexp_value yojson rresult"
 archive(byte) = "graphql.cma"
 archive(native) = "graphql.cmxa"
 plugin(byte) = "graphql.cma"
