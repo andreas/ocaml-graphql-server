@@ -3,24 +3,32 @@ open Angstrom
 
 (* Language type definitions *)
 
-type value =
-  | Null
-  | Variable of string
-  | Int of int
-  | Float of float
-  | String of string
-  | Boolean of bool
-  | Enum of string
-  | List of value list
-  | Object of key_value list
-  [@@deriving sexp]
+type primitive_value = [
+  | `Null
+  | `Int of int
+  | `Float of float
+  | `String of string
+  | `Bool of bool
+  | `Enum of string
+] [@@deriving sexp]
 
-and key_value = string * value [@@deriving sexp]
+type const_value = [
+  | primitive_value
+  | `List of const_value list
+  | `Assoc of (string * const_value) list
+] [@@deriving sexp]
+
+type value = [
+  | primitive_value
+  | `Variable of string
+  | `List of value list
+  | `Assoc of (string * value) list
+] [@@deriving sexp]
 
 type directive =
   {
     name : string;
-    arguments : key_value list;
+    arguments : (string * value) list;
   }
   [@@deriving sexp]
 
@@ -41,7 +49,7 @@ and field =
   {
     alias : string option;
     name : string;
-    arguments : key_value list;
+    arguments : (string * value) list;
     directives : directive list;
     selection_set : selection list;
   }
@@ -74,7 +82,7 @@ type variable_definition =
   {
     name : string;
     typ : typ;
-    default_value : value option;
+    default_value : const_value option;
   }
   [@@deriving sexp]
 
@@ -147,39 +155,49 @@ let string_chars = ignored *> take_while1 is_name_char
 let number_chars = ignored *> take_while1 is_number_char
 let name         = ignored *> take_while1 is_name_char 
 
-let null = string "null" *> return Null
-let variable = lift (fun n -> Variable n) (dollar *> name)
-let string_value = lift (fun s -> String s) (quote *> string_chars <* quote)
-let boolean_value = string "true"  *> return (Boolean true) <|>
-                    string "false" *> return (Boolean false)
+let null = string "null" *> return `Null
+let variable = lift (fun n -> `Variable n) (dollar *> name)
+let string_value = lift (fun s -> `String s) (quote *> string_chars <* quote)
+let boolean_value = string "true"  *> return (`Bool true) <|>
+                    string "false" *> return (`Bool false)
 let number_value = lift (fun n ->
   try
-    Int (int_of_string n)
+    `Int (int_of_string n)
   with Failure _ ->
-    Float (float_of_string n)) number_chars
+    `Float (float_of_string n)) number_chars
 let enum_value = name >>= function
   | "true"
   | "false"
   | "null" as n -> fail (Format.sprintf "Invalid enum value: %s" n)
-  | n -> return (Enum n)
+  | n -> return (`Enum n)
 
-let value = fix (fun value' ->
-  let list_value = lbrack *> rbrack *> return (List []) <|>
-                   lift (fun l -> List l) (lbrack *> many value' <* rbrack)
+let value_parser value_types = fix (fun value' ->
+  let list_value = lbrack *> rbrack *> return (`List []) <|>
+                   lift (fun l -> `List l) (lbrack *> many value' <* rbrack)
   and object_field = lift2 (fun name value -> name, value) (name <* colon) value'
   in
-  let object_value = lbrace *> rbrace *> return (Object []) <|>
-                     lift (fun p -> Object p) (lbrace *> many object_field <* rbrace)
+  let object_value = lbrace *> rbrace *> return (`Assoc []) <|>
+                     lift (fun p -> `Assoc p) (lbrace *> many object_field <* rbrace)
   in
-    null <|>
-    variable <|>
-    number_value <|>
-    string_value <|>
-    boolean_value <|>
-    enum_value <|>
-    list_value <|>
-    object_value
+    List.fold_left (<|>) (list_value <|> object_value) value_types
 )
+
+let value : value Angstrom.t = value_parser [
+  null;
+  number_value;
+  string_value;
+  boolean_value;
+  enum_value;
+  variable
+]
+
+let const_value : const_value Angstrom.t = value_parser [
+  null;
+  number_value;
+  string_value;
+  boolean_value;
+  enum_value
+]
 
 let argument = lift2 (fun name value -> name, value)
                (name <* colon) value
@@ -205,7 +223,7 @@ let variable_definition = lift3 (fun name typ default_value -> {
     name;
     typ;
     default_value;
-  }) (dollar *> name <* colon) typ (optional (equal *> value))
+  }) (dollar *> name <* colon) typ (optional (equal *> const_value))
 
 let variable_definitions = lparen *> many variable_definition <* rparen
 

@@ -1,21 +1,30 @@
-type value =
-  | Null
-  | Variable of string
-  | Int of int
-  | Float of float
-  | String of string
-  | Boolean of bool
-  | Enum of string
-  | List of value list
-  | Object of key_value list
-  [@@deriving sexp]
+type const_value = [
+  | `Null
+  | `Int of int
+  | `Float of float
+  | `String of string
+  | `Bool of bool
+  | `Enum of string
+  | `List of const_value list
+  | `Assoc of (string * const_value) list
+] [@@deriving sexp]
 
-and key_value = string * value [@@deriving sexp]
+type value = [
+  | `Null
+  | `Int of int
+  | `Float of float
+  | `String of string
+  | `Bool of bool
+  | `Enum of string
+  | `Variable of string
+  | `List of value list
+  | `Assoc of (string * value) list
+] [@@deriving sexp]
 
 type directive =
   {
     name : string;
-    arguments : key_value list;
+    arguments : (string * value) list;
   }
   [@@deriving sexp]
 
@@ -36,7 +45,7 @@ and field =
   {
     alias : string option;
     name : string;
-    arguments : key_value list;
+    arguments : (string * value) list;
     directives : directive list;
     selection_set : selection list;
   }
@@ -69,7 +78,7 @@ type variable_definition =
   {
     name : string;
     typ : typ;
-    default_value : value option;
+    default_value : const_value option;
   }
   [@@deriving sexp]
 

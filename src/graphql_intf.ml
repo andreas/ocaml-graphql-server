@@ -33,7 +33,7 @@ module type Schema = sig
               ('a, 'b) arg
 
     val scalar : name:string ->
-                coerce:(Graphql_parser.value -> ('b, string) result) ->
+                coerce:(Graphql_parser.const_value -> ('b, string) result) ->
                 ('a, 'b option -> 'a) arg_typ
 
     val enum : name:string ->
@@ -87,7 +87,9 @@ module type Schema = sig
   val bool   : ('ctx, bool option) typ
   val float  : ('ctx, float option) typ
 
-  val execute : 'ctx schema -> 'ctx -> Graphql_parser.document -> (Yojson.Basic.json, Yojson.Basic.json) result io
-  (** [execute schema ctx doc] evaluates the [doc] against [schema] with the
-      given context [ctx]. *)
+  type variables = (string * Graphql_parser.const_value) list
+
+  val execute : 'ctx schema -> 'ctx -> ?variables:variables -> Graphql_parser.document -> (Yojson.Basic.json, Yojson.Basic.json) result io
+  (** [execute schema ctx variables doc] evaluates the [doc] against [schema]
+      with the given context [ctx] and [variables]. *)
 end

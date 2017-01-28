@@ -18,6 +18,12 @@ module List = struct
   end
 end
 
+module Option = struct
+  let return x = Some x
+  let bind x f = match x with | None -> None | Some y -> f y
+  let map x ~f = match x with | None -> None | Some y -> Some (f y)
+end
+
 (* IO *)
 module type IO = sig
   type +'a t
@@ -58,13 +64,22 @@ module Make(Io : IO) = struct
     end
   end
 
+  module StringMap = struct
+    include Map.Make(String)
+    exception Missing_key of string
+    let find_exn key t = try find key t with Not_found -> raise (Missing_key key)
+    let find k t = try Some (find_exn k t) with Missing_key _ -> None
+  end
+
+  type variable_map = Graphql_parser.const_value StringMap.t
+
   module Arg = struct
     open Rresult
 
     type (_, _) arg_typ =
       | Scalar : {
           name   : string;
-          coerce : Graphql_parser.value -> ('b, string) result;
+          coerce : Graphql_parser.const_value -> ('b, string) result;
         } -> ('a, 'b option -> 'a) arg_typ
       | Object : {
           name   : string;
@@ -102,90 +117,108 @@ module Make(Io : IO) = struct
     let int = Scalar {
       name = "Int";
       coerce = function
-        | Graphql_parser.Int n -> Ok n
+        | `Int n -> Ok n
         | _ -> Error "Invalid int"
     }
 
     let string = Scalar {
       name = "String";
       coerce = function
-        | Graphql_parser.String s -> Ok s
+        | `String s -> Ok s
         | _ -> Error "Invalid string"
     }
 
     let float = Scalar {
       name = "Float";
       coerce = function
-        | Graphql_parser.Float f -> Ok f
-        | Graphql_parser.Int n -> Ok (float_of_int n)
+        | `Float f -> Ok f
+        | `Int n -> Ok (float_of_int n)
         | _ -> Error "Invalid float"
     }
 
     let bool = Scalar {
       name = "Boolean";
       coerce = function
-        | Graphql_parser.Boolean b -> Ok b
+        | `Bool b -> Ok b
         | _ -> Error "Invalid boolean"
     }
 
     let guid = Scalar {
       name = "ID";
       coerce = function
-        | Graphql_parser.String s -> Ok s
-        | Graphql_parser.Int n -> Ok (string_of_int n)
+        | `String s -> Ok s
+        | `Int n -> Ok (string_of_int n)
         | _ -> Error "Invalid ID"
     }
 
     let non_null typ = NonNullable typ
     let list typ = List typ
 
-    let rec eval_arglist : type a b. (a, b) arg_list -> Graphql_parser.key_value list -> b -> (a, string) result =
-      fun arglist key_values f ->
+    let rec value_to_const_value variable_map = function
+    | `Null -> `Null
+    | `Int _ as i -> i
+    | `Float _ as f -> f
+    | `String _ as s -> s
+    | `Bool _ as b -> b
+    | `Enum _ as e -> e
+    | `Variable v -> StringMap.find_exn v variable_map
+    | `List xs -> `List (List.map (value_to_const_value variable_map) xs)
+    | `Assoc props ->
+        let props' = List.map (fun (name, value) -> name, value_to_const_value variable_map value) props in
+        `Assoc props'
+
+    let rec eval_arglist : type a b. variable_map -> (a, b) arg_list -> (string * Graphql_parser.value) list -> b -> (a, string) result =
+      fun variable_map arglist key_values f ->
         match arglist with
         | [] -> Ok f
         | arg::arglist' ->
-            let value = List.assoc arg.name key_values in
-            eval_arg arg.typ value >>= fun coerced ->
-            eval_arglist arglist' key_values (f coerced)
+            try
+              let value = List.assoc arg.name key_values in
+              let const_value = Option.map value ~f:(value_to_const_value variable_map) in
+              eval_arg variable_map arg.typ const_value >>= fun coerced ->
+              eval_arglist variable_map arglist' key_values (f coerced)
+            with StringMap.Missing_key key -> Error (Format.sprintf "Missing variable `%s`" key)
 
-    and eval_arg : type a b. (a, b -> a) arg_typ -> Graphql_parser.value option -> (b, string) result = fun typ value ->
+    and eval_arg : type a b. variable_map -> (a, b -> a) arg_typ -> Graphql_parser.const_value option -> (b, string) result = fun variable_map typ value ->
       match (typ, value) with
       | NonNullable _, None -> Error "Missing required argument"
-      | NonNullable _, Some Graphql_parser.Null -> Error "Missing required argument"
+      | NonNullable _, Some `Null -> Error "Missing required argument"
       | Scalar _, None -> Ok None
-      | Scalar _, Some Graphql_parser.Null -> Ok None
+      | Scalar _, Some `Null -> Ok None
       | Object _, None -> Ok None
-      | Object _, Some Graphql_parser.Null -> Ok None
+      | Object _, Some `Null -> Ok None
       | List _, None -> Ok None
-      | List _, Some Graphql_parser.Null -> Ok None
+      | List _, Some `Null -> Ok None
       | Enum _, None -> Ok None
-      | Enum _, Some Graphql_parser.Null -> Ok None
+      | Enum _, Some `Null -> Ok None
       | Scalar s, Some value ->
           s.coerce value >>| fun coerced ->
           Some coerced
       | Object o, Some value ->
           begin match value with
-          | Graphql_parser.Object key_values ->
-              eval_arglist o.fields key_values o.coerce >>| fun coerced ->
+          | `Assoc props ->
+              let props' = (props :> (string * Graphql_parser.value) list) in
+              eval_arglist variable_map o.fields props' o.coerce >>| fun coerced ->
               Some coerced
           | _ -> Error "Expected object"
           end
      | List typ, Some value ->
           begin match value with
-          | Graphql_parser.List values ->
+          | `List values ->
               let option_values = List.map (fun x -> Some x) values in
-              List.Result.map_join (eval_arg typ) option_values >>| fun coerced ->
+              List.Result.map_join (eval_arg variable_map typ) option_values >>| fun coerced ->
               Some coerced
-          | value -> eval_arg typ (Some value) >>| fun coerced ->
+          | value -> eval_arg variable_map typ (Some value) >>| fun coerced ->
               (Some [coerced] : b)
           end
       | NonNullable typ, value ->
-          eval_arg typ value >>= (function
+          eval_arg variable_map typ value >>= (function
           | Some value -> Ok value
           | None -> Error "Missing required argument")
       | Enum e, Some value ->
           begin match value with
-          | Graphql_parser.Enum v ->
+          | `Enum v
+          | `String v ->
               begin match List.assoc v e.values with
               | Some _ as value -> Ok value
               | None -> Error "Invalid enum value"
@@ -634,12 +667,14 @@ module Introspection = struct
 end
 
   (* Execution *)
-  module StringMap = struct
-    include Map.Make(String)
-    let find_exn = find
-    let find k t = try Some(find_exn k t) with Not_found -> None
-  end
+  type variables = (string * Graphql_parser.const_value) list
+  type json_variables = (string * Yojson.Basic.json) list
   type fragment_map = Graphql_parser.fragment StringMap.t
+  type 'ctx execution_context = {
+    variables : variable_map;
+    fragments : fragment_map;
+    ctx       : 'ctx;
+  }
 
   let rec collect_fields : fragment_map -> ('ctx, 'src) obj -> Graphql_parser.selection list -> Graphql_parser.field list = fun fragment_map obj fields -> 
     List.map (function
@@ -675,21 +710,21 @@ end
     | None -> Io.ok `Null
     | Some src' -> f src'
 
-  let rec present : type src. 'ctx -> src -> fragment_map -> Graphql_parser.field -> ('ctx, src) typ -> (Yojson.Basic.json, string) result Io.t = fun ctx src fragment_map query_field typ ->
+  let rec present : type src. 'ctx execution_context -> src -> Graphql_parser.field -> ('ctx, src) typ -> (Yojson.Basic.json, string) result Io.t = fun ctx src query_field typ ->
     match typ with
     | Scalar s -> coerce_or_null src (fun x -> Io.return (Ok (s.coerce x)))
     | List t ->
         coerce_or_null src (fun src' ->
-          List.map (fun x -> present ctx x fragment_map query_field t) src'
+          List.map (fun x -> present ctx x query_field t) src'
           |> Io.all
           |> Io.map ~f:List.Result.join
           |> Io.Result.map ~f:(fun field_values -> `List field_values)
         )
-    | NonNullable t -> present ctx (Some src) fragment_map query_field t
+    | NonNullable t -> present ctx (Some src) query_field t
     | Object o ->
         coerce_or_null src (fun src' ->
-          let fields = collect_fields fragment_map o query_field.selection_set in
-          resolve_fields ctx src' fragment_map o fields
+          let fields = collect_fields ctx.fragments o query_field.selection_set in
+          resolve_fields ctx src' o fields
         )
     | Enum e ->
         coerce_or_null src (fun src' ->
@@ -698,22 +733,22 @@ end
           | None -> Io.ok `Null
         )
 
-  and resolve_field : type src. 'ctx -> src -> fragment_map -> Graphql_parser.field -> ('ctx, src) field -> ((string * Yojson.Basic.json), string) result Io.t = fun ctx src fragment_map query_field (Field field) ->
+  and resolve_field : type src. 'ctx execution_context -> src -> Graphql_parser.field -> ('ctx, src) field -> ((string * Yojson.Basic.json), string) result Io.t = fun ctx src query_field (Field field) ->
     let open Io.Infix in
     let name = alias_or_name query_field in
-    let resolver = field.resolve ctx src in
-    match Arg.eval_arglist field.args query_field.arguments resolver with
+    let resolver = field.resolve ctx.ctx src in
+    match Arg.eval_arglist ctx.variables field.args query_field.arguments resolver with
     | Error _ as err -> Io.return err
     | Ok tmp ->
         field.lift tmp >>= fun resolved ->
-        present ctx resolved fragment_map query_field field.typ >>|? fun value ->
+        present ctx resolved query_field field.typ >>|? fun value ->
         name, value
 
-  and resolve_fields : type src. 'ctx -> src -> fragment_map -> ('ctx, src) obj -> Graphql_parser.field list -> (Yojson.Basic.json, string) result Io.t = fun ctx src fragment_map obj fields ->
+  and resolve_fields : type src. 'ctx execution_context -> src -> ('ctx, src) obj -> Graphql_parser.field list -> (Yojson.Basic.json, string) result Io.t = fun ctx src obj fields ->
     List.map (fun (query_field : Graphql_parser.field) ->
       match field_from_object obj query_field.name with
       | Some field ->
-          resolve_field ctx src fragment_map query_field field
+          resolve_field ctx src query_field field
       | None ->
           Io.ok (alias_or_name query_field, `Null)
     ) fields
@@ -721,12 +756,12 @@ end
     |> Io.map ~f:List.Result.join
     |> Io.Result.map ~f:(fun properties -> `Assoc properties)
 
-  let execute_operation : 'ctx schema -> fragment_map -> Graphql_parser.operation -> 'ctx -> (Yojson.Basic.json, string) result Io.t = fun schema fragment_map operation ctx ->
+  let execute_operation : 'ctx schema -> 'ctx execution_context -> Graphql_parser.operation -> (Yojson.Basic.json, string) result Io.t = fun schema ctx operation ->
     match operation.optype with
     | Graphql_parser.Query ->
         let query  = schema.query in
-        let fields = collect_fields fragment_map query operation.selection_set in
-        resolve_fields ctx () fragment_map query fields
+        let fields = collect_fields ctx.fragments query operation.selection_set in
+        resolve_fields ctx () query fields
     | Graphql_parser.Mutation ->
         Io.error "Mutation is not implemented"
     | Graphql_parser.Subscription ->
@@ -743,13 +778,15 @@ end
     | (Graphql_parser.Operation op)::defs -> Ok op
     | _::defs -> select_operation defs
 
-  let execute schema ctx doc =
+  let execute schema ctx ?variables:(variables=[]) doc =
     let open Io.Infix in
     let execute' schema ctx doc =
-      let fragment_map = collect_fragments doc in
+      let fragments = collect_fragments doc in
+      let variables = List.fold_left (fun memo (name, value) -> StringMap.add name value memo) StringMap.empty variables in
+      let execution_ctx = { fragments; ctx; variables; } in
       let schema' = Introspection.add_schema_field schema in
       Io.return (select_operation doc) >>=? fun op ->
-      execute_operation schema' fragment_map op ctx
+      execute_operation schema' execution_ctx op
     in
     execute' schema ctx doc >>| function
     | Ok data   -> Ok (`Assoc ["data", data])
