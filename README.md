@@ -5,14 +5,15 @@
 Current feature set:
 
 - [x] GraphQL parser in pure OCaml using [angstrom](https://github.com/inhabitedtype/angstrom) (April 2016 RFC draft)
-- [x] Basic execution
-- [x] Basic introspection
-- [x] Argument support
+- [x] Execution
+- [x] Introspection
+- [x] Arguments
+- [x] Variables
 - [x] Lwt support
 - [x] Async support
 - [x] Example with HTTP server and GraphiQL
 
-![GraphiQL Example](https://cloud.githubusercontent.com/assets/2518/20041922/403ed918-a471-11e6-8178-1cd22dbc4658.png)
+![GraphiQL Example](https://cloud.githubusercontent.com/assets/2518/22173954/8d1e5bbe-dfd1-11e6-9a7e-4f93d0ce2e24.png)
 
 ## Documentation
 
@@ -87,9 +88,20 @@ let schema = Schema.(schema
 
 ### Running a Query
 
+Without variables:
+
 ```ocaml
-let query = Graphql_parser.parse some_string in
+let query = Graphql_parser.parse "{ users { name } }" in
 Graphql.Schema.execute schema ctx query
+```
+
+With variables parsed from JSON:
+
+```ocaml
+let query = Graphql_parser.parse "{ users(limit: $x) { name } }" in
+let json_variables = Yojson.Basic.(from_string "{\"x\": 42}" |> Util.to_assoc) in
+let variables = (json_variables :> (string * Graphql_parser.const_value) list)
+Graphql.Schema.execute schema ctx ~variables query
 ```
 
 ### Lwt Support

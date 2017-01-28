@@ -92,7 +92,7 @@
       ((alias ()) (name foo)
        (arguments
         ((size (Variable size)) (bar (Variable b))
-         (obj (Object ((key (String value)))))))
+         (obj (Assoc ((key (String value)))))))
        (directives ()) (selection_set ())))))))
  (Operation
   ((optype Query) (name ()) (variable_definitions ()) (directives ())
@@ -100,7 +100,7 @@
     ((Field
       ((alias ()) (name unnamed)
        (arguments
-        ((truthy (Boolean true)) (falsey (Boolean false)) (nullish Null)))
+        ((truthy (Bool true)) (falsey (Bool false)) (nullish Null)))
        (directives ()) (selection_set ())))
      (Field
       ((alias ()) (name query) (arguments ()) (directives ())

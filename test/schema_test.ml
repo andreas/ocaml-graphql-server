@@ -1,4 +1,3 @@
-open Graphql
 open Test_common
 
 let suite = [

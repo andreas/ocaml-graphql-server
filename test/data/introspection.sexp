@@ -62,8 +62,8 @@
       ((alias ()) (name description) (arguments ()) (directives ())
        (selection_set ())))
      (Field
-      ((alias ()) (name fields)
-       (arguments ((includeDeprecated (Boolean true)))) (directives ())
+      ((alias ()) (name fields) (arguments ((includeDeprecated (Bool true))))
+       (directives ())
        (selection_set
         ((Field
           ((alias ()) (name name) (arguments ()) (directives ())
@@ -93,7 +93,7 @@
        (selection_set ((FragmentSpread ((name TypeRef) (directives ())))))))
      (Field
       ((alias ()) (name enumValues)
-       (arguments ((includeDeprecated (Boolean true)))) (directives ())
+       (arguments ((includeDeprecated (Bool true)))) (directives ())
        (selection_set
         ((Field
           ((alias ()) (name name) (arguments ()) (directives ())
