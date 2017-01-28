@@ -8,7 +8,7 @@ type user = {
   role : role;
 }
 
-let users = [
+let users = ref [
   { id = 1; name = "Alice"; role = Admin };
   { id = 2; name = "Bob"; role = User };
 ]
@@ -35,11 +35,25 @@ let user = Schema.(obj "user"
   ])
 )
 
-let schema = Schema.(schema 
-    ~fields:[
+let input_role = Schema.Arg.(enum "role" ~values:["user", User; "admin", Admin])
+
+let schema = Schema.(schema [
       field "users"
         ~typ:(non_null (list (non_null user)))
         ~args:Arg.[]
-        ~resolve:(fun () () -> users)
+        ~resolve:(fun () () -> !users)
+    ]
+    ~mutations:[
+      field "add_user"
+        ~typ:(non_null (list (non_null user)))
+        ~args:Arg.[
+          arg "name" ~typ:(non_null string);
+          arg "role" ~typ:(non_null input_role)
+        ]
+        ~resolve:(fun () () name role ->
+          let id = Random.int 1000000 in
+          users := List.append !users [{ id; name; role }];
+          !users
+        )
     ]
 )

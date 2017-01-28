@@ -8,12 +8,12 @@ module List = struct
   let find cond xs = try Some (find_exn cond xs) with Not_found -> None
 
   module Result = struct
-    let rec join ?memo:(memo=[]) = function
+    let rec join ?(memo=[]) = function
       | [] -> Ok (List.rev memo)
       | (Error _ as err)::_ -> err
       | (Ok x)::xs -> join ~memo:(x::memo) xs
 
-    let map_join f xs =
+    let all f xs =
       List.map f xs |> join
   end
 end
@@ -44,7 +44,7 @@ module Make(Io : IO) = struct
     let ok x = Io.return (Ok x)
     let error x = Io.return (Error x)
 
-    let rec all ?memo:(memo=[]) = function
+    let rec all ?(memo=[]) = function
       | [] -> Io.return []
       | x::xs ->
           bind (all xs) (fun xs' ->
@@ -56,6 +56,14 @@ module Make(Io : IO) = struct
       let bind x f = bind x (function Ok x' -> f x' | Error _ as err -> Io.return err)
       let map x ~f = map x ~f:(function Ok x' -> Ok (f x') | Error _ as err -> err)
     end
+
+    let rec map_s ?(memo=[]) f = function
+      | [] -> Io.return (List.rev memo)
+      | x::xs ->
+          bind (f x) (fun x' -> map_s ~memo:(x'::memo) f xs)
+
+    let rec map_p f xs =
+      List.map f xs |> all
 
     module Infix = struct
       let (>>=) = bind
@@ -235,7 +243,7 @@ module Make(Io : IO) = struct
           begin match value with
           | `List values ->
               let option_values = List.map (fun x -> Some x) values in
-              List.Result.map_join (eval_arg variable_map typ) option_values >>| fun coerced ->
+              List.Result.all (eval_arg variable_map typ) option_values >>| fun coerced ->
               Some coerced
           | value -> eval_arg variable_map typ (Some value) >>| fun coerced ->
               (Some [coerced] : b)
@@ -292,14 +300,22 @@ module Make(Io : IO) = struct
 
   type 'ctx schema = {
     query : ('ctx, unit) obj;
+    mutation : ('ctx, unit) obj option;
   }
 
-  let schema ~fields = {
+  let schema ?(mutation_name="mutation") ?mutations ?(query_name="query") fields = {
     query = {
-      name = "root";
+      name = query_name;
       doc = None;
       fields = lazy fields;
-    }
+    };
+    mutation = Option.map mutations ~f:(fun fields ->
+      {
+        name = mutation_name;
+        doc = None;
+        fields = lazy fields;
+      }
+    )
   }
 
   (* Constructor functions *)
@@ -735,7 +751,11 @@ module Introspection = struct
         typ = NonNullable (List (NonNullable __type));
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ s -> fst @@ types (Object s.query)
+        resolve = fun _ s ->
+          let query_types, visited = types (Object s.query) in
+          match s.mutation with
+          | None -> query_types
+          | Some mut -> fst @@ types ~memo:(query_types, visited) (Object mut)
       };
       Field {
         name = "queryType";
@@ -751,7 +771,7 @@ module Introspection = struct
         typ = __type;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ s -> None;
+        resolve = fun _ s -> Option.map s.mutation ~f:(fun mut -> AnyTyp (Object mut))
       };
       Field {
         name = "directives";
@@ -774,13 +794,14 @@ module Introspection = struct
       resolve = fun _ _ -> s
     } in
     let fields = lazy (schema_field::(Lazy.force s.query.fields)) in
-    { query = { s.query with fields } }
+    { s with query = { s.query with fields } }
 end
 
   (* Execution *)
   type variables = (string * Graphql_parser.const_value) list
   type json_variables = (string * Yojson.Basic.json) list
   type fragment_map = Graphql_parser.fragment StringMap.t
+  type execution_order = Serial | Parallel
   type 'ctx execution_context = {
     variables : variable_map;
     fragments : fragment_map;
@@ -821,6 +842,11 @@ end
     | None -> Io.ok `Null
     | Some src' -> f src'
 
+  let map order f xs =
+    match order with
+    | Serial -> Io.map_s f xs
+    | Parallel -> Io.map_p f xs
+
   let rec present : type src. 'ctx execution_context -> src -> Graphql_parser.field -> ('ctx, src) typ -> (Yojson.Basic.json, string) result Io.t = fun ctx src query_field typ ->
     match typ with
     | Scalar s -> coerce_or_null src (fun x -> Io.return (Ok (s.coerce x)))
@@ -855,26 +881,30 @@ end
         present ctx resolved query_field field.typ >>|? fun value ->
         name, value
 
-  and resolve_fields : type src. 'ctx execution_context -> src -> ('ctx, src) obj -> Graphql_parser.field list -> (Yojson.Basic.json, string) result Io.t = fun ctx src obj fields ->
-    List.map (fun (query_field : Graphql_parser.field) ->
+  and resolve_fields : type src. 'ctx execution_context -> ?execution_order:execution_order -> src -> ('ctx, src) obj -> Graphql_parser.field list -> (Yojson.Basic.json, string) result Io.t = fun ctx ?execution_order:(execution_order=Parallel) src obj fields ->
+    map execution_order (fun (query_field : Graphql_parser.field) ->
       match field_from_object obj query_field.name with
       | Some field ->
           resolve_field ctx src query_field field
       | None ->
           Io.ok (alias_or_name query_field, `Null)
     ) fields
-    |> Io.all
     |> Io.map ~f:List.Result.join
     |> Io.Result.map ~f:(fun properties -> `Assoc properties)
 
-  let execute_operation : 'ctx schema -> 'ctx execution_context -> Graphql_parser.operation -> (Yojson.Basic.json, string) result Io.t = fun schema ctx operation ->
+  let execute_operation : 'ctx schema -> 'ctx execution_context -> fragment_map -> variable_map -> Graphql_parser.operation -> (Yojson.Basic.json, string) result Io.t = fun schema ctx fragments variables operation ->
     match operation.optype with
     | Graphql_parser.Query ->
         let query  = schema.query in
-        let fields = collect_fields ctx.fragments query operation.selection_set in
+        let fields = collect_fields fragments query operation.selection_set in
         resolve_fields ctx () query fields
     | Graphql_parser.Mutation ->
-        Io.error "Mutation is not implemented"
+        begin match schema.mutation with
+        | None -> Io.error "Schema is not configured for mutations"
+        | Some mut ->
+            let fields = collect_fields fragments mut operation.selection_set in
+            resolve_fields ~execution_order:Serial ctx () mut fields
+        end
     | Graphql_parser.Subscription ->
         Io.error "Subscription is not implemented"
 
@@ -894,10 +924,10 @@ end
     let execute' schema ctx doc =
       let fragments = collect_fragments doc in
       let variables = List.fold_left (fun memo (name, value) -> StringMap.add name value memo) StringMap.empty variables in
-      let execution_ctx = { fragments; ctx; variables; } in
+      let execution_ctx = { fragments; ctx; variables } in
       let schema' = Introspection.add_schema_field schema in
       Io.return (select_operation doc) >>=? fun op ->
-      execute_operation schema' execution_ctx op
+      execute_operation schema' execution_ctx fragments variables op
     in
     execute' schema ctx doc >>| function
     | Ok data   -> Ok (`Assoc ["data", data])

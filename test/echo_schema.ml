@@ -24,7 +24,7 @@ let person_arg = Schema.Arg.(obj "person" ~fields:Arg.[
 )
 
 let schema =
-  Schema.(schema ~fields:[
+  Schema.(schema [
       echo_field "string" string Arg.string;
       echo_field "float" float Arg.float;
       echo_field "int" int Arg.int;
