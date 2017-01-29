@@ -14,24 +14,34 @@
 </head>
 <body>
 <code class="code"><span class="keyword">sig</span>
+&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;const_value&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;<span class="keywordsign">`</span><span class="constructor">Assoc</span>&nbsp;<span class="keyword">of</span>&nbsp;(string&nbsp;*&nbsp;<span class="constructor">Graphql_parser</span>.const_value)&nbsp;list
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Bool</span>&nbsp;<span class="keyword">of</span>&nbsp;bool
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Enum</span>&nbsp;<span class="keyword">of</span>&nbsp;string
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Float</span>&nbsp;<span class="keyword">of</span>&nbsp;float
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Int</span>&nbsp;<span class="keyword">of</span>&nbsp;int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">List</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Graphql_parser</span>.const_value&nbsp;list
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Null</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">String</span>&nbsp;<span class="keyword">of</span>&nbsp;string&nbsp;]
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;const_value_of_sexp&nbsp;:&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Graphql_parser</span>.const_value
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;__const_value_of_sexp__&nbsp;:&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Graphql_parser</span>.const_value
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;sexp_of_const_value&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.const_value&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t
 &nbsp;&nbsp;<span class="keyword">type</span>&nbsp;value&nbsp;=
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">Null</span>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">Variable</span>&nbsp;<span class="keyword">of</span>&nbsp;string
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">Int</span>&nbsp;<span class="keyword">of</span>&nbsp;int
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">Float</span>&nbsp;<span class="keyword">of</span>&nbsp;float
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">String</span>&nbsp;<span class="keyword">of</span>&nbsp;string
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">Boolean</span>&nbsp;<span class="keyword">of</span>&nbsp;bool
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">Enum</span>&nbsp;<span class="keyword">of</span>&nbsp;string
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">List</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Graphql_parser</span>.value&nbsp;list
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">Object</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Graphql_parser</span>.key_value&nbsp;list
-&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;key_value&nbsp;=&nbsp;string&nbsp;*&nbsp;<span class="constructor">Graphql_parser</span>.value
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;<span class="keywordsign">`</span><span class="constructor">Assoc</span>&nbsp;<span class="keyword">of</span>&nbsp;(string&nbsp;*&nbsp;<span class="constructor">Graphql_parser</span>.value)&nbsp;list
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Bool</span>&nbsp;<span class="keyword">of</span>&nbsp;bool
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Enum</span>&nbsp;<span class="keyword">of</span>&nbsp;string
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Float</span>&nbsp;<span class="keyword">of</span>&nbsp;float
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Int</span>&nbsp;<span class="keyword">of</span>&nbsp;int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">List</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Graphql_parser</span>.value&nbsp;list
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Null</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">String</span>&nbsp;<span class="keyword">of</span>&nbsp;string
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">Variable</span>&nbsp;<span class="keyword">of</span>&nbsp;string&nbsp;]
 &nbsp;&nbsp;<span class="keyword">val</span>&nbsp;value_of_sexp&nbsp;:&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Graphql_parser</span>.value
-&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;key_value_of_sexp&nbsp;:&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Graphql_parser</span>.key_value
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;__value_of_sexp__&nbsp;:&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Graphql_parser</span>.value
 &nbsp;&nbsp;<span class="keyword">val</span>&nbsp;sexp_of_value&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.value&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t
-&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;sexp_of_key_value&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.key_value&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t
 &nbsp;&nbsp;<span class="keyword">type</span>&nbsp;directive&nbsp;=&nbsp;{
 &nbsp;&nbsp;&nbsp;&nbsp;name&nbsp;:&nbsp;string;
-&nbsp;&nbsp;&nbsp;&nbsp;arguments&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.key_value&nbsp;list;
+&nbsp;&nbsp;&nbsp;&nbsp;arguments&nbsp;:&nbsp;(string&nbsp;*&nbsp;<span class="constructor">Graphql_parser</span>.value)&nbsp;list;
 &nbsp;&nbsp;}
 &nbsp;&nbsp;<span class="keyword">val</span>&nbsp;directive_of_sexp&nbsp;:&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Graphql_parser</span>.directive
 &nbsp;&nbsp;<span class="keyword">val</span>&nbsp;sexp_of_directive&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.directive&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t
@@ -50,7 +60,7 @@
 &nbsp;&nbsp;<span class="keyword">and</span>&nbsp;field&nbsp;=&nbsp;{
 &nbsp;&nbsp;&nbsp;&nbsp;alias&nbsp;:&nbsp;string&nbsp;option;
 &nbsp;&nbsp;&nbsp;&nbsp;name&nbsp;:&nbsp;string;
-&nbsp;&nbsp;&nbsp;&nbsp;arguments&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.key_value&nbsp;list;
+&nbsp;&nbsp;&nbsp;&nbsp;arguments&nbsp;:&nbsp;(string&nbsp;*&nbsp;<span class="constructor">Graphql_parser</span>.value)&nbsp;list;
 &nbsp;&nbsp;&nbsp;&nbsp;directives&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.directive&nbsp;list;
 &nbsp;&nbsp;&nbsp;&nbsp;selection_set&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.selection&nbsp;list;
 &nbsp;&nbsp;}
@@ -84,7 +94,7 @@
 &nbsp;&nbsp;<span class="keyword">type</span>&nbsp;variable_definition&nbsp;=&nbsp;{
 &nbsp;&nbsp;&nbsp;&nbsp;name&nbsp;:&nbsp;string;
 &nbsp;&nbsp;&nbsp;&nbsp;typ&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.typ;
-&nbsp;&nbsp;&nbsp;&nbsp;default_value&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.value&nbsp;option;
+&nbsp;&nbsp;&nbsp;&nbsp;default_value&nbsp;:&nbsp;<span class="constructor">Graphql_parser</span>.const_value&nbsp;option;
 &nbsp;&nbsp;}
 &nbsp;&nbsp;<span class="keyword">val</span>&nbsp;variable_definition_of_sexp&nbsp;:
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">Sexplib</span>.<span class="constructor">Sexp</span>.t&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Graphql_parser</span>.variable_definition
