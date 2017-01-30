@@ -3,3 +3,4 @@ Graphql_parser
 Graphql_schema
 Graphql_async
 Graphql_lwt
+Graphql_intf
