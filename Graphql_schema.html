@@ -15,7 +15,8 @@
 <link title="Graphql_parser" rel="Chapter" href="Graphql_parser.html">
 <link title="Graphql_schema" rel="Chapter" href="Graphql_schema.html">
 <link title="Graphql_async" rel="Chapter" href="Graphql_async.html">
-<link title="Graphql_lwt" rel="Chapter" href="Graphql_lwt.html"><title>Graphql_schema</title>
+<link title="Graphql_lwt" rel="Chapter" href="Graphql_lwt.html">
+<link title="Graphql_intf" rel="Chapter" href="Graphql_intf.html"><title>Graphql_schema</title>
 </head>
 <body>
 <div class="navbar"><a class="pre" href="Graphql_parser.html" title="Graphql_parser">Previous</a>
@@ -27,4 +28,4 @@
 <pre><span class="keyword">module</span> Graphql_schema: <code class="code"><span class="keyword">sig</span></code> <a href="Graphql_schema.html">..</a> <code class="code"><span class="keyword">end</span></code></pre><hr width="100%">
 
 <pre><span class="keyword">module type</span> <a href="Graphql_schema.IO.html">IO</a> = <code class="code"><span class="keyword">sig</span></code> <a href="Graphql_schema.IO.html">..</a> <code class="code"><span class="keyword">end</span></code></pre>
-<pre><span class="keyword">module</span> <a href="Graphql_schema.Make.html">Make</a>: <div class="sig_block"><code class="code"><span class="keyword">functor</span> (</code><code class="code"><span class="constructor">Io</span></code><code class="code"> : </code><code class="type"><a href="Graphql_schema.IO.html">IO</a></code><code class="code">) <span class="keywordsign">-&gt;</span> </code><code class="type">Graphql_intf.Schema</code><code class="type">  with type 'a io = 'a Io.t</code></div></pre></body></html>
+<pre><span class="keyword">module</span> <a href="Graphql_schema.Make.html">Make</a>: <div class="sig_block"><code class="code"><span class="keyword">functor</span> (</code><code class="code"><span class="constructor">Io</span></code><code class="code"> : </code><code class="type"><a href="Graphql_schema.IO.html">IO</a></code><code class="code">) <span class="keywordsign">-&gt;</span> </code><code class="type"><a href="Graphql_intf.Schema.html">Graphql_intf.Schema</a></code><code class="type">  with type 'a io = 'a Io.t</code></div></pre></body></html>
