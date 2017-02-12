@@ -71,6 +71,8 @@ module Make(Io : IO) = struct
     let find k t = try Some (find_exn k t) with Missing_key _ -> None
   end
 
+  module StringSet = Set.Make(String)
+
   type variable_map = Graphql_parser.const_value StringMap.t
 
   module Arg = struct
@@ -240,7 +242,7 @@ module Make(Io : IO) = struct
 
   type ('ctx, 'src) obj = {
     name   : string;
-    fields : ('ctx, 'src) field list;
+    fields : ('ctx, 'src) field list Lazy.t;
   }
   and (_, _) field =
     Field : {
@@ -264,7 +266,7 @@ module Make(Io : IO) = struct
   let schema ~fields = {
     query = {
       name = "root";
-      fields;
+      fields = lazy fields;
     }
   }
 
@@ -272,7 +274,8 @@ module Make(Io : IO) = struct
 
   (* Constructor functions *)
   let obj ~name ~fields =
-    Object { name; fields }
+    let rec o = Object { name; fields = lazy (fields o)} in
+    o
 
   let field name ~typ ~args ~resolve =
     Field { lift = Io.return; name; typ; args; resolve }
@@ -328,19 +331,35 @@ module Introspection = struct
     | AnyArgField : (_, _) Arg.arg -> any_field
   type any_arg = AnyArg : (_, _) Arg.arg -> any_arg
 
+  let unless_visited (result, visited) name f =
+    if StringSet.mem name visited then
+      result, visited
+    else
+      f (result, visited)
+
   (* Extracts all types contained in a single type *)
-  let rec types : type src. any_typ list -> ('ctx, src) typ -> any_typ list = fun memo typ -> match typ with
-    | List typ -> types memo typ
-    | NonNullable typ -> types memo typ
-    | Scalar _ as scalar -> (AnyTyp scalar)::memo
-    | Enum _ as enum -> (AnyTyp enum)::memo
+  let rec types : type src. ?memo:(any_typ list * StringSet.t) -> ('ctx, src) typ -> (any_typ list * StringSet.t) = fun ?(memo=([], StringSet.empty)) typ ->
+    match typ with
+    | List typ -> types ~memo typ
+    | NonNullable typ -> types ~memo typ
+    | Scalar s as scalar ->
+        unless_visited memo s.name (fun (result, visited) ->
+          (AnyTyp scalar)::result, StringSet.add s.name visited
+        )
+    | Enum e as enum ->
+        unless_visited memo e.name (fun (result, visited) ->
+          (AnyTyp enum)::result, StringSet.add e.name visited
+        )
     | Object o as obj ->
-        let memo'   = (AnyTyp obj)::memo in
-        let reducer = fun memo (Field f) ->
-          let memo' = types memo f.typ in
-          arg_list_types memo' f.args
-        in
-        List.fold_left reducer memo' o.fields
+        unless_visited memo o.name (fun (result, visited) ->
+          let result'  = (AnyTyp obj)::result in
+          let visited' = StringSet.add o.name visited in
+          let reducer = fun memo (Field f) ->
+            let result', visited' = types ~memo f.typ in
+            arg_list_types result' f.args, visited'
+          in
+          List.fold_left reducer (result', visited') (Lazy.force o.fields)
+        )
   and arg_types : type a b. any_typ list -> (a, b) Arg.arg_typ -> any_typ list = fun memo argtyp ->
     match argtyp with
     | Arg.Scalar _ as scalar -> (AnyArgTyp scalar)::memo
@@ -383,7 +402,7 @@ module Introspection = struct
 
   let __enum_value = Object {
     name = "__EnumValue";
-    fields = [
+    fields = lazy [
       Field {
         name = "name";
         typ = NonNullable string;
@@ -417,7 +436,7 @@ module Introspection = struct
 
   let rec __input_value : 'ctx. ('ctx, any_arg option) typ = Object {
     name = "__InputValue";
-    fields = [
+    fields = lazy [
       Field {
         name = "name";
         typ = NonNullable string;
@@ -451,7 +470,7 @@ module Introspection = struct
 
   and __type : 'ctx. ('ctx, any_typ option) typ = Object {
     name = "__Type";
-    fields = [
+    fields = lazy [
       Field {
         name = "kind";
         typ = NonNullable __type_kind;
@@ -497,7 +516,7 @@ module Introspection = struct
         lift = Io.return;
         resolve = fun _ t -> match t with
           | AnyTyp (Object o) ->
-              Some (List.map (fun f -> AnyField f) o.fields)
+              Some (List.map (fun f -> AnyField f) (Lazy.force o.fields))
           | AnyArgTyp (Arg.Object o) ->
               let arg_list = args_to_list o.fields in
               Some (List.map (fun (AnyArg f) -> AnyArgField f) arg_list)
@@ -556,7 +575,7 @@ module Introspection = struct
 
   and __field : 'ctx. ('ctx, any_field option) typ = Object {
     name = "__Field";
-    fields = [
+    fields = lazy [
       Field {
         name = "name";
         typ = NonNullable string;
@@ -610,7 +629,7 @@ module Introspection = struct
 
   let __directive = Object {
     name = "__Directive";
-    fields = [
+    fields = lazy [
       Field {
         name = "name";
         typ = NonNullable string;
@@ -623,20 +642,20 @@ module Introspection = struct
 
   let __schema : 'ctx. ('ctx, 'ctx schema option) typ = Object {
     name = "__Schema";
-    fields = [
+    fields = lazy [
       Field {
         name = "types";
         typ = NonNullable (List (NonNullable __type));
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ s -> types [] (Object s.query);
+        resolve = fun _ s -> fst @@ types (Object s.query)
       };
       Field {
         name = "queryType";
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ s -> AnyTyp (Object s.query);
+        resolve = fun _ s -> AnyTyp (Object s.query)
       };
       Field {
         name = "mutationType";
@@ -663,7 +682,8 @@ module Introspection = struct
       lift = Io.return;
       resolve = fun _ _ -> s
     } in
-    { query = { s.query with fields = schema_field::s.query.fields } }
+    let fields = lazy (schema_field::(Lazy.force s.query.fields)) in
+    { query = { s.query with fields } }
 end
 
   (* Execution *)
@@ -703,7 +723,7 @@ end
     | None -> field.name
 
   let field_from_object : ('ctx, 'src) obj -> string -> ('ctx, 'src) field option = fun obj field_name ->
-    List.find (fun (Field field) -> field.name = field_name) obj.fields
+    List.find (fun (Field field) -> field.name = field_name) (Lazy.force obj.fields)
 
   let coerce_or_null : 'a option -> ('a -> (Yojson.Basic.json, string) result Io.t) -> (Yojson.Basic.json, string) result Io.t = fun src f ->
     match src with

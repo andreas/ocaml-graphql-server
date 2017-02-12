@@ -58,7 +58,7 @@ let role = Schema.enum
 
 let user = Schema.(obj
   ~name:"user"
-  ~fields:[
+  ~fields:(fun _ -> [
     field "id"
       ~typ:(non_null int)
       ~args:Arg.[]
@@ -73,7 +73,7 @@ let user = Schema.(obj
       ~typ:(non_null role)
       ~args:Arg.[]
       ~resolve:(fun () p -> p.role)
-  ]
+  ])
 )
 
 let schema = Schema.(schema 
@@ -102,6 +102,32 @@ let query = Graphql_parser.parse "{ users(limit: $x) { name } }" in
 let json_variables = Yojson.Basic.(from_string "{\"x\": 42}" |> Util.to_assoc) in
 let variables = (json_variables :> (string * Graphql_parser.const_value) list)
 Graphql.Schema.execute schema ctx ~variables query
+```
+
+### Recursive Objects
+
+To allow defining an object that refers to itself, the type itself is provided as argument to the `~fields` function. Example:
+
+```ocaml
+type tweet = {
+  id : int;
+  replies : tweet list;
+}
+
+let tweet = Schema.(obj
+  ~name:"tweet"
+  ~fields:(fun tweet -> [
+    field "id"
+      ~typ:(non_null int)
+      ~args:Arg.[]
+      ~resolver:(fun ctx t -> t.id)
+    ;
+    field "replies"
+      ~typ:(non_null (list tweet))
+      ~args:Arg.[]
+      ~resolver:(fun ctx t -> t.replies)
+  ])
+)
 ```
 
 ### Lwt Support
@@ -155,7 +181,7 @@ The following types ensure this:
 ```ocaml
 type ('ctx, 'src) obj = {
   name   : string;
-  fields : ('ctx, 'src) field list;
+  fields : ('ctx, 'src) field list Lazy.t;
 }
 and ('ctx, 'src) field =
   Field : {

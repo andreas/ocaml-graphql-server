@@ -19,7 +19,7 @@ let role = Schema.enum
 
 let user = Schema.(obj
   ~name:"user"
-  ~fields:[
+  ~fields:(fun _ -> [
     field "id"
       ~typ:(non_null int)
       ~args:Arg.[]
@@ -34,7 +34,7 @@ let user = Schema.(obj
       ~typ:(non_null role)
       ~args:Arg.[]
       ~resolve:(fun () p -> p.role)
-  ]
+  ])
 )
 
 let schema = Schema.(schema 

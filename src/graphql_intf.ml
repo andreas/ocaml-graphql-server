@@ -16,7 +16,7 @@ module type Schema = sig
               'ctx schema
 
   val obj : name:string ->
-            fields:('ctx, 'src) field list ->
+            fields:(('ctx, 'src option) typ -> ('ctx, 'src) field list) ->
             ('ctx, 'src option) typ
 
   module Arg : sig
