@@ -9,12 +9,13 @@ type user = {
   id   : int;
   name : string;
   role : role;
+  friends : user list;
 }
 
-let users = [
-  { id = 1; name = "Alice"; role = Admin };
-  { id = 2; name = "Bob"; role = User }
-]
+let rec alice = { id = 1; name = "Alice"; role = Admin; friends = [bob] }
+and bob = { id = 2; name = "Bob"; role = User; friends = [alice]}
+
+let users = [alice; bob]
 
 let role = Schema.enum
   ~name:"role"
@@ -22,7 +23,7 @@ let role = Schema.enum
 
 let user = Schema.(obj
   ~name:"user"
-  ~fields:[
+  ~fields:(fun user -> [
     field "id"
       ~args:Arg.[]
       ~typ:(non_null int)
@@ -37,7 +38,12 @@ let user = Schema.(obj
       ~args:Arg.[]
       ~typ:(non_null role)
       ~resolve:(fun () p -> p.role)
-  ]
+    ;
+    field "friends"
+      ~args:Arg.[]
+      ~typ:(list (non_null user))
+      ~resolve:(fun () p -> Some p.friends)
+  ])
 )
 
 let schema = Schema.(schema 
