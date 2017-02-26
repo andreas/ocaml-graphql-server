@@ -57,7 +57,7 @@ let schema = Schema.(schema
         ~typ:string
         ~args:Arg.[
           arg "config" ~typ:(non_null (obj ~name:"greeter_config" ~coerce:(fun greeting name -> (greeting, name)) ~fields:[
-            arg "greeting" ~typ:(non_null string);
+            arg' "greeting" ~typ:string ~default:"hello";
             arg "name" ~typ:(non_null string)
           ]))
         ]

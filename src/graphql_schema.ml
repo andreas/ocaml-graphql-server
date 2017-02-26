@@ -75,6 +75,8 @@ module Make(Io : IO) = struct
 
   type variable_map = Graphql_parser.const_value StringMap.t
 
+  let id : 'a. 'a -> 'a = fun x -> x
+
   module Arg = struct
     open Rresult
 
@@ -94,17 +96,20 @@ module Make(Io : IO) = struct
         } -> ('a, 'b option -> 'a) arg_typ
       | List : ('a, 'b -> 'a) arg_typ -> ('a, 'b list option -> 'a) arg_typ
       | NonNullable : ('a, 'b option -> 'a) arg_typ -> ('a, 'b -> 'a) arg_typ
-    and ('a, 'b) arg = {
-      name : string;
-      typ : ('a, 'b) arg_typ;
-      default : 'a option;
-    }
+    and ('a, 'b) arg = Arg : {
+        name : string;
+        typ : ('a, 'c -> 'a) arg_typ;
+        default : 'c -> 'b
+      } -> ('a, 'b -> 'a) arg
     and (_, _) arg_list =
       | [] : ('a, 'a) arg_list
       | (::) : ('b, 'c -> 'b) arg * ('a, 'b) arg_list -> ('a, 'c -> 'b) arg_list
 
-    let arg ?default:(default=None) name ~typ =
-      { name; typ; default }
+    let arg name ~typ =
+      Arg { name; typ; default = id }
+
+    let arg' name ~typ ~default =
+      Arg { name; typ; default = function None -> default | Some v -> v }
 
     let scalar ~name ~coerce =
       Scalar { name; coerce }
@@ -173,12 +178,13 @@ module Make(Io : IO) = struct
       fun variable_map arglist key_values f ->
         match arglist with
         | [] -> Ok f
-        | arg::arglist' ->
+        | (Arg arg)::arglist' ->
             try
               let value = List.assoc arg.name key_values in
               let const_value = Option.map value ~f:(value_to_const_value variable_map) in
               eval_arg variable_map arg.typ const_value >>= fun coerced ->
-              eval_arglist variable_map arglist' key_values (f coerced)
+              let coerced_or_default = arg.default coerced in
+              eval_arglist variable_map arglist' key_values (f coerced_or_default)
             with StringMap.Missing_key key -> Error (Format.sprintf "Missing variable `%s`" key)
 
     and eval_arg : type a b. variable_map -> (a, b -> a) arg_typ -> Graphql_parser.const_value option -> (b, string) result = fun variable_map typ value ->
@@ -269,8 +275,6 @@ module Make(Io : IO) = struct
       fields = lazy fields;
     }
   }
-
-  let id : 'a. 'a -> 'a = fun x -> x
 
   (* Constructor functions *)
   let obj ~name ~fields =
@@ -373,7 +377,7 @@ module Introspection = struct
     let open Arg in
     match arglist with
     | [] -> memo
-    | arg::args ->
+    | (Arg arg)::args ->
         let memo' = arg_types memo arg.typ in
         arg_list_types memo' args
 
@@ -442,7 +446,7 @@ module Introspection = struct
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ (AnyArg v) -> v.name
+        resolve = fun _ (AnyArg (Arg.Arg v)) -> v.name
       };
       Field {
         name = "description";
@@ -456,14 +460,14 @@ module Introspection = struct
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ (AnyArg v) -> AnyArgTyp v.typ;
+        resolve = fun _ (AnyArg (Arg.Arg v)) -> AnyArgTyp v.typ;
       };
       Field {
         name = "defaultValue";
         typ = string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ v -> None;
+        resolve = fun _ (AnyArg v) -> None (* Arg.arg_default_value_as_string v.typ*)
       }
     ]
   }
@@ -583,7 +587,7 @@ module Introspection = struct
         lift = Io.return;
         resolve = fun _ f -> match f with
           | AnyField (Field f) -> f.name
-          | AnyArgField a -> a.name
+          | AnyArgField (Arg.Arg a) -> a.name
       };
       Field {
         name = "description";
@@ -608,7 +612,7 @@ module Introspection = struct
         lift = Io.return;
         resolve = fun _ f -> match f with
           | AnyField (Field f) -> AnyTyp f.typ
-          | AnyArgField a -> AnyArgTyp a.typ
+          | AnyArgField (Arg.Arg a) -> AnyArgTyp a.typ
       };
       Field {
         name = "isDeprecated";
