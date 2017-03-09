@@ -15,7 +15,8 @@ module type Schema = sig
   val schema : fields:('ctx, unit) field list ->
               'ctx schema
 
-  val obj : name:string ->
+  val obj : ?doc:string ->
+            string ->
             fields:(('ctx, 'src option) typ -> ('ctx, 'src) field list) ->
             ('ctx, 'src option) typ
 
@@ -27,24 +28,29 @@ module type Schema = sig
       | [] : ('a, 'a) arg_list
       | (::) : ('b, 'c -> 'b) arg * ('a, 'b) arg_list -> ('a, 'c -> 'b) arg_list
 
-    val arg : string ->
+    val arg : ?doc:string ->
+              string ->
               typ:('a, 'b -> 'a) arg_typ ->
               ('a, 'b -> 'a) arg
 
-    val arg' : string ->
-              typ:('a, 'b option -> 'a) arg_typ ->
-              default:'b ->
-              ('a, 'b -> 'a) arg
+    val arg' : ?doc:string ->
+               string ->
+               typ:('a, 'b option -> 'a) arg_typ ->
+               default:'b ->
+               ('a, 'b -> 'a) arg
 
-    val scalar : name:string ->
-                coerce:(Graphql_parser.const_value -> ('b, string) result) ->
-                ('a, 'b option -> 'a) arg_typ
+    val scalar : ?doc:string ->
+                 string ->
+                 coerce:(Graphql_parser.const_value -> ('b, string) result) ->
+                 ('a, 'b option -> 'a) arg_typ
 
-    val enum : name:string ->
-              values:(string * 'b) list ->
-              ('a, 'b option -> 'a) arg_typ
+    val enum : ?doc:string ->
+               string ->
+               values:(string * 'b) list ->
+               ('a, 'b option -> 'a) arg_typ
 
-    val obj : name:string ->
+    val obj : ?doc:string ->
+              string ->
               fields:('c, 'b) arg_list ->
               coerce:'b ->
               ('a, 'c option -> 'a) arg_typ
@@ -59,25 +65,29 @@ module type Schema = sig
     val non_null : ('a, 'b option -> 'a) arg_typ -> ('a, 'b -> 'a) arg_typ
   end
 
-  val field : string ->
+  val field : ?doc:string ->
+              string ->
               typ:('ctx, 'a) typ ->
               args:('a, 'b) Arg.arg_list ->
               resolve:('ctx -> 'src -> 'b) ->
               ('ctx, 'src) field
 
-  val io_field : string ->
-                  typ:('ctx, 'a) typ ->
-                  args:('a io, 'b) Arg.arg_list ->
-                  resolve:('ctx -> 'src -> 'b) ->
-                  ('ctx, 'src) field
+  val io_field : ?doc:string ->
+                 string ->
+                 typ:('ctx, 'a) typ ->
+                 args:('a io, 'b) Arg.arg_list ->
+                 resolve:('ctx -> 'src -> 'b) ->
+                 ('ctx, 'src) field
 
-  val enum : name:string ->
-            values:('a * string) list ->
-            ('ctx, 'a option) typ
+  val enum : ?doc:string ->
+             string ->
+             values:('a * string) list ->
+             ('ctx, 'a option) typ
 
-  val scalar : name:string ->
-              coerce:('a -> Yojson.Basic.json) ->
-              ('ctx, 'a option) typ
+  val scalar : ?doc:string ->
+               string ->
+               coerce:('a -> Yojson.Basic.json) ->
+               ('ctx, 'a option) typ
 
   val list : ('ctx, 'src) typ -> ('ctx, 'src list option) typ
 
