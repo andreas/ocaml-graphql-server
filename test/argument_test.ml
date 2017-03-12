@@ -46,4 +46,7 @@ let suite : (string * [>`Quick] * (unit -> unit)) list = [
   ("input coercion: string to ID", `Quick, fun () ->
     test_query "{ id(x: \"42\") }" "{\"data\":{\"id\":\"42\"}}"
   );
+  ("default arguments", `Quick, fun () ->
+    test_query "{ sum_defaults }" "{\"data\":{\"sum_defaults\":45}}"
+  )
 ]

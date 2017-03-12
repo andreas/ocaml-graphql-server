@@ -27,10 +27,14 @@ module type Schema = sig
       | [] : ('a, 'a) arg_list
       | (::) : ('b, 'c -> 'b) arg * ('a, 'b) arg_list -> ('a, 'c -> 'b) arg_list
 
-    val arg : ?default:'a option ->
-              string ->
-              typ:('a, 'b) arg_typ ->
-              ('a, 'b) arg
+    val arg : string ->
+              typ:('a, 'b -> 'a) arg_typ ->
+              ('a, 'b -> 'a) arg
+
+    val arg' : string ->
+              typ:('a, 'b option -> 'a) arg_typ ->
+              default:'b ->
+              ('a, 'b -> 'a) arg
 
     val scalar : name:string ->
                 coerce:(Graphql_parser.const_value -> ('b, string) result) ->

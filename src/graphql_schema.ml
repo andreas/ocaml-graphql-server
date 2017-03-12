@@ -20,8 +20,9 @@ end
 
 module Option = struct
   let return x = Some x
-  let bind x f = match x with | None -> None | Some y -> f y
-  let map x ~f = match x with | None -> None | Some y -> Some (f y)
+  let bind x f = match x with None -> None | Some y -> f y
+  let map x ~f = match x with None -> None | Some y -> Some (f y)
+  let or_default x default = match x with None -> default | Some x -> x
 end
 
 (* IO *)
@@ -75,6 +76,8 @@ module Make(Io : IO) = struct
 
   type variable_map = Graphql_parser.const_value StringMap.t
 
+  let id : 'a. 'a -> 'a = fun x -> x
+
   module Arg = struct
     open Rresult
 
@@ -94,17 +97,25 @@ module Make(Io : IO) = struct
         } -> ('a, 'b option -> 'a) arg_typ
       | List : ('a, 'b -> 'a) arg_typ -> ('a, 'b list option -> 'a) arg_typ
       | NonNullable : ('a, 'b option -> 'a) arg_typ -> ('a, 'b -> 'a) arg_typ
-    and ('a, 'b) arg = {
-      name : string;
-      typ : ('a, 'b) arg_typ;
-      default : 'a option;
-    }
+    and ('a, 'b) arg =
+      | Arg : {
+          name : string;
+          typ : ('a, 'b) arg_typ;
+        } -> ('a, 'b) arg
+      | DefaultArg : {
+          name : string;
+          typ : ('a, 'b option -> 'a) arg_typ;
+          default : 'b;
+        } -> ('a, 'b -> 'a) arg
     and (_, _) arg_list =
       | [] : ('a, 'a) arg_list
       | (::) : ('b, 'c -> 'b) arg * ('a, 'b) arg_list -> ('a, 'c -> 'b) arg_list
 
-    let arg ?default:(default=None) name ~typ =
-      { name; typ; default }
+    let arg name ~typ =
+      Arg { name; typ }
+
+    let arg' name ~typ ~default =
+      DefaultArg { name; typ; default }
 
     let scalar ~name ~coerce =
       Scalar { name; coerce }
@@ -173,7 +184,13 @@ module Make(Io : IO) = struct
       fun variable_map arglist key_values f ->
         match arglist with
         | [] -> Ok f
-        | arg::arglist' ->
+        | (DefaultArg arg)::arglist' ->
+            let arglist'' = (Arg { name = arg.name; typ = arg.typ })::arglist' in
+            eval_arglist variable_map arglist'' key_values (function
+              | None -> f arg.default
+              | Some value -> f value
+            )
+        | (Arg arg)::arglist' ->
             try
               let value = List.assoc arg.name key_values in
               let const_value = Option.map value ~f:(value_to_const_value variable_map) in
@@ -269,8 +286,6 @@ module Make(Io : IO) = struct
       fields = lazy fields;
     }
   }
-
-  let id : 'a. 'a -> 'a = fun x -> x
 
   (* Constructor functions *)
   let obj ~name ~fields =
@@ -374,8 +389,10 @@ module Introspection = struct
     match arglist with
     | [] -> memo
     | arg::args ->
-        let memo' = arg_types memo arg.typ in
-        arg_list_types memo' args
+        let memo' = match arg with
+        | Arg a -> arg_types memo a.typ
+        | DefaultArg a -> arg_types memo a.typ
+        in arg_list_types memo' args
 
   let rec args_to_list : type a b. ?memo:any_arg list -> (a, b) Arg.arg_list -> any_arg list = fun ?memo:(memo=[]) arglist ->
     let open Arg in
@@ -442,7 +459,9 @@ module Introspection = struct
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ (AnyArg v) -> v.name
+        resolve = fun _ arg -> match arg with
+          | AnyArg (Arg.DefaultArg a) -> a.name
+          | AnyArg (Arg.Arg a) -> a.name
       };
       Field {
         name = "description";
@@ -456,14 +475,16 @@ module Introspection = struct
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ (AnyArg v) -> AnyArgTyp v.typ;
+        resolve = fun _ arg -> match arg with
+          | AnyArg (Arg.DefaultArg a) -> AnyArgTyp a.typ
+          | AnyArg (Arg.Arg a) -> AnyArgTyp a.typ
       };
       Field {
         name = "defaultValue";
         typ = string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ v -> None;
+        resolve = fun _ (AnyArg v) -> None
       }
     ]
   }
@@ -583,7 +604,8 @@ module Introspection = struct
         lift = Io.return;
         resolve = fun _ f -> match f with
           | AnyField (Field f) -> f.name
-          | AnyArgField a -> a.name
+          | AnyArgField (Arg.Arg a) -> a.name
+          | AnyArgField (Arg.DefaultArg a) -> a.name
       };
       Field {
         name = "description";
@@ -608,7 +630,8 @@ module Introspection = struct
         lift = Io.return;
         resolve = fun _ f -> match f with
           | AnyField (Field f) -> AnyTyp f.typ
-          | AnyArgField a -> AnyArgTyp a.typ
+          | AnyArgField (Arg.Arg a) -> AnyArgTyp a.typ
+          | AnyArgField (Arg.DefaultArg a) -> AnyArgTyp a.typ
       };
       Field {
         name = "isDeprecated";

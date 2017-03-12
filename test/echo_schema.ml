@@ -38,4 +38,12 @@ let schema =
               arg "x" ~typ:(non_null person_arg)
             ]
             ~resolve:(fun () () (title, first, last) -> first ^ " " ^ last)
+            ;
+      field "sum_defaults"
+            ~typ:int
+            ~args:Arg.[
+              arg' "x" ~typ:string ~default:"42";
+              arg' "y" ~typ:int ~default:3
+            ]
+            ~resolve:(fun () () x y -> try Some ((int_of_string x) + y) with _ -> None)
   ])
