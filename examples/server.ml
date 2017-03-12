@@ -17,12 +17,10 @@ and bob = { id = 2; name = "Bob"; role = User; friends = [alice]}
 
 let users = [alice; bob]
 
-let role = Schema.enum
-  ~name:"role"
+let role = Schema.enum "role"
   ~values:[(User, "user"); (Admin, "admin")]
 
-let user = Schema.(obj
-  ~name:"user"
+let user = Schema.(obj "user"
   ~fields:(fun user -> [
     field "id"
       ~args:Arg.[]
@@ -56,7 +54,7 @@ let schema = Schema.(schema
       field "greeter"
         ~typ:string
         ~args:Arg.[
-          arg "config" ~typ:(non_null (obj ~name:"greeter_config" ~coerce:(fun greeting name -> (greeting, name)) ~fields:[
+          arg "config" ~typ:(non_null (obj "greeter_config" ~coerce:(fun greeting name -> (greeting, name)) ~fields:[
             arg' "greeting" ~typ:string ~default:"hello";
             arg "name" ~typ:(non_null string)
           ]))

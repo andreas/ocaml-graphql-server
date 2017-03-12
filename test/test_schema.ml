@@ -13,12 +13,10 @@ let users = [
   { id = 2; name = "Bob"; role = User };
 ]
 
-let role = Schema.enum
-  ~name:"role"
+let role = Schema.enum "role"
   ~values:[(User, "user"); (Admin, "admin")]
 
-let user = Schema.(obj
-  ~name:"user"
+let user = Schema.(obj "user"
   ~fields:(fun _ -> [
     field "id"
       ~typ:(non_null int)

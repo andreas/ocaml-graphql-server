@@ -84,15 +84,18 @@ module Make(Io : IO) = struct
     type (_, _) arg_typ =
       | Scalar : {
           name   : string;
+          doc    : string option;
           coerce : Graphql_parser.const_value -> ('b, string) result;
         } -> ('a, 'b option -> 'a) arg_typ
       | Object : {
           name   : string;
+          doc    : string option;
           fields : ('a, 'b) arg_list;
           coerce : 'b;
         } -> ('c, 'a option -> 'c) arg_typ
       | Enum : {
           name   : string;
+          doc    : string option;
           values : (string * 'b) list;
         } -> ('a, 'b option -> 'a) arg_typ
       | List : ('a, 'b -> 'a) arg_typ -> ('a, 'b list option -> 'a) arg_typ
@@ -100,10 +103,12 @@ module Make(Io : IO) = struct
     and ('a, 'b) arg =
       | Arg : {
           name : string;
+          doc : string option;
           typ : ('a, 'b) arg_typ;
         } -> ('a, 'b) arg
       | DefaultArg : {
           name : string;
+          doc : string option;
           typ : ('a, 'b option -> 'a) arg_typ;
           default : 'b;
         } -> ('a, 'b -> 'a) arg
@@ -111,24 +116,25 @@ module Make(Io : IO) = struct
       | [] : ('a, 'a) arg_list
       | (::) : ('b, 'c -> 'b) arg * ('a, 'b) arg_list -> ('a, 'c -> 'b) arg_list
 
-    let arg name ~typ =
-      Arg { name; typ }
+    let arg ?doc name ~typ =
+      Arg { name; doc; typ }
 
-    let arg' name ~typ ~default =
-      DefaultArg { name; typ; default }
+    let arg' ?doc name ~typ ~default =
+      DefaultArg { name; doc; typ; default }
 
-    let scalar ~name ~coerce =
-      Scalar { name; coerce }
+    let scalar ?doc name ~coerce =
+      Scalar { name; doc; coerce }
 
-    let enum ~name ~values =
-      Enum { name; values }
+    let enum ?doc name ~values =
+      Enum { name; doc; values }
 
-    let obj ~name ~fields ~coerce =
-      Object { name; fields; coerce }
+    let obj ?doc name ~fields ~coerce =
+      Object { name; doc; fields; coerce }
 
     (* Built-in argument types *)
     let int = Scalar {
       name = "Int";
+      doc = None;
       coerce = function
         | `Int n -> Ok n
         | _ -> Error "Invalid int"
@@ -136,6 +142,7 @@ module Make(Io : IO) = struct
 
     let string = Scalar {
       name = "String";
+      doc = None;
       coerce = function
         | `String s -> Ok s
         | _ -> Error "Invalid string"
@@ -143,6 +150,7 @@ module Make(Io : IO) = struct
 
     let float = Scalar {
       name = "Float";
+      doc = None;
       coerce = function
         | `Float f -> Ok f
         | `Int n -> Ok (float_of_int n)
@@ -151,6 +159,7 @@ module Make(Io : IO) = struct
 
     let bool = Scalar {
       name = "Boolean";
+      doc = None;
       coerce = function
         | `Bool b -> Ok b
         | _ -> Error "Invalid boolean"
@@ -158,6 +167,7 @@ module Make(Io : IO) = struct
 
     let guid = Scalar {
       name = "ID";
+      doc = None;
       coerce = function
         | `String s -> Ok s
         | `Int n -> Ok (string_of_int n)
@@ -185,7 +195,7 @@ module Make(Io : IO) = struct
         match arglist with
         | [] -> Ok f
         | (DefaultArg arg)::arglist' ->
-            let arglist'' = (Arg { name = arg.name; typ = arg.typ })::arglist' in
+            let arglist'' = (Arg { name = arg.name; doc = arg.doc; typ = arg.typ })::arglist' in
             eval_arglist variable_map arglist'' key_values (function
               | None -> f arg.default
               | Some value -> f value
@@ -248,22 +258,26 @@ module Make(Io : IO) = struct
 
   (* Schema data types *)
   type 'a scalar = {
-    name    : string;
+    name   : string;
+    doc    : string option;
     coerce : 'a -> Yojson.Basic.json;
   }
 
   type 'a enum = {
     name    : string;
+    doc     : string option;
     values  : ('a * string) list;
   }
 
   type ('ctx, 'src) obj = {
     name   : string;
+    doc    : string option;
     fields : ('ctx, 'src) field list Lazy.t;
   }
   and (_, _) field =
     Field : {
       name    : string;
+      doc     : string option;
       typ     : ('ctx, 'io_out) typ;
       args    : ('maybe_io_out, 'args) Arg.arg_list;
       resolve : 'ctx -> 'src -> 'args;
@@ -283,26 +297,27 @@ module Make(Io : IO) = struct
   let schema ~fields = {
     query = {
       name = "root";
+      doc = None;
       fields = lazy fields;
     }
   }
 
   (* Constructor functions *)
-  let obj ~name ~fields =
-    let rec o = Object { name; fields = lazy (fields o)} in
+  let obj ?doc name ~fields =
+    let rec o = Object { name; doc; fields = lazy (fields o)} in
     o
 
-  let field name ~typ ~args ~resolve =
-    Field { lift = Io.return; name; typ; args; resolve }
+  let field ?doc name ~typ ~args ~resolve =
+    Field { lift = Io.return; name; doc; typ; args; resolve }
 
-  let io_field name ~typ ~args ~resolve =
-    Field { lift = id; name; typ; args; resolve }
+  let io_field ?doc name ~typ ~args ~resolve =
+    Field { lift = id; name; doc; typ; args; resolve }
 
-  let enum ~name ~values =
-    Enum { name; values }
+  let enum ?doc name ~values =
+    Enum { name; doc; values }
 
-  let scalar ~name ~coerce =
-    Scalar { name; coerce }
+  let scalar ?doc name ~coerce =
+    Scalar { name; doc; coerce }
 
   let list typ =
     List typ
@@ -313,26 +328,31 @@ module Make(Io : IO) = struct
   (* Built-in scalars *)
   let int : 'ctx. ('ctx, int option) typ = Scalar {
     name   = "Int";
+    doc    = None;
     coerce = fun i -> `Int i;
   }
 
   let string : 'ctx. ('ctx, string option) typ = Scalar {
     name   = "String";
+    doc    = None;
     coerce = fun s ->`String s;
   }
 
   let bool : 'ctx. ('ctx, bool option) typ = Scalar {
-    name = "Boolean";
+    name   = "Boolean";
+    doc    = None;
     coerce = fun b -> `Bool b;
   }
 
   let float : 'ctx. ('ctx, float option) typ = Scalar {
-    name = "Float";
+    name   = "Float";
+    doc    = None;
     coerce = fun f -> `Float f;
   }
 
   let guid : 'ctx. ('ctx, string option) typ = Scalar {
-    name = "ID";
+    name   = "ID";
+    doc    = None;
     coerce = fun x -> `String x;
   }
 
@@ -405,6 +425,7 @@ module Introspection = struct
 
   let __type_kind = Enum {
     name = "__TypeKind";
+    doc = None;
     values = [
       (`Scalar, "SCALAR");
       (`Object, "OBJECT");
@@ -419,9 +440,11 @@ module Introspection = struct
 
   let __enum_value = Object {
     name = "__EnumValue";
+    doc = None;
     fields = lazy [
       Field {
         name = "name";
+        doc = None;
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
@@ -429,6 +452,7 @@ module Introspection = struct
       };
       Field {
         name = "description";
+        doc = None;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -436,6 +460,7 @@ module Introspection = struct
       };
       Field {
         name = "isDeprecated";
+        doc = None;
         typ = NonNullable bool;
         args = Arg.[];
         lift = Io.return;
@@ -443,6 +468,7 @@ module Introspection = struct
       };
       Field {
         name = "deprecationReason";
+        doc = None;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -453,34 +479,41 @@ module Introspection = struct
 
   let rec __input_value : 'ctx. ('ctx, any_arg option) typ = Object {
     name = "__InputValue";
+    doc = None;
     fields = lazy [
       Field {
         name = "name";
+        doc = None;
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ arg -> match arg with
-          | AnyArg (Arg.DefaultArg a) -> a.name
-          | AnyArg (Arg.Arg a) -> a.name
+        resolve = fun _ (AnyArg arg) -> match arg with
+          | Arg.DefaultArg a -> a.name
+          | Arg.Arg a -> a.name
       };
       Field {
         name = "description";
+        doc = None;
         typ = string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ _ -> None;
+        resolve = fun _ (AnyArg arg) -> match arg with
+          | Arg.DefaultArg a -> a.doc
+          | Arg.Arg a -> a.doc
       };
       Field {
         name = "type";
+        doc = None;
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ arg -> match arg with
-          | AnyArg (Arg.DefaultArg a) -> AnyArgTyp a.typ
-          | AnyArg (Arg.Arg a) -> AnyArgTyp a.typ
+        resolve = fun _ (AnyArg arg) -> match arg with
+          | Arg.DefaultArg a -> AnyArgTyp a.typ
+          | Arg.Arg a -> AnyArgTyp a.typ
       };
       Field {
         name = "defaultValue";
+        doc = None;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -491,9 +524,11 @@ module Introspection = struct
 
   and __type : 'ctx. ('ctx, any_typ option) typ = Object {
     name = "__Type";
+    doc = None;
     fields = lazy [
       Field {
         name = "kind";
+        doc = None;
         typ = NonNullable __type_kind;
         args = Arg.[];
         lift = Io.return;
@@ -511,6 +546,7 @@ module Introspection = struct
       };
       Field {
         name = "name";
+        doc = None;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -518,20 +554,29 @@ module Introspection = struct
           | AnyTyp (Object o) -> Some o.name
           | AnyTyp (Scalar s) -> Some s.name
           | AnyTyp (Enum e) -> Some e.name
-          | AnyArgTyp (Arg.Object o) -> Some o.name;
-          | AnyArgTyp (Arg.Scalar s) -> Some s.name;
+          | AnyArgTyp (Arg.Object o) -> Some o.name
+          | AnyArgTyp (Arg.Scalar s) -> Some s.name
           | AnyArgTyp (Arg.Enum e) -> Some e.name
           | _ -> None;
       };
       Field {
         name = "description";
+        doc = None;
         typ = string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ t -> None;
+        resolve = fun _ t -> match t with
+          | AnyTyp (Object o) -> o.doc
+          | AnyTyp (Scalar s) -> s.doc
+          | AnyTyp (Enum e) -> e.doc
+          | AnyArgTyp (Arg.Object o) -> o.doc
+          | AnyArgTyp (Arg.Scalar s) -> s.doc
+          | AnyArgTyp (Arg.Enum e) -> e.doc
+          | _ -> None
       };
       Field {
         name = "fields";
+        doc = None;
         typ = List (NonNullable __field);
         args = Arg.[];
         lift = Io.return;
@@ -545,6 +590,7 @@ module Introspection = struct
       };
       Field {
         name = "interfaces";
+        doc = None;
         typ = List __type;
         args = Arg.[];
         lift = Io.return;
@@ -554,6 +600,7 @@ module Introspection = struct
       };
       Field {
         name = "possibleTypes";
+        doc = None;
         typ = List __type;
         args = Arg.[];
         lift = Io.return;
@@ -561,6 +608,7 @@ module Introspection = struct
       };
       Field {
         name = "ofType";
+        doc = None;
         typ = __type;
         args = Arg.[];
         lift = Io.return;
@@ -573,6 +621,7 @@ module Introspection = struct
       };
       Field {
         name = "inputFields";
+        doc = None;
         typ = List (NonNullable __input_value);
         args = Arg.[];
         lift = Io.return;
@@ -583,6 +632,7 @@ module Introspection = struct
       };
       Field {
         name = "enumValues";
+        doc = None;
         typ = List (NonNullable __enum_value);
         args = Arg.[];
         lift = Io.return;
@@ -596,9 +646,11 @@ module Introspection = struct
 
   and __field : 'ctx. ('ctx, any_field option) typ = Object {
     name = "__Field";
+    doc = None;
     fields = lazy [
       Field {
         name = "name";
+        doc = None;
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
@@ -609,13 +661,18 @@ module Introspection = struct
       };
       Field {
         name = "description";
+        doc = None;
         typ = string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ f -> None
+        resolve = fun _ f -> match f with
+          | AnyField (Field f) -> f.doc
+          | AnyArgField (Arg.Arg a) -> a.doc
+          | AnyArgField (Arg.DefaultArg a) -> a.doc
       };
       Field {
         name = "args";
+        doc = None;
         typ = NonNullable (List (NonNullable __input_value));
         args = Arg.[];
         lift = Io.return;
@@ -625,6 +682,7 @@ module Introspection = struct
       };
       Field {
         name = "type";
+        doc = None;
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.return;
@@ -635,6 +693,7 @@ module Introspection = struct
       };
       Field {
         name = "isDeprecated";
+        doc = None;
         typ = NonNullable bool;
         args = Arg.[];
         lift = Io.return;
@@ -642,6 +701,7 @@ module Introspection = struct
       };
       Field {
         name = "deprecationReason";
+        doc = None;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -652,9 +712,11 @@ module Introspection = struct
 
   let __directive = Object {
     name = "__Directive";
+    doc = None;
     fields = lazy [
       Field {
         name = "name";
+        doc = None;
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
@@ -665,9 +727,11 @@ module Introspection = struct
 
   let __schema : 'ctx. ('ctx, 'ctx schema option) typ = Object {
     name = "__Schema";
+    doc = None;
     fields = lazy [
       Field {
         name = "types";
+        doc = None;
         typ = NonNullable (List (NonNullable __type));
         args = Arg.[];
         lift = Io.return;
@@ -675,6 +739,7 @@ module Introspection = struct
       };
       Field {
         name = "queryType";
+        doc = None;
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.return;
@@ -682,6 +747,7 @@ module Introspection = struct
       };
       Field {
         name = "mutationType";
+        doc = None;
         typ = __type;
         args = Arg.[];
         lift = Io.return;
@@ -689,6 +755,7 @@ module Introspection = struct
       };
       Field {
         name = "directives";
+        doc = None;
         typ = NonNullable (List (NonNullable __directive));
         args = Arg.[];
         lift = Io.return;
@@ -700,6 +767,7 @@ module Introspection = struct
   let add_schema_field s =
     let schema_field = Field {
       name = "__schema";
+      doc = None;
       typ = NonNullable __schema;
       args = Arg.[];
       lift = Io.return;
