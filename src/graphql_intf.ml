@@ -12,8 +12,11 @@ module type Schema = sig
 
   (** {3 Constructors } *)
 
-  val schema : fields:('ctx, unit) field list ->
-              'ctx schema
+  val schema : ?mutation_name:string ->
+               ?mutations:('ctx, unit) field list ->
+               ?query_name:string ->
+               ('ctx, unit) field list ->
+               'ctx schema
 
   val obj : ?doc:string ->
             string ->

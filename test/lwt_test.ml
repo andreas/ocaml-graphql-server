@@ -14,8 +14,7 @@ let test_query schema ctx query expected =
       Alcotest.(check string) "invalid execution result" expected (Yojson.Basic.to_string result')
   end
 
-let schema = Graphql_lwt.Schema.(schema
-    ~fields:[
+let schema = Graphql_lwt.Schema.(schema [
       field "direct_string"
         ~typ:(non_null string)
         ~args:Arg.[]
