@@ -52,14 +52,15 @@ let users = [
   { id = 2; name = "Bob"; role = User }
 ]
 
-let role = Schema.enum
-  ~name:"role"
+let role = Schema.enum "role"
+  ~doc:"The role of a user"
   ~values:[(User, "user"); (Admin, "admin")]
 
-let user = Schema.(obj
-  ~name:"user"
+let user = Schema.(obj "user"
+  ~doc:"A user in the system"
   ~fields:(fun _ -> [
     field "id"
+      ~doc:"Unique user identifier"
       ~typ:(non_null int)
       ~args:Arg.[]
       ~resolve:(fun () p -> p.id)
@@ -76,14 +77,12 @@ let user = Schema.(obj
   ])
 )
 
-let schema = Schema.(schema 
-    ~fields:[
-      field "users"
-        ~typ:(non_null (list (non_null user)))
-        ~args:Arg.[]
-        ~resolve:(fun () () -> users)
-    ]
-)
+let schema = Schema.(schema [
+  field "users"
+    ~typ:(non_null (list (non_null user)))
+    ~args:Arg.[]
+    ~resolve:(fun () () -> users)
+])
 ```
 
 ### Running a Query
@@ -104,7 +103,7 @@ let variables = (json_variables :> (string * Graphql_parser.const_value) list)
 Graphql.Schema.execute schema ctx ~variables query
 ```
 
-### Recursive Objects
+### Self-Recursive Objects
 
 To allow defining an object that refers to itself, the type itself is provided as argument to the `~fields` function. Example:
 
@@ -114,8 +113,7 @@ type tweet = {
   replies : tweet list;
 }
 
-let tweet = Schema.(obj
-  ~name:"tweet"
+let tweet = Schema.(obj "tweet"
   ~fields:(fun tweet -> [
     field "id"
       ~typ:(non_null int)
@@ -130,22 +128,41 @@ let tweet = Schema.(obj
 )
 ```
 
+### Mutually Recursive Objects
+
+Mutually recursive objects can be defined using `let rec` and `lazy`:
+
+```ocaml
+let rec foo = lazy Schema.(obj "foo"
+  ~fields:(fun _ -> [
+    field "bar"
+      ~typ:Lazy.(force bar)
+      ~args.Arg.[]
+      ~resolver:(fun ctx foo -> foo.bar)
+  ])
+and bar = lazy Schema.(obj "bar"
+  ~fields:(fun _ -> [
+    field "foo"
+      ~typ:Lazy.(force foo)
+      ~args.Arg.[]
+      ~resolver:(fun ctx bar -> bar.foo)
+  ])
+```
+
 ### Lwt Support
 
 ```ocaml
 open Lwt.Infix
 open Graphql_lwt
 
-let schema = Schema.(schema
-  ~fields:[
-    io_field "wait"
-    ~typ:(non_null float)
-    ~args:Arg.[
-      arg "duration" ~typ:float;
-    ]
-    ~resolve:(fun () () -> Lwt_unix.sleep duration >|= fun () -> duration)
+let schema = Schema.(schema [
+  io_field "wait"
+  ~typ:(non_null float)
+  ~args:Arg.[
+    arg "duration" ~typ:float;
   ]
-)
+  ~resolve:(fun () () -> Lwt_unix.sleep duration >|= fun () -> duration)
+])
 ```
 
 ### Async Support
@@ -155,17 +172,39 @@ open Core.Std
 open Async.Std
 open Graphql_async
 
-let schema = Schema.(schema
-  ~fields:[
-    io_field "wait"
-    ~typ:(non_null float)
-    ~args:Arg.[
-      arg "duration" ~typ:float;
-    ]
-    ~resolve:(fun () () -> after (Time.Span.of_float duration) >>| fun () -> duration)
+let schema = Schema.(schema [
+  io_field "wait"
+  ~typ:(non_null float)
+  ~args:Arg.[
+    arg "duration" ~typ:float;
   ]
+  ~resolve:(fun () () -> after (Time.Span.of_float duration) >>| fun () -> duration)
+])
+```
+
+### Arguments
+
+Arguments for a field can either be required, optional or optional with a default value:
+
+```ocaml
+Schema.(obj "math"
+  ~fields:(fun _ -> [
+    field "sum"
+      ~typ:int
+      ~args:Arg.[
+        arg  "x" ~typ:(non_null int); (* <-- required *)
+        arg  "y" ~typ:int;            (* <-- optional *)
+        arg' "z" ~typ:int ~default:7  (* <-- optional w/ default *)
+      ]
+      ~resolve:(fun x y z ->
+        let y' = match y with Some n -> n | None -> 42 in
+        x + y' + z
+      )
+  ])
 )
 ```
+
+Note that you must use `arg'` to provide a default value.
 
 ## Design
 
