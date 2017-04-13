@@ -30,7 +30,7 @@ module type IO = sig
   type +'a t
 
   val return : 'a -> 'a t
-  val bind : 'a t -> ('a -> 'b t) -> 'b t
+  val bind : 'a t -> f:('a -> 'b t) -> 'b t
 end
 
 (* Schema *)
@@ -40,7 +40,7 @@ module Make(Io : IO) = struct
   module Io = struct
     include Io
 
-    let map x ~f = bind x (fun x' -> return (f x'))
+    let map x ~f = bind x ~f:(fun x' -> return (f x'))
     let ok x = Io.return (Ok x)
     let error x = Io.return (Error x)
 
@@ -53,14 +53,14 @@ module Make(Io : IO) = struct
 
     module Result = struct
       let return x = return (Ok x)
-      let bind x f = bind x (function Ok x' -> f x' | Error _ as err -> Io.return err)
+      let bind x f = bind x ~f:(function Ok x' -> f x' | Error _ as err -> Io.return err)
       let map x ~f = map x ~f:(function Ok x' -> Ok (f x') | Error _ as err -> err)
     end
 
     let rec map_s ?(memo=[]) f = function
       | [] -> Io.return (List.rev memo)
       | x::xs ->
-          bind (f x) (fun x' -> map_s ~memo:(x'::memo) f xs)
+          bind (f x) ~f:(fun x' -> map_s ~memo:(x'::memo) f xs)
 
     let rec map_p f xs =
       List.map f xs |> all
