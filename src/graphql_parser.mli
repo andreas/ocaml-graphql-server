@@ -1,3 +1,5 @@
+(** GraphQL query parser *)
+
 type const_value = [
   | `Null
   | `Int of int

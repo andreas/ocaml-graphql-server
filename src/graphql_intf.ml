@@ -1,4 +1,4 @@
-(** Constructing GraphQL schemas. *)
+(** GraphQL schema signature *)
 module type Schema = sig
   type +'a io
 

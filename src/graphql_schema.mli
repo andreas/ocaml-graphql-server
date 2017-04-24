@@ -1,4 +1,6 @@
-(* IO *)
+(** GraphQL schema functor *)
+
+(* IO signature *)
 module type IO = sig
   type +'a t
 
@@ -6,5 +8,5 @@ module type IO = sig
   val bind : 'a t -> ('a -> 'b t) -> 'b t
 end
 
-(* Schema *)
+(* GraphQL schema functor *)
 module Make(Io : IO) : Graphql_intf.Schema with type 'a io = 'a Io.t
