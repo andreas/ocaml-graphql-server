@@ -25,7 +25,10 @@
 </div>
 <h1>Module <a href="type_Graphql_schema.html">Graphql_schema</a></h1>
 
-<pre><span class="keyword">module</span> Graphql_schema: <code class="code"><span class="keyword">sig</span></code> <a href="Graphql_schema.html">..</a> <code class="code"><span class="keyword">end</span></code></pre><hr width="100%">
+<pre><span class="keyword">module</span> Graphql_schema: <code class="code"><span class="keyword">sig</span></code> <a href="Graphql_schema.html">..</a> <code class="code"><span class="keyword">end</span></code></pre><div class="info module top">
+GraphQL schema functor<br>
+</div>
+<hr width="100%">
 
 <pre><span class="keyword">module type</span> <a href="Graphql_schema.IO.html">IO</a> = <code class="code"><span class="keyword">sig</span></code> <a href="Graphql_schema.IO.html">..</a> <code class="code"><span class="keyword">end</span></code></pre>
 <pre><span class="keyword">module</span> <a href="Graphql_schema.Make.html">Make</a>: <div class="sig_block"><code class="code"><span class="keyword">functor</span> (</code><code class="code"><span class="constructor">Io</span></code><code class="code"> : </code><code class="type"><a href="Graphql_schema.IO.html">IO</a></code><code class="code">) <span class="keywordsign">-&gt;</span> </code><code class="type"><a href="Graphql_intf.Schema.html">Graphql_intf.Schema</a></code><code class="type">  with type 'a io = 'a Io.t</code></div></pre></body></html>
