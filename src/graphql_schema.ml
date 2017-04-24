@@ -883,11 +883,14 @@ end
 
   and resolve_fields : type src. 'ctx execution_context -> ?execution_order:execution_order -> src -> ('ctx, src) obj -> Graphql_parser.field list -> (Yojson.Basic.json, string) result Io.t = fun ctx ?execution_order:(execution_order=Parallel) src obj fields ->
     map execution_order (fun (query_field : Graphql_parser.field) ->
-      match field_from_object obj query_field.name with
-      | Some field ->
-          resolve_field ctx src query_field field
-      | None ->
-          Io.ok (alias_or_name query_field, `Null)
+      if query_field.name = "__typename" then
+        Io.ok (alias_or_name query_field, `String obj.name)
+      else
+        match field_from_object obj query_field.name with
+        | Some field ->
+            resolve_field ctx src query_field field
+        | None ->
+            Io.ok (alias_or_name query_field, `Null)
     ) fields
     |> Io.map ~f:List.Result.join
     |> Io.Result.map ~f:(fun properties -> `Assoc properties)
