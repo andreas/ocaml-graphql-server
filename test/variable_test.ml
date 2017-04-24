@@ -2,7 +2,7 @@ let test_query variables = Test_common.test_query Echo_schema.schema () ~variabl
 
 let suite : (string * [>`Quick] * (unit -> unit)) list = [
   ("string variable", `Quick, fun () ->
-    test_query ["x", `String "foo"] "{ string(x: $x) }" "{\"data\":{\"string\":\"foo\"}}"
+    test_query ["x", `String "foo bar baz"] "{ string(x: $x) }" "{\"data\":{\"string\":\"foo bar baz\"}}"
   );
   ("float variable", `Quick, fun () ->
     test_query ["x", `Float 42.5] "{ float(x: $x) }" "{\"data\":{\"float\":42.5}}"
