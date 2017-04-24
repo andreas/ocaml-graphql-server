@@ -1,7 +1,7 @@
 true: bin_annot, debug, safe_string
 true: short_paths
 
-true: package(angstrom,sexplib,ppx_sexp_conv,yojson,rresult)
+true: package(angstrom,sexplib,ppx_deriving,ppx_sexp_conv,yojson,rresult)
 <src/*_async.*>: package(async_kernel)
 <src/*_lwt.*>: package(lwt)
 
