@@ -4,6 +4,8 @@
 
 `ocaml-graphql-server` is a library for creating GraphQL servers. It's currently in an early, experimental stage.
 
+**NB** Requires OCaml 4.03 or greater.
+
 Current feature set:
 
 - [x] GraphQL parser in pure OCaml using [angstrom](https://github.com/inhabitedtype/angstrom) (April 2016 RFC draft)
