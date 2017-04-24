@@ -152,7 +152,6 @@ let dot    = char '.'
 let dash   = char '-'
 let quote  = char '"'
 
-let string_chars = ignored *> take_while1 is_name_char
 let is_name_char =
   function | '0' .. '9' | 'a' .. 'z' | 'A' .. 'Z' | '_'  -> true | _ -> false
 let name = take_while1 is_name_char
@@ -161,6 +160,15 @@ let is_number_char =
   function | '0' .. '9' | 'e' | 'E' | '.' | '-' | '+' -> true | _ -> false
 let number_chars = take_while1 is_number_char
 
+let string_chars = scan_string `Unescaped (fun state c ->
+  match state with
+  | `Escaped -> Some `Unescaped
+  | `Unescaped ->
+      match c with
+      | '\\' -> Some `Escaped
+      | '"' -> None
+      | _ -> Some `Unescaped
+)
 
 let null = string "null" *> return `Null
 
