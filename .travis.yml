@@ -1,0 +1,14 @@
+language: c
+sudo: required
+install: wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-opam.sh
+script: bash -ex .travis-opam.sh
+env:
+  matrix:
+    - OCAML_VERSION=4.03
+    - OCAML_VERSION=4.03 DEPOPTS=lwt
+    - OCAML_VERSION=4.03 DEPOPTS=async_kernel
+    - OCAML_VERSION=4.04
+    - OCAML_VERSION=4.04 DEPOPTS=lwt
+    - OCAML_VERSION=4.04 DEPOPTS=async_kernel
+os:
+  - linux

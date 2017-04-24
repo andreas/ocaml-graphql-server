@@ -11,14 +11,28 @@ build: [
           "--with-lwt" "%{lwt:installed}%"
           "--with-async" "%{async_kernel:installed}%"
 ]
+build-test: [
+ [ "ocaml" "pkg/pkg.ml" "build" "--dev-pkg" "%{pinned}%" "--tests" "true" ]
+ [ "ocaml" "pkg/pkg.ml" "test" ]
+]
 depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
   "topkg" {build}
   "angstrom" {>= "0.3.0"}
+  "ppx_deriving"
   "sexplib"
   "ppx_sexp_conv"
-  "ppx_sexp_value"
   "yojson"
   "rresult"
+  "alcotest" {test}
+  "lwt" {test}
+  "async_unix" {test}
+]
+depopts: [
+  "lwt"
+  "async_kernel"
+]
+available: [
+  ocaml-version >= "4.03.0"
 ]
