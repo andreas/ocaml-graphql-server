@@ -113,27 +113,28 @@ type document =
 
 (* Parser combinators *)
 
-let comment =
-  char '#' *> skip_while (function | '\n' -> false | _ -> true )
-
-let is_ignored_char =
-  function | ' ' | ',' | '\n' -> true | _ -> false
-
-let ignored = skip_while is_ignored_char <|> comment
-
-let lex p = ignored *> p
-let char c = lex (Angstrom.char c)
-let string s = lex (Angstrom.string s)
-
-let is_name_char =
-  function | '0' .. '9' | 'a' .. 'z' | 'A' .. 'Z' | '_'  -> true | _ -> false
-
-let is_number_char =
-  function | '0' .. '9' | 'e' | 'E' | '.' | '-' | '+' -> true | _ -> false
-
 let optional p = option None (lift (fun x -> Some x) p)
 let optional_list p = option [] p
-let lift5 f a b c d e = lift4 f a b c d >>= fun f -> e >>| f
+let lift5 f a b c d e = lift4 f a b c d <*> e
+
+let ignored = scan_state `Whitespace (fun state c ->
+  match state with
+  | `Comment ->
+      if c = '\n' then Some `Whitespace else Some `Comment
+  | `Whitespace ->
+      match c with
+      | ' ' | ',' | '\n' -> Some `Whitespace
+      | '#' -> Some `Comment
+      | _ -> None
+) >>| fun _ -> ()
+
+let ( *~>) a b = (a *> ignored) *> b
+let ( <~*) a b = (a <* ignored) <* b
+
+let lift2' f a b = lift2 f (a <* ignored) b
+let lift3' f a b c = lift3 f (a <* ignored) (b <* ignored) c
+let lift4' f a b c d = lift4 f (a <* ignored) (b <* ignored) (c <* ignored) d
+let lift5' f a b c d e = lift5 f (a <* ignored) (b <* ignored) (c <* ignored) (d <* ignored) e
 
 let ellipsis = string "..."
 let lparen = char '('
@@ -152,19 +153,30 @@ let dash   = char '-'
 let quote  = char '"'
 
 let string_chars = ignored *> take_while1 is_name_char
-let number_chars = ignored *> take_while1 is_number_char
-let name         = ignored *> take_while1 is_name_char 
+let is_name_char =
+  function | '0' .. '9' | 'a' .. 'z' | 'A' .. 'Z' | '_'  -> true | _ -> false
+let name = take_while1 is_name_char
+
+let is_number_char =
+  function | '0' .. '9' | 'e' | 'E' | '.' | '-' | '+' -> true | _ -> false
+let number_chars = take_while1 is_number_char
+
 
 let null = string "null" *> return `Null
+
 let variable = lift (fun n -> `Variable n) (dollar *> name)
+
 let string_value = lift (fun s -> `String s) (quote *> string_chars <* quote)
+
 let boolean_value = string "true"  *> return (`Bool true) <|>
                     string "false" *> return (`Bool false)
+
 let number_value = lift (fun n ->
   try
     `Int (int_of_string n)
   with Failure _ ->
     `Float (float_of_string n)) number_chars
+
 let enum_value = name >>= function
   | "true"
   | "false"
@@ -172,15 +184,15 @@ let enum_value = name >>= function
   | n -> return (`Enum n)
 
 let value_parser value_types = fix (fun value' ->
-  let list_value = lbrack *> rbrack *> return (`List []) <|>
-                   lift (fun l -> `List l) (lbrack *> many value' <* rbrack)
-  and object_field = lift2 (fun name value -> name, value) (name <* colon) value'
+  let list_value = lbrack *~> rbrack *> return (`List []) <|>
+                   lift (fun l -> `List l) (lbrack *~> sep_by1 ignored value' <~* rbrack)
+  and object_field = lift2' (fun name value -> name, value) (name <~* colon) value'
   in
-  let object_value = lbrace *> rbrace *> return (`Assoc []) <|>
-                     lift (fun p -> `Assoc p) (lbrace *> many object_field <* rbrace)
+  let object_value = lbrace *~> rbrace *> return (`Assoc []) <|>
+                     lift (fun p -> `Assoc p) (lbrace *~> sep_by1 ignored object_field <~* rbrace)
   in
     List.fold_left (<|>) (list_value <|> object_value) value_types
-)
+  )
 
 let value : value Angstrom.t = value_parser [
   null;
@@ -199,45 +211,44 @@ let const_value : const_value Angstrom.t = value_parser [
   enum_value
 ]
 
-let argument = lift2 (fun name value -> name, value)
-               (name <* colon) value
+let argument = lift2' (fun name value -> name, value)
+                 (name <~* colon) value
 
-let arguments = lparen *> many argument <* rparen
+let arguments = lparen *~> sep_by ignored argument <~* rparen
 
-let directive = lift2 (fun name arguments -> {name; arguments})
-                (at *> name) (optional_list arguments)
+let directive = lift2' (fun name arguments -> {name; arguments})
+                  (at *> name) (optional_list arguments)
 
-let directives = many directive
+let directives = sep_by ignored directive
 
 let typ = fix (fun typ' ->
   let named_type = lift (fun n -> NamedType n) name
-  and list_type = lift (fun t -> ListType t) (lbrack *> typ' <* rbrack)
-  in let non_null_type = lift (fun t -> NonNullType t) ((named_type <|> list_type) <* bang)
+  and list_type = lift (fun t -> ListType t) (lbrack *~> typ' <~* rbrack)
+  and non_null = option false (bang *> return true)
   in
-    named_type <|>
-    list_type <|>
-    non_null_type
+    lift2' (fun t non_null -> if non_null then NonNullType t else t)
+      (named_type <|> list_type) non_null
 )
 
-let variable_definition = lift3 (fun name typ default_value -> {
-    name;
-    typ;
-    default_value;
-  }) (dollar *> name <* colon) typ (optional (equal *> const_value))
+let variable_definition = lift3' (fun name typ default_value -> {
+  name;
+  typ;
+  default_value;
+}) (dollar *~> name <~* colon) typ (optional (equal *~> const_value))
 
-let variable_definitions = lparen *> many variable_definition <* rparen
+let variable_definitions = lparen *~> many variable_definition <~* rparen
+
+let alias = name <~* colon
 
 let fragment_name = name >>= function
   | "on" -> fail "Invalid fragment name `on`"
   | n    -> return n
 
-let type_condition = string "on" *> name
-
-let alias = name <* colon
+let type_condition = string "on" *~> name
 
 let selection_set = fix (fun selection_set' ->
   let field =
-    lift5 (fun alias name arguments directives selection_set -> Field {
+    lift5' (fun alias name arguments directives selection_set -> Field {
       alias;
       name;
       arguments;
@@ -245,20 +256,20 @@ let selection_set = fix (fun selection_set' ->
       selection_set;
     }) (optional alias) name (optional_list arguments) (optional_list directives) (optional_list selection_set')
   and fragment_spread =
-    lift2 (fun name directives -> FragmentSpread {name; directives})
-    (ellipsis *> fragment_name) (optional_list directives)
+    lift2' (fun name directives -> FragmentSpread {name; directives})
+    (ellipsis *~> fragment_name) (optional_list directives)
   and inline_fragment =
-    lift3 (fun type_condition directives selection_set -> InlineFragment {
+    lift3' (fun type_condition directives selection_set -> InlineFragment {
       type_condition;
       directives;
       selection_set;
     })
-    (ellipsis *> optional type_condition) (optional_list directives) selection_set'
+    (ellipsis *~> optional type_condition) (optional_list directives) selection_set'
   in let selection =
     field <|>
     fragment_spread <|>
     inline_fragment
-  in lbrace *> many1 selection <* rbrace
+  in lbrace *~> sep_by1 ignored selection <~* rbrace
 )
 
 let optype = (string "query"        *> return Query) <|>
@@ -266,7 +277,7 @@ let optype = (string "query"        *> return Query) <|>
              (string "subscription" *> return Subscription)
 
 let operation_definition =
-  lift5 (fun optype name variable_definitions directives selection_set -> Operation {
+  lift5' (fun optype name variable_definitions directives selection_set -> Operation {
     optype;
     name;
     variable_definitions;
@@ -275,16 +286,16 @@ let operation_definition =
   }) (option Query optype) (optional name) (optional_list variable_definitions) (optional_list directives) selection_set
 
 let fragment_definition =
-  lift4 (fun name type_condition directives selection_set -> Fragment {
+  lift4' (fun name type_condition directives selection_set -> Fragment {
     name;
     type_condition;
     directives;
     selection_set;
   })
-  (string "fragment" *> fragment_name) type_condition (optional_list directives) selection_set
+  (string "fragment" *~> fragment_name) type_condition (optional_list directives) selection_set
 
 let definition = operation_definition <|> fragment_definition
 
-let document = many1 definition
+let document = many1 (ignored *> definition)
 
 let parse query = Angstrom.parse_only document (`String query)

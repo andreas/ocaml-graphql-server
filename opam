@@ -19,7 +19,7 @@ depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
   "topkg" {build}
-  "angstrom" {>= "0.3.0"}
+  "angstrom" {>= "0.4.0"}
   "ppx_deriving"
   "sexplib"
   "ppx_sexp_conv"
