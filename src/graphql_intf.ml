@@ -106,7 +106,7 @@ module type Schema = sig
 
   type variables = (string * Graphql_parser.const_value) list
 
-  val execute : 'ctx schema -> 'ctx -> ?variables:variables -> Graphql_parser.document -> (Yojson.Basic.json, Yojson.Basic.json) result io
+  val execute : 'ctx schema -> 'ctx -> ?variables:variables -> ?operation_name:string -> Graphql_parser.document -> (Yojson.Basic.json, Yojson.Basic.json) result io
   (** [execute schema ctx variables doc] evaluates the [doc] against [schema]
       with the given context [ctx] and [variables]. *)
 end
