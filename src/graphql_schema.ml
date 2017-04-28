@@ -917,19 +917,24 @@ end
       | Graphql_parser.Fragment f -> StringMap.add f.name f memo
     ) StringMap.empty doc
 
-  let rec select_operation = function
+  let rec select_operation ?operation_name = function
     | [] -> Error "No operation found"
-    | (Graphql_parser.Operation op)::defs -> Ok op
-    | _::defs -> select_operation defs
+    | (Graphql_parser.Operation op)::defs ->
+        begin match operation_name with
+        | Some name when op.name = name -> Ok op
+        | None -> Ok op
+        | _ -> select_operation ?operation_name defs
+        end
+    | _::defs -> select_operation ?operation_name defs
 
-  let execute schema ctx ?variables:(variables=[]) doc =
+  let execute schema ctx ?variables:(variables=[]) ?operation_name doc =
     let open Io.Infix in
     let execute' schema ctx doc =
       let fragments = collect_fragments doc in
       let variables = List.fold_left (fun memo (name, value) -> StringMap.add name value memo) StringMap.empty variables in
       let execution_ctx = { fragments; ctx; variables } in
       let schema' = Introspection.add_schema_field schema in
-      Io.return (select_operation doc) >>=? fun op ->
+      Io.return (select_operation ~operation_name doc) >>=? fun op ->
       execute_operation schema' execution_ctx fragments variables op
     in
     execute' schema ctx doc >>| function

@@ -13,4 +13,8 @@ let suite = [
     let query = "{ __typename }" in
     test_query Test_schema.schema () query "{\"data\":{\"__typename\":\"query\"}}"
   );
+  ("select operation", `Quick, fun () ->
+    let query = "a { a: __typename } b { b: __typename }" in
+    test_query Test_schema.schema () query ~operation_name:"b" "{\"data\":{\"b\":\"query\"}}"
+  );
 ]
