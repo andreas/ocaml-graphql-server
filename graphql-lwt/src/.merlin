@@ -1,0 +1,22 @@
+B ../../_build/default/graphql-lwt/src
+B ../../_build/default/graphql/src
+FLG -ppx "../../_build/.ppx/default/ppx_sexp_conv/ppx.exe --as-ppx --cookie 'library-name="graphql_lwt"'"
+FLG -w -40
+PKG angstrom
+PKG base
+PKG base.caml
+PKG base.shadow_stdlib
+PKG bigarray
+PKG biniou
+PKG bytes
+PKG cstruct
+PKG easy-format
+PKG lwt
+PKG ocplib-endian
+PKG ocplib-endian.bigstring
+PKG result
+PKG rresult
+PKG sexplib
+PKG unix
+PKG yojson
+S .

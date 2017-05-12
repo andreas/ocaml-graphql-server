@@ -1,0 +1,24 @@
+(jbuild_version 1)
+
+(library
+ ((name graphql_test)
+  (wrapped false)
+  (modules
+   (echo_schema
+    parser_test
+    schema_test
+    test_common
+    test_schema
+    variable_test
+    argument_test))
+  (libraries (graphql alcotest))))
+
+(executables
+ ((libraries (graphql_test))
+  (modules (test))
+  (names (test))))
+
+(alias
+ ((name runtest)
+  (deps (test.exe))
+  (action (run ${<}))))
