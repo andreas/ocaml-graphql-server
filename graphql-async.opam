@@ -12,7 +12,6 @@ depends: [
   "jbuilder" {build}
   "graphql"
   "angstrom" {>= "0.4.0"}
-  "ppx_deriving"
   "sexplib"
   "ppx_sexp_conv"
   "yojson"
