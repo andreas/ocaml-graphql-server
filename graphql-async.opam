@@ -6,32 +6,20 @@ doc: "https://andreas.github.io/ocaml-graphql-server/"
 bug-reports: "https://github.com/andreas/ocaml-graphql-server"
 dev-repo: "https://github.com/andreas/ocaml-graphql-server"
 build: [
-  "ocaml" "pkg/pkg.ml" "build"
-          "--pinned" "%{pinned}%"
-          "--with-lwt" "%{lwt:installed}%"
-          "--with-async" "%{async_kernel:installed}%"
-]
-build-test: [
- [ "ocaml" "pkg/pkg.ml" "build" "--dev-pkg" "%{pinned}%" "--tests" "true" ]
- [ "ocaml" "pkg/pkg.ml" "test" ]
+  ["jbuilder" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocamlfind" {build}
-  "ocamlbuild" {build}
-  "topkg" {build}
+  "jbuilder" {build}
+  "graphql"
   "angstrom" {>= "0.4.0"}
   "ppx_deriving"
   "sexplib"
   "ppx_sexp_conv"
   "yojson"
   "rresult"
-  "alcotest" {test}
-  "lwt" {test}
-  "async_unix" {test}
-]
-depopts: [
-  "lwt"
   "async_kernel"
+  "alcotest" {test}
+  "async_unix" {test}
 ]
 available: [
   ocaml-version >= "4.03.0"

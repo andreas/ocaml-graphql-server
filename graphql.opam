@@ -1,0 +1,25 @@
+opam-version: "1.2"
+maintainer: "Andreas Garnaes <andreas.garnaes@gmail.com>"
+authors: "Andreas Garnaes <andreas.garnaes@gmail.com>"
+homepage: "https://github.com/andreas/ocaml-graphql-server"
+doc: "https://andreas.github.io/ocaml-graphql-server/"
+bug-reports: "https://github.com/andreas/ocaml-graphql-server"
+dev-repo: "https://github.com/andreas/ocaml-graphql-server"
+build: [
+  ["jbuilder" "build" "-p" name "-j" jobs]
+]
+depends: [
+  "jbuilder" {build}
+  "graphql"
+  "angstrom" {>= "0.4.0"}
+  "ppx_deriving"
+  "sexplib"
+  "ppx_sexp_conv"
+  "yojson"
+  "rresult"
+  "alcotest" {test}
+  "async_unix" {test}
+]
+available: [
+  ocaml-version >= "4.03.0"
+]
