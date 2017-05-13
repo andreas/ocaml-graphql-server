@@ -13,7 +13,7 @@ depends: [
   "graphql"
   "angstrom" {>= "0.4.0"}
   "sexplib"
-  "ppx_sexp_conv"
+  "ppx_sexp_conv" {>= "0.9.0"}
   "yojson"
   "rresult"
   "alcotest" {test}
