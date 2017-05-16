@@ -10,7 +10,8 @@ build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
 depends: [
   "jbuilder" {build}
   "graphql"
-  "async_kernel"
+  "async_kernel" {>= "v0.9.0"}
+  "async_unix" {test & >= "v0.9.0"}
   "alcotest" {test}
 ]
 available: [
