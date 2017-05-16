@@ -1,6 +1,6 @@
 open Graphql
-open Async_kernel.Std
-open Async_unix.Std
+open Async_kernel
+open Async_unix
 
 let test_query schema ctx query expected =
   Thread_safe.block_on_async_exn begin fun () ->

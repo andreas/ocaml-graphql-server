@@ -27,7 +27,7 @@ depends: [
   "rresult"
   "alcotest" {test}
   "lwt" {test}
-  "async_unix" {test}
+  "async_unix" {test & >= "v0.9.0"}
 ]
 depopts: [
   "lwt"
