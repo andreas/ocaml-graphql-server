@@ -5,16 +5,11 @@ homepage: "https://github.com/andreas/ocaml-graphql-server"
 doc: "https://andreas.github.io/ocaml-graphql-server/"
 bug-reports: "https://github.com/andreas/ocaml-graphql-server"
 dev-repo: "https://github.com/andreas/ocaml-graphql-server"
-build: [
-  ["jbuilder" "build" "-p" name "-j" jobs]
-]
+build: [["jbuilder" "build" "-p" name "-j" jobs]]
+build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
 depends: [
   "jbuilder" {build}
-  "angstrom" {>= "0.4.0"}
-  "sexplib"
-  "ppx_sexp_conv"
-  "yojson"
-  "rresult"
+  "graphql"
   "alcotest" {test}
   "lwt"
 ]
