@@ -8,9 +8,9 @@ env:
   global:
   - PINS="graphql-async:. graphql-lwt:. graphql:."
   matrix:
-  - PACKAGE="graphql.dev" DISTRO="ubuntu-16.04" OCAML_VERSION="4.03.0"
-  - PACKAGE="graphql.dev" DISTRO="alpine-3.5" OCAML_VERSION="4.04.1"
-  - PACKAGE="graphql-lwt.dev" DISTRO="debian-unstable" OCAML_VERSION="4.03.0"
-  - PACKAGE="graphql-lwt.dev" DISTRO="debian-testing" OCAML_VERSION="4.04.1"
-  - PACKAGE="graphql-async.dev" DISTRO="debian-stable" OCAML_VERSION="4.03.0"
-  - PACKAGE="graphql-async.dev" DISTRO="fedora-25" OCAML_VERSION="4.04.1"
+  - PACKAGE="graphql" DISTRO="ubuntu-16.04" OCAML_VERSION="4.03.0"
+  - PACKAGE="graphql" DISTRO="alpine-3.5" OCAML_VERSION="4.04.1"
+  - PACKAGE="graphql-lwt" DISTRO="debian-unstable" OCAML_VERSION="4.03.0"
+  - PACKAGE="graphql-lwt" DISTRO="debian-testing" OCAML_VERSION="4.04.1"
+  - PACKAGE="graphql-async" DISTRO="debian-stable" OCAML_VERSION="4.03.0"
+  - PACKAGE="graphql-async" DISTRO="fedora-25" OCAML_VERSION="4.04.1"
