@@ -1,0 +1,10 @@
+(jbuild_version 1)
+
+(executables
+ ((libraries (graphql_async alcotest async_unix))
+  (names (async_test))))
+
+(alias
+ ((name runtest)
+  (deps (async_test.exe))
+  (action (run ${<}))))

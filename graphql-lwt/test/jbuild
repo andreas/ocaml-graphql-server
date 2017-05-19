@@ -1,0 +1,10 @@
+(jbuild_version 1)
+
+(executables
+ ((libraries (graphql_lwt alcotest lwt.unix))
+  (names (lwt_test))))
+
+(alias
+ ((name runtest)
+  (deps (lwt_test.exe))
+  (action (run ${<}))))

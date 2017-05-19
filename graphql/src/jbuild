@@ -1,0 +1,8 @@
+(jbuild_version 1)
+
+(library
+ ((name graphql)
+  (public_name graphql)
+  (wrapped false)
+  (preprocess (pps (ppx_sexp_conv)))
+  (libraries (angstrom sexplib yojson rresult))))
