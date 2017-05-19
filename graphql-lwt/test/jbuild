@@ -1,7 +1,7 @@
 (jbuild_version 1)
 
 (executables
- ((libraries (graphql_lwt alcotest lwt.unix))
+ ((libraries (graphql-lwt alcotest lwt.unix))
   (names (lwt_test))))
 
 (alias
