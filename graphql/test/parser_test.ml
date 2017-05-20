@@ -9,8 +9,8 @@ let read_all path =
     raise exn
 
 let test_query_file filename () =
-  let query    = read_all ("test/data/"^filename^".graphql") in
-  let expected = read_all ("test/data/"^filename^".sexp") |> String.trim in
+  let query    = read_all ("data/"^filename^".graphql") in
+  let expected = read_all ("data/"^filename^".sexp") |> String.trim in
   match Graphql_parser.parse query with
   | Ok doc ->
       let sexp = Graphql_parser.sexp_of_document doc |> Sexplib.Sexp.to_string_hum in
