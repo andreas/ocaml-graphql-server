@@ -2,6 +2,15 @@ open Graphql
 open Async_kernel
 open Async_unix
 
+let yojson = (module struct
+  type t = Yojson.Basic.json
+
+  let pp formatter t =
+    Format.pp_print_text formatter (Yojson.Basic.pretty_to_string t)
+
+  let equal = (=)
+end : Alcotest.TESTABLE with type t = Yojson.Basic.json)
+
 let test_query schema ctx query expected =
   Thread_safe.block_on_async_exn begin fun () ->
     match Graphql_parser.parse query with
@@ -12,7 +21,7 @@ let test_query schema ctx query expected =
       | Ok data -> data
       | Error err -> err
       in
-      Alcotest.(check string) "invalid execution result" expected (Yojson.Basic.to_string result')
+      Alcotest.check yojson "invalid execution result" expected result'
   end
 
 let schema = Graphql_async.Schema.(schema [
@@ -30,7 +39,12 @@ let schema = Graphql_async.Schema.(schema [
 
 let suite = [
   ("execution", `Quick, fun () ->
-    test_query schema () "{ direct_string io_int  }" "{\"data\":{\"direct_string\":\"foo\",\"io_int\":42}}"
+    test_query schema () "{ direct_string io_int  }" (`Assoc [
+      "data", `Assoc [
+        "direct_string", `String "foo";
+        "io_int", `Int 42
+      ]
+    ])
   );
 ]
 
