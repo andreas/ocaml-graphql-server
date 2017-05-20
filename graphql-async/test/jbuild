@@ -6,5 +6,6 @@
 
 (alias
  ((name runtest)
+  (package graphql-async)
   (deps (async_test.exe))
   (action (run ${<}))))

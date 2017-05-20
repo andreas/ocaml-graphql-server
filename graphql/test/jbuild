@@ -20,5 +20,6 @@
 
 (alias
  ((name runtest)
+  (package graphql)
   (deps (test.exe))
   (action (run ${<}))))

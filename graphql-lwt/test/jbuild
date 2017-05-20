@@ -6,5 +6,6 @@
 
 (alias
  ((name runtest)
+  (package graphql-lwt)
   (deps (lwt_test.exe))
   (action (run ${<}))))
