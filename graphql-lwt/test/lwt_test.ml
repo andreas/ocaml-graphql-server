@@ -32,3 +32,5 @@ let suite = [
     test_query schema () "{ direct_string io_int  }" "{\"data\":{\"direct_string\":\"foo\",\"io_int\":42}}"
   );
 ]
+
+let () = Alcotest.run "graphql-server" ["lwt", suite]

@@ -1,14 +1,16 @@
 language: c
-sudo: required
-install: wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-opam.sh
-script: bash -ex .travis-opam.sh
+sudo: false
+services:
+  - docker
+install: wget https://raw.githubusercontent.com/ocaml/ocaml-travisci-skeleton/master/.travis-docker.sh
+script: bash -ex ./.travis-docker.sh
 env:
+  global:
+  - PINS="graphql-async:. graphql-lwt:. graphql:."
   matrix:
-    - OCAML_VERSION=4.03
-    - OCAML_VERSION=4.03 DEPOPTS=lwt
-    - OCAML_VERSION=4.03 DEPOPTS=async_kernel
-    - OCAML_VERSION=4.04
-    - OCAML_VERSION=4.04 DEPOPTS=lwt
-    - OCAML_VERSION=4.04 DEPOPTS=async_kernel
-os:
-  - linux
+  - PACKAGE="graphql" DISTRO="ubuntu-16.04" OCAML_VERSION="4.03.0"
+  - PACKAGE="graphql" DISTRO="alpine-3.5" OCAML_VERSION="4.04.1"
+  - PACKAGE="graphql-lwt" DISTRO="debian-unstable" OCAML_VERSION="4.03.0"
+  - PACKAGE="graphql-lwt" DISTRO="debian-testing" OCAML_VERSION="4.04.1"
+  - PACKAGE="graphql-async" DISTRO="debian-stable" OCAML_VERSION="4.03.0"
+  - PACKAGE="graphql-async" DISTRO="fedora-25" OCAML_VERSION="4.04.1"
