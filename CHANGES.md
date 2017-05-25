@@ -1,4 +1,4 @@
-v0.0.1 2016-11-07 Copenhagen (DK)
+0.1.0 2017-05-25
 ---------------------------------
 
-Development version.
+Initial public release.

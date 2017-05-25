@@ -1,6 +1,7 @@
-# `ocaml-graphql-server`
-
 ![Build Status](https://travis-ci.org/andreas/ocaml-graphql-server.svg?branch=master)
+
+Graphql - Execution of GraphQL queries in OCaml
+-----------------------------------------------
 
 `ocaml-graphql-server` is a library for creating GraphQL servers. It's currently in an early, experimental stage.
 
