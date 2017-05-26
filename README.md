@@ -1,19 +1,18 @@
-![Build Status](https://travis-ci.org/andreas/ocaml-graphql-server.svg?branch=master)
-
-Graphql - Execution of GraphQL queries in OCaml
+GraphQL Servers in OCaml
 -----------------------------------------------
 
-`ocaml-graphql-server` is a library for creating GraphQL servers. It's currently in an early, experimental stage.
+![Build Status](https://travis-ci.org/andreas/ocaml-graphql-server.svg?branch=master)
 
-**NB** Requires OCaml 4.03 or greater.
+This repo contains a library for creating GraphQL servers in OCaml. Note that the API is still under active development.
 
 Current feature set:
 
+- [x] Type-safe schema design
 - [x] GraphQL parser in pure OCaml using [angstrom](https://github.com/inhabitedtype/angstrom) (April 2016 RFC draft)
-- [x] Execution
-- [x] Introspection
-- [x] Arguments
-- [x] Variables
+- [x] Query execution
+- [x] Introspection of schemas
+- [x] Arguments for fields
+- [x] Allows variables in queries
 - [x] Lwt support
 - [x] Async support
 - [x] Example with HTTP server and GraphiQL
@@ -21,6 +20,12 @@ Current feature set:
 ![GraphiQL Example](https://cloud.githubusercontent.com/assets/2518/22173954/8d1e5bbe-dfd1-11e6-9a7e-4f93d0ce2e24.png)
 
 ## Documentation
+
+Three OPAM packages are provided:
+
+- `graphql` provides the core functionality and is IO-agnostic. It provides a functor `Graphql.Schema.Make(IO)` to instantiate with your own IO monad.
+- `graphql-lwt` provides the module `Graphql_lwt.Schema` with [Lwt](https://github.com/ocsigen/lwt) support in field resolvers.
+- `graphql-async` provides the module `Graphql_async.Schema` with [Async](https://github.com/janestreet/async) support in field resolvers.`
 
 [API documentation](https://andreas.github.io/ocaml-graphql-server/)
 
@@ -31,11 +36,12 @@ Current feature set:
 To run a sample GraphQL server also serving GraphiQL, do the following:
 
 ```bash
+opam install graphql-lwt jbuilder
 git checkout git@github.com/andreas/ocaml-graphql-server.git
 cd ocaml-graphql-server
-opam pin add graphql .
 cd examples
-ocamlbuild -use-ocamlfind server.native && ./server.native
+jbuilder build server.exe
+./_build/default/server.exe
 ```
 
 Now open [http://localhost:8080](http://localhost:8080).
@@ -162,11 +168,11 @@ open Graphql_lwt
 
 let schema = Schema.(schema [
   io_field "wait"
-  ~typ:(non_null float)
-  ~args:Arg.[
-    arg "duration" ~typ:float;
-  ]
-  ~resolve:(fun () () -> Lwt_unix.sleep duration >|= fun () -> duration)
+    ~typ:(non_null float)
+    ~args:Arg.[
+      arg "duration" ~typ:float;
+    ]
+    ~resolve:(fun () () -> Lwt_unix.sleep duration >|= fun () -> duration)
 ])
 ```
 
@@ -179,11 +185,11 @@ open Graphql_async
 
 let schema = Schema.(schema [
   io_field "wait"
-  ~typ:(non_null float)
-  ~args:Arg.[
-    arg "duration" ~typ:float;
-  ]
-  ~resolve:(fun () () -> after (Time.Span.of_float duration) >>| fun () -> duration)
+    ~typ:(non_null float)
+    ~args:Arg.[
+      arg "duration" ~typ:float;
+    ]
+    ~resolve:(fun () () -> after (Time.Span.of_float duration) >>| fun () -> duration)
 ])
 ```
 
