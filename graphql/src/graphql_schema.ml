@@ -934,10 +934,10 @@ end
     | None -> Io.ok `Null
     | Some src' -> f src'
 
-  let map order f xs =
+  let map order =
     match order with
-    | Serial -> Io.map_s f xs
-    | Parallel -> Io.map_p f xs
+    | Serial -> Io.map_s ~memo:[]
+    | Parallel -> Io.map_p
 
   let rec present : type src. 'ctx execution_context -> src -> Graphql_parser.field -> ('ctx, src) typ -> (Yojson.Basic.json, string) result Io.t = fun ctx src query_field typ ->
     match typ with

@@ -1,0 +1,60 @@
+enum COLOR {
+    RED
+    GREEN
+    BLUE
+}
+
+input IntervalInput {
+    min: Float
+    max: Float
+}
+
+input PersonFilter {
+    favorite_color: COLOR
+    age: IntervalInput
+}
+
+type Person {
+    id: ID!
+    age: Int!
+    name: String!
+    nickname: String
+    net_worth: Float
+    favorite_color: COLOR
+    friends: [Person]!
+}
+
+type Query {
+    # Nullable primitives
+    nullable_int: Int
+    nullable_string: String
+    nullable_float: Float
+    nullable_bool: Boolean
+    nullable_id: ID
+    nullable_enum: COLOR
+
+    # Non-nullable primitives
+    non_nullable_int: Int!
+    non_nullable_string: String!
+    non_nullable_float: Float!
+    non_nullable_bool: Boolean!
+    non_nullable_id: ID!
+    non_nullable_enum: COLOR!
+
+    # List of primitives
+    list_int: [Int]
+    list_string: [String]
+    list_float: [Float]
+    list_bool: [Boolean]
+    list_id: [ID]
+    list_enum: [COLOR]
+
+    # Objects
+    person: Person!
+
+    filter_persons(filter: PersonFilter): [Person]!
+}
+
+schema {
+    query: Query
+}

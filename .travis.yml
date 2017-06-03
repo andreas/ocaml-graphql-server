@@ -6,7 +6,7 @@ install: wget https://raw.githubusercontent.com/ocaml/ocaml-travisci-skeleton/ma
 script: bash -ex ./.travis-docker.sh
 env:
   global:
-  - PINS="graphql-async:. graphql-lwt:. graphql:."
+  - PINS="graphql-async:. graphql-lwt:. graphql:. graphql-ppx:."
   matrix:
   - PACKAGE="graphql" DISTRO="ubuntu-16.04" OCAML_VERSION="4.03.0"
   - PACKAGE="graphql" DISTRO="alpine-3.5" OCAML_VERSION="4.04.1"
@@ -14,3 +14,5 @@ env:
   - PACKAGE="graphql-lwt" DISTRO="debian-testing" OCAML_VERSION="4.04.1"
   - PACKAGE="graphql-async" DISTRO="debian-stable" OCAML_VERSION="4.03.0"
   - PACKAGE="graphql-async" DISTRO="fedora-25" OCAML_VERSION="4.04.1"
+  - PACKAGE="graphql-ppx" DISTRO="debian-stable" OCAML_VERSION="4.03.0"
+  - PACKAGE="graphql-ppx" DISTRO="fedora-25" OCAML_VERSION="4.04.1"

@@ -1,0 +1,9 @@
+(jbuild_version 1)
+
+(library
+ ((name graphql_ppx)
+  (public_name graphql-ppx)
+  (kind ppx_rewriter)
+  (libraries (ocaml-migrate-parsetree graphql rresult yojson))
+  (ppx_runtime_libraries (yojson))
+  (preprocess (pps (ppx_metaquot)))))

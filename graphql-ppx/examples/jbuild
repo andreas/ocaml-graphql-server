@@ -1,0 +1,9 @@
+(jbuild_version 1)
+
+(executable
+  ((libraries (lwt cohttp.lwt uri))
+  (preprocess (pps (graphql_ppx)))
+  (preprocessor_deps ((file schema.json)))
+  (modules (github))
+  (name github))
+)

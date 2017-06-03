@@ -1,0 +1,7 @@
+Write type-safe GraphQL queries
+
+Given a introspection query response in `schema.json`, the expression `[%graphql {| query { ... } |} ]` is rewritten to a 3-tuple `(query, kvariables, parse)`: 
+
+- `query` (type `string`) is the GraphQL query to be submitted.
+- `kvariables` (type `(Yojson.Basic.json -> 'a) -> arg1:_ -> ... -> argn:_ -> unit -> 'a`) is a function to construct the JSON value to submit as query variables. The labels and types of `argx` are extracted from the query. Required variables appear as labeled arguments, optional variables appear as optional arguments.
+- `parse` is a function for parsing the JSON response from the server and has the type `Yojson.Basic.json -> < ... >`. The shape of the object type corresponds to the returned response.
