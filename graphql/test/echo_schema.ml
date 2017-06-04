@@ -12,8 +12,13 @@ let echo_field name field_typ arg_typ = Schema.(
 )
 
 type colors = Red | Green | Blue
-let color_enum     = Schema.enum "color" ~values:[Red, "RED"; Green, "GREEN"; Blue, "BLUE"]
-let color_enum_arg = Schema.Arg.enum "color" ~values:["RED", Red; "GREEN", Green; "BLUE", Blue]
+let color_enum_values = Schema.([
+  enum_value "RED" ~value:Red;
+  enum_value "GREEN" ~value:Green;
+  enum_value "BLUE" ~value:Blue
+])
+let color_enum     = Schema.enum "color" ~values:color_enum_values
+let color_enum_arg = Schema.Arg.enum "color" ~values:color_enum_values
 
 let person_arg = Schema.Arg.(obj "person" ~fields:Arg.[
     arg "title" ~typ:string;

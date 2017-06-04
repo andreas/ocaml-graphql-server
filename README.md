@@ -63,9 +63,13 @@ let users = [
   { id = 2; name = "Bob"; role = User }
 ]
 
-let role = Schema.enum "role"
+let role = Schema.(enum "role"
   ~doc:"The role of a user"
-  ~values:[(User, "user"); (Admin, "admin")]
+  ~values:[
+    enum_value "USER" ~value:User;
+    enum_value "ADMIN" ~value:Admin;
+  ]
+)
 
 let user = Schema.(obj "user"
   ~doc:"A user in the system"
