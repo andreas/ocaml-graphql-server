@@ -13,8 +13,13 @@ let users = ref [
   { id = 2; name = "Bob"; role = User };
 ]
 
-let role = Schema.enum "role"
-  ~values:[(User, "user"); (Admin, "admin")]
+let role_values = Schema.([
+  enum_value "user" ~value:User;
+  enum_value "admin" ~value:Admin;
+])
+
+let role = Schema.(enum "role" ~values:role_values)
+let input_role = Schema.Arg.(enum "role" ~values:role_values)
 
 let user = Schema.(obj "user"
   ~fields:(fun _ -> [
@@ -34,8 +39,6 @@ let user = Schema.(obj "user"
       ~resolve:(fun () p -> p.role)
   ])
 )
-
-let input_role = Schema.Arg.(enum "role" ~values:["user", User; "admin", Admin])
 
 let schema = Schema.(schema [
       field "users"

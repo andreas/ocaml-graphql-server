@@ -88,6 +88,16 @@ module Make(Io : IO) = struct
     | NotDeprecated
     | Deprecated of string option
 
+  type 'a enum_value = {
+    name       : string;
+    doc        : string option;
+    deprecated : deprecated;
+    value      : 'a;
+  }
+
+  let enum_value ?doc ?(deprecated=NotDeprecated) name ~value =
+    { name; doc; deprecated; value; }
+
   let id : 'a. 'a -> 'a = fun x -> x
 
   module Arg = struct
@@ -108,7 +118,7 @@ module Make(Io : IO) = struct
       | Enum : {
           name   : string;
           doc    : string option;
-          values : (string * 'b) list;
+          values : 'b enum_value list;
         } -> ('a, 'b option -> 'a) arg_typ
       | List : ('a, 'b -> 'a) arg_typ -> ('a, 'b list option -> 'a) arg_typ
       | NonNullable : ('a, 'b option -> 'a) arg_typ -> ('a, 'b -> 'a) arg_typ
@@ -260,8 +270,8 @@ module Make(Io : IO) = struct
           begin match value with
           | `Enum v
           | `String v ->
-              begin match List.assoc v e.values with
-              | Some _ as value -> Ok value
+              begin match List.find (fun enum_value -> enum_value.name = v) e.values with
+              | Some enum_value -> Ok (Some enum_value.value)
               | None -> Error "Invalid enum value"
               end
           | _ -> Error "Expected enum"
@@ -278,7 +288,7 @@ module Make(Io : IO) = struct
   type 'a enum = {
     name    : string;
     doc     : string option;
-    values  : ('a * string) list;
+    values  : 'a enum_value list;
   }
 
   type ('ctx, 'src) obj = {
@@ -386,6 +396,7 @@ module Introspection = struct
     | AnyField : (_, _) field -> any_field
     | AnyArgField : (_, _) Arg.arg -> any_field
   type any_arg = AnyArg : (_, _) Arg.arg -> any_arg
+  type any_enum_value = AnyEnumValue : _ enum_value -> any_enum_value
 
   let unless_visited (result, visited) name f =
     if StringSet.mem name visited then
@@ -448,18 +459,58 @@ module Introspection = struct
     name = "__TypeKind";
     doc = None;
     values = [
-      (`Scalar, "SCALAR");
-      (`Object, "OBJECT");
-      (`Interface, "INTERFACE");
-      (`Union, "UNION");
-      (`Enum, "ENUM");
-      (`InputObject, "INPUT_OBJECT");
-      (`List, "LIST");
-      (`NonNull, "NON_NULL");
+      {
+        name="SCALAR";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Scalar;
+      };
+      {
+        name="OBJECT";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Object;
+      };
+      {
+        name="INTERFACE";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Interface;
+      };
+      {
+        name="UNION";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Union;
+      };
+      {
+        name="ENUM";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Enum;
+      };
+      {
+        name="INPUT_OBJECT";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`InputObject;
+      };
+      {
+        name="LIST";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`List;
+      };
+      {
+        name="NON_NULL";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`NonNull;
+      };
     ]
   }
 
-  let __enum_value = Object {
+  let __enum_value : 'ctx. ('ctx, any_enum_value option) typ = Object {
     name = "__EnumValue";
     doc = None;
     fields = lazy [
@@ -470,7 +521,7 @@ module Introspection = struct
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ name -> name;
+        resolve = fun _ (AnyEnumValue enum_value) -> enum_value.name;
       };
       Field {
         name = "description";
@@ -479,7 +530,7 @@ module Introspection = struct
         typ = string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ e -> None;
+        resolve = fun _ (AnyEnumValue enum_value) -> enum_value.doc;
       };
       Field {
         name = "isDeprecated";
@@ -488,7 +539,7 @@ module Introspection = struct
         typ = NonNullable bool;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ e -> false;
+        resolve = fun _ (AnyEnumValue enum_value) -> enum_value.deprecated <> NotDeprecated;
       };
       Field {
         name = "deprecationReason";
@@ -497,7 +548,10 @@ module Introspection = struct
         typ = string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ e -> None;
+        resolve = fun _ (AnyEnumValue enum_value) ->
+          match enum_value.deprecated with
+          | Deprecated reason -> reason
+          | NotDeprecated -> None
       }
     ]
   }
@@ -551,7 +605,7 @@ module Introspection = struct
     ]
   }
 
-  and __type : 'ctx. ('ctx, any_typ option) typ = Object {
+  and __type : 'ctx . ('ctx, any_typ option) typ = Object {
     name = "__Type";
     doc = None;
     fields = lazy [
@@ -675,8 +729,8 @@ module Introspection = struct
         args = Arg.[];
         lift = Io.return;
         resolve = fun _ t -> match t with
-          | AnyTyp (Enum e) -> Some (List.map snd e.values)
-          | AnyArgTyp (Arg.Enum e) -> Some (List.map fst e.values)
+          | AnyTyp (Enum e) -> Some (List.map (fun x -> AnyEnumValue x) e.values)
+          | AnyArgTyp (Arg.Enum e) -> Some (List.map (fun x -> AnyEnumValue x) e.values)
           | _      -> None
       }
     ]
@@ -903,8 +957,8 @@ end
         )
     | Enum e ->
         coerce_or_null src (fun src' ->
-          match List.find (fun (v, s) -> src' == v) e.values with
-          | Some (_, s) -> Io.ok (`String s)
+          match List.find (fun enum_value -> src' == enum_value.value) e.values with
+          | Some enum_value -> Io.ok (`String enum_value.name)
           | None -> Io.ok `Null
         )
 

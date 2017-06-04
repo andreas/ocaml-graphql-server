@@ -17,8 +17,12 @@ and bob = { id = 2; name = "Bob"; role = User; friends = [alice]}
 
 let users = [alice; bob]
 
-let role = Schema.enum "role"
-  ~values:[(User, "user"); (Admin, "admin")]
+let role = Schema.(enum "role"
+  ~values:[
+    enum_value "USER" ~value:User ~doc:"A regular user";
+    enum_value "ADMIN" ~value:Admin ~doc:"An admin user";
+  ]
+)
 
 let user = Schema.(obj "user"
   ~fields:(fun user -> [

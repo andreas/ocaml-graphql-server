@@ -10,6 +10,8 @@ module type Schema = sig
 
   type ('ctx, 'src) typ
 
+  type 'a enum_value
+
   (** {3 Constructors } *)
 
   val schema : ?mutation_name:string ->
@@ -21,6 +23,12 @@ module type Schema = sig
   type deprecated =
     | NotDeprecated
     | Deprecated of string option
+
+  val enum_value : ?doc:string ->
+                   ?deprecated:deprecated ->
+                   string ->
+                   value:'a ->
+                   'a enum_value
 
   val obj : ?doc:string ->
             string ->
@@ -53,7 +61,7 @@ module type Schema = sig
 
     val enum : ?doc:string ->
                string ->
-               values:(string * 'b) list ->
+               values:'b enum_value list ->
                ('a, 'b option -> 'a) arg_typ
 
     val obj : ?doc:string ->
@@ -90,7 +98,7 @@ module type Schema = sig
 
   val enum : ?doc:string ->
              string ->
-             values:('a * string) list ->
+             values:'a enum_value list ->
              ('ctx, 'a option) typ
 
   val scalar : ?doc:string ->
