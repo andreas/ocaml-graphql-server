@@ -84,6 +84,10 @@ module Make(Io : IO) = struct
 
   type variable_map = Graphql_parser.const_value StringMap.t
 
+  type deprecated =
+    | NotDeprecated
+    | Deprecated of string option
+
   let id : 'a. 'a -> 'a = fun x -> x
 
   module Arg = struct
@@ -284,12 +288,13 @@ module Make(Io : IO) = struct
   }
   and (_, _) field =
     Field : {
-      name    : string;
-      doc     : string option;
-      typ     : ('ctx, 'io_out) typ;
-      args    : ('maybe_io_out, 'args) Arg.arg_list;
-      resolve : 'ctx -> 'src -> 'args;
-      lift    : 'maybe_io_out -> 'io_out Io.t
+      name       : string;
+      doc        : string option;
+      deprecated : deprecated;
+      typ        : ('ctx, 'io_out) typ;
+      args       : ('maybe_io_out, 'args) Arg.arg_list;
+      resolve    : 'ctx -> 'src -> 'args;
+      lift       : 'maybe_io_out -> 'io_out Io.t
     } -> ('ctx, 'src) field
   and (_, _) typ =
     | Object      : ('ctx, 'src) obj -> ('ctx, 'src option) typ
@@ -323,11 +328,11 @@ module Make(Io : IO) = struct
     let rec o = Object { name; doc; fields = lazy (fields o)} in
     o
 
-  let field ?doc name ~typ ~args ~resolve =
-    Field { lift = Io.return; name; doc; typ; args; resolve }
+  let field ?doc ?(deprecated=NotDeprecated) name ~typ ~args ~resolve =
+    Field { lift = Io.return; name; doc; deprecated; typ; args; resolve }
 
-  let io_field ?doc name ~typ ~args ~resolve =
-    Field { lift = id; name; doc; typ; args; resolve }
+  let io_field ?doc ?(deprecated=NotDeprecated) name ~typ ~args ~resolve =
+    Field { lift = id; name; doc; deprecated; typ; args; resolve }
 
   let enum ?doc name ~values =
     Enum { name; doc; values }
@@ -461,6 +466,7 @@ module Introspection = struct
       Field {
         name = "name";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
@@ -469,6 +475,7 @@ module Introspection = struct
       Field {
         name = "description";
         doc = None;
+        deprecated = NotDeprecated;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -477,6 +484,7 @@ module Introspection = struct
       Field {
         name = "isDeprecated";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable bool;
         args = Arg.[];
         lift = Io.return;
@@ -485,6 +493,7 @@ module Introspection = struct
       Field {
         name = "deprecationReason";
         doc = None;
+        deprecated = NotDeprecated;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -500,6 +509,7 @@ module Introspection = struct
       Field {
         name = "name";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
@@ -510,6 +520,7 @@ module Introspection = struct
       Field {
         name = "description";
         doc = None;
+        deprecated = NotDeprecated;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -520,6 +531,7 @@ module Introspection = struct
       Field {
         name = "type";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.return;
@@ -530,6 +542,7 @@ module Introspection = struct
       Field {
         name = "defaultValue";
         doc = None;
+        deprecated = NotDeprecated;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -545,6 +558,7 @@ module Introspection = struct
       Field {
         name = "kind";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable __type_kind;
         args = Arg.[];
         lift = Io.return;
@@ -563,6 +577,7 @@ module Introspection = struct
       Field {
         name = "name";
         doc = None;
+        deprecated = NotDeprecated;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -578,6 +593,7 @@ module Introspection = struct
       Field {
         name = "description";
         doc = None;
+        deprecated = NotDeprecated;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -593,6 +609,7 @@ module Introspection = struct
       Field {
         name = "fields";
         doc = None;
+        deprecated = NotDeprecated;
         typ = List (NonNullable __field);
         args = Arg.[];
         lift = Io.return;
@@ -607,6 +624,7 @@ module Introspection = struct
       Field {
         name = "interfaces";
         doc = None;
+        deprecated = NotDeprecated;
         typ = List __type;
         args = Arg.[];
         lift = Io.return;
@@ -617,6 +635,7 @@ module Introspection = struct
       Field {
         name = "possibleTypes";
         doc = None;
+        deprecated = NotDeprecated;
         typ = List __type;
         args = Arg.[];
         lift = Io.return;
@@ -625,6 +644,7 @@ module Introspection = struct
       Field {
         name = "ofType";
         doc = None;
+        deprecated = NotDeprecated;
         typ = __type;
         args = Arg.[];
         lift = Io.return;
@@ -638,6 +658,7 @@ module Introspection = struct
       Field {
         name = "inputFields";
         doc = None;
+        deprecated = NotDeprecated;
         typ = List (NonNullable __input_value);
         args = Arg.[];
         lift = Io.return;
@@ -649,6 +670,7 @@ module Introspection = struct
       Field {
         name = "enumValues";
         doc = None;
+        deprecated = NotDeprecated;
         typ = List (NonNullable __enum_value);
         args = Arg.[];
         lift = Io.return;
@@ -667,6 +689,7 @@ module Introspection = struct
       Field {
         name = "name";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
@@ -678,6 +701,7 @@ module Introspection = struct
       Field {
         name = "description";
         doc = None;
+        deprecated = NotDeprecated;
         typ = string;
         args = Arg.[];
         lift = Io.return;
@@ -689,6 +713,7 @@ module Introspection = struct
       Field {
         name = "args";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable (List (NonNullable __input_value));
         args = Arg.[];
         lift = Io.return;
@@ -699,6 +724,7 @@ module Introspection = struct
       Field {
         name = "type";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.return;
@@ -710,18 +736,24 @@ module Introspection = struct
       Field {
         name = "isDeprecated";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable bool;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ f -> false
+        resolve = fun _ f -> match f with
+          | AnyField (Field { deprecated = Deprecated _ }) -> true
+          | _ -> false
       };
       Field {
         name = "deprecationReason";
         doc = None;
+        deprecated = NotDeprecated;
         typ = string;
         args = Arg.[];
         lift = Io.return;
-        resolve = fun _ f -> None
+        resolve = fun _ f -> match f with
+          | AnyField (Field { deprecated = Deprecated reason }) -> reason
+          | _ -> None
       }
     ]
   }
@@ -733,6 +765,7 @@ module Introspection = struct
       Field {
         name = "name";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.return;
@@ -748,6 +781,7 @@ module Introspection = struct
       Field {
         name = "types";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable (List (NonNullable __type));
         args = Arg.[];
         lift = Io.return;
@@ -760,6 +794,7 @@ module Introspection = struct
       Field {
         name = "queryType";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.return;
@@ -768,6 +803,7 @@ module Introspection = struct
       Field {
         name = "mutationType";
         doc = None;
+        deprecated = NotDeprecated;
         typ = __type;
         args = Arg.[];
         lift = Io.return;
@@ -776,6 +812,7 @@ module Introspection = struct
       Field {
         name = "directives";
         doc = None;
+        deprecated = NotDeprecated;
         typ = NonNullable (List (NonNullable __directive));
         args = Arg.[];
         lift = Io.return;
@@ -788,6 +825,7 @@ module Introspection = struct
     let schema_field = Field {
       name = "__schema";
       doc = None;
+      deprecated = NotDeprecated;
       typ = NonNullable __schema;
       args = Arg.[];
       lift = Io.return;
