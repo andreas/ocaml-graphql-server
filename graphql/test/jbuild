@@ -10,7 +10,8 @@
     test_common
     test_schema
     variable_test
-    argument_test))
+    argument_test
+    introspection_test))
   (libraries (graphql alcotest))))
 
 (executables

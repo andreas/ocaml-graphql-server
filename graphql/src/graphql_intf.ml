@@ -18,6 +18,10 @@ module type Schema = sig
                ('ctx, unit) field list ->
                'ctx schema
 
+  type deprecated =
+    | NotDeprecated
+    | Deprecated of string option
+
   val obj : ?doc:string ->
             string ->
             fields:(('ctx, 'src option) typ -> ('ctx, 'src) field list) ->
@@ -69,6 +73,7 @@ module type Schema = sig
   end
 
   val field : ?doc:string ->
+              ?deprecated:deprecated ->
               string ->
               typ:('ctx, 'a) typ ->
               args:('a, 'b) Arg.arg_list ->
@@ -76,6 +81,7 @@ module type Schema = sig
               ('ctx, 'src) field
 
   val io_field : ?doc:string ->
+                 ?deprecated:deprecated ->
                  string ->
                  typ:('ctx, 'a) typ ->
                  args:('a io, 'b) Arg.arg_list ->
