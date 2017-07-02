@@ -1,4 +1,4 @@
-Master
+0.2.0 2017-07-02
 ---------------------------------
 
 - Support deprecation of fields (#53)
