@@ -27,7 +27,11 @@ Three OPAM packages are provided:
 - `graphql-lwt` provides the module `Graphql_lwt.Schema` with [Lwt](https://github.com/ocsigen/lwt) support in field resolvers.
 - `graphql-async` provides the module `Graphql_async.Schema` with [Async](https://github.com/janestreet/async) support in field resolvers.`
 
-[API documentation](https://andreas.github.io/ocaml-graphql-server/)
+API documentation:
+
+- [`graphql`](https://andreas.github.io/ocaml-graphql-server/graphql)
+- [`graphql-lwt`](https://andreas.github.io/ocaml-graphql-server/graphql-lwt)
+- [`graphql-async`](https://andreas.github.io/ocaml-graphql-server/graphql-async)
 
 ## Examples
 
