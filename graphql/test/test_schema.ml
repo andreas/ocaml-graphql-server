@@ -26,17 +26,17 @@ let user = Schema.(obj "user"
     field "id"
       ~typ:(non_null int)
       ~args:Arg.[]
-      ~resolve:(fun () p -> p.id)
+      ~resolve:(fun _ p -> p.id)
     ;
     field "name"
       ~typ:(non_null string)
       ~args:Arg.[]
-      ~resolve:(fun () p -> p.name)
+      ~resolve:(fun _ p -> p.name)
     ;
     field "role"
       ~typ:(non_null role)
       ~args:Arg.[]
-      ~resolve:(fun () p -> p.role)
+      ~resolve:(fun _ p -> p.role)
   ])
 )
 
@@ -52,7 +52,7 @@ let schema = Schema.(schema [
     field "users"
       ~typ:(non_null (list (non_null user)))
       ~args:Arg.[]
-      ~resolve:(fun () () -> !users)
+      ~resolve:(fun _ () -> !users)
     ]
     ~mutations:[
       field "add_user"
@@ -61,7 +61,7 @@ let schema = Schema.(schema [
           arg "name" ~typ:(non_null string);
           arg "role" ~typ:(non_null input_role)
         ]
-        ~resolve:(fun () () name role ->
+        ~resolve:(fun _ () name role ->
           let id = Random.int 1000000 in
           users := List.append !users [{ id; name; role }];
           !users
