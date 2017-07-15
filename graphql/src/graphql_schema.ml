@@ -291,6 +291,11 @@ module Make(Io : IO) = struct
     values  : 'a enum_value list;
   }
 
+  type 'ctx resolve_params = {
+    ctx : 'ctx;
+    field : Graphql_parser.field;
+  }
+
   type ('ctx, 'src) obj = {
     name   : string;
     doc    : string option;
@@ -303,7 +308,7 @@ module Make(Io : IO) = struct
       deprecated : deprecated;
       typ        : ('ctx, 'io_out) typ;
       args       : ('maybe_io_out, 'args) Arg.arg_list;
-      resolve    : 'ctx -> 'src -> 'args;
+      resolve    : 'ctx resolve_params -> 'src -> 'args;
       lift       : 'maybe_io_out -> 'io_out Io.t
     } -> ('ctx, 'src) field
   and (_, _) typ =
@@ -965,7 +970,11 @@ end
   and resolve_field : type src. 'ctx execution_context -> src -> Graphql_parser.field -> ('ctx, src) field -> ((string * Yojson.Basic.json), string) result Io.t = fun ctx src query_field (Field field) ->
     let open Io.Infix in
     let name = alias_or_name query_field in
-    let resolver = field.resolve ctx.ctx src in
+    let resolve_params = {
+      ctx = ctx.ctx;
+      field = query_field;
+    } in
+    let resolver = field.resolve resolve_params src in
     match Arg.eval_arglist ctx.variables field.args query_field.arguments resolver with
     | Error _ as err -> Io.return err
     | Ok tmp ->

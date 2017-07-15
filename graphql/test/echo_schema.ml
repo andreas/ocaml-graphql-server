@@ -1,6 +1,6 @@
 open Graphql
 
-let echo : 'a. unit -> unit -> 'a -> 'a = fun _ _ x -> x
+let echo : 'a. unit Schema.resolve_params -> unit -> 'a -> 'a = fun _ _ x -> x
 
 let echo_field name field_typ arg_typ = Schema.(
       field name
@@ -42,7 +42,7 @@ let schema =
             ~args:Arg.[
               arg "x" ~typ:(non_null person_arg)
             ]
-            ~resolve:(fun () () (title, first, last) -> first ^ " " ^ last)
+            ~resolve:(fun _ () (title, first, last) -> first ^ " " ^ last)
             ;
       field "sum_defaults"
             ~typ:int
@@ -50,5 +50,5 @@ let schema =
               arg' "x" ~typ:string ~default:"42";
               arg' "y" ~typ:int ~default:3
             ]
-            ~resolve:(fun () () x y -> try Some ((int_of_string x) + y) with _ -> None)
+            ~resolve:(fun _ () x y -> try Some ((int_of_string x) + y) with _ -> None)
   ])

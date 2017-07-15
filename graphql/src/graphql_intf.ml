@@ -80,12 +80,17 @@ module type Schema = sig
     val non_null : ('a, 'b option -> 'a) arg_typ -> ('a, 'b -> 'a) arg_typ
   end
 
+  type 'ctx resolve_params = {
+    ctx : 'ctx;
+    field : Graphql_parser.field;
+  }
+
   val field : ?doc:string ->
               ?deprecated:deprecated ->
               string ->
               typ:('ctx, 'a) typ ->
               args:('a, 'b) Arg.arg_list ->
-              resolve:('ctx -> 'src -> 'b) ->
+              resolve:('ctx resolve_params -> 'src -> 'b) ->
               ('ctx, 'src) field
 
   val io_field : ?doc:string ->
@@ -93,7 +98,7 @@ module type Schema = sig
                  string ->
                  typ:('ctx, 'a) typ ->
                  args:('a io, 'b) Arg.arg_list ->
-                 resolve:('ctx -> 'src -> 'b) ->
+                 resolve:('ctx resolve_params -> 'src -> 'b) ->
                  ('ctx, 'src) field
 
   val enum : ?doc:string ->
