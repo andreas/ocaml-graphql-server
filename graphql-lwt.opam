@@ -12,6 +12,8 @@ depends: [
   "graphql"
   "alcotest" {test}
   "lwt"
+  "cohttp-lwt-unix" {>= "0.99"}
+  "crunch"
 ]
 available: [
   ocaml-version >= "4.03.0"
