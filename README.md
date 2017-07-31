@@ -215,7 +215,7 @@ Schema.(obj "math"
         arg  "y" ~typ:int;            (* <-- optional *)
         arg' "z" ~typ:int ~default:7  (* <-- optional w/ default *)
       ]
-      ~resolve:(fun x y z ->
+      ~resolve:(fun () () x y z ->
         let y' = match y with Some n -> n | None -> 42 in
         x + y' + z
       )
