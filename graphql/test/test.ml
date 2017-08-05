@@ -5,4 +5,5 @@ let () =
     "variables", Variable_test.suite;
     "introspection", Introspection_test.suite;
     "errors", Error_test.suite;
+    "abstract", Abstract_test.suite;
   ]

@@ -110,6 +110,30 @@ module type Schema = sig
 
   val non_null : ('ctx, 'src option) typ -> ('ctx, 'src) typ
 
+  type ('ctx, 'a) abstract_value
+  type ('ctx, 'a) abstract_typ = ('ctx, ('ctx, 'a) abstract_value option) typ
+
+  val union : ?doc:string ->
+              string ->
+              ('ctx, 'a) abstract_typ
+
+  type abstract_field
+  val abstract_field : ?doc:string ->
+                       ?deprecated:deprecated ->
+                       string ->
+                       typ:(_, 'a) typ ->
+                       args:('a, _) Arg.arg_list ->
+                       abstract_field
+
+  val interface : ?doc:string ->
+                  string ->
+                  fields:(('ctx, 'a) abstract_typ -> abstract_field list) ->
+                  ('ctx, 'a) abstract_typ
+
+  val add_type : ('ctx, 'a) abstract_typ ->
+                 ('ctx, 'src option) typ ->
+                 'src -> ('ctx, 'a) abstract_value
+
   (** {3 Built-in scalars} *)
 
   val int    : ('ctx, int option) typ
