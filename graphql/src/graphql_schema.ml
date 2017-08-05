@@ -296,6 +296,7 @@ module Make(Io : IO) = struct
     name   : string;
     doc    : string option;
     fields : ('ctx, 'src) field list Lazy.t;
+    interfaces : abstract list ref;
   }
   and (_, _) field =
     Field : {
@@ -313,6 +314,22 @@ module Make(Io : IO) = struct
     | NonNullable : ('ctx, 'src option) typ -> ('ctx, 'src) typ
     | Scalar      : 'src scalar -> ('ctx, 'src option) typ
     | Enum        : 'src enum -> ('ctx, 'src option) typ
+    | Abstract    : abstract -> ('ctx, ('ctx, 'a) abstract_value option) typ
+  and any_typ =
+    | AnyTyp : (_, _) typ -> any_typ
+    | AnyArgTyp : _ Arg.arg_typ -> any_typ
+  and abstract = {
+    name   : string;
+    doc    : string option;
+    kind   : [`Union | `Interface of abstract_field list Lazy.t];
+    mutable types  : any_typ list;
+  }
+  and abstract_field =
+    AbstractField : (_, _) field -> abstract_field
+  and ('ctx, 'a) abstract_value =
+    AbstractValue : ('ctx, 'src option) typ * 'src -> ('ctx, 'a) abstract_value
+
+  type ('ctx, 'a) abstract_typ = ('ctx, ('ctx, 'a) abstract_value option) typ
 
   type 'ctx schema = {
     query : ('ctx, unit) obj;
@@ -323,12 +340,14 @@ module Make(Io : IO) = struct
     query = {
       name = query_name;
       doc = None;
+      interfaces = ref [];
       fields = lazy fields;
     };
     mutation = Option.map mutations ~f:(fun fields ->
       {
         name = mutation_name;
         doc = None;
+        interfaces = ref [];
         fields = lazy fields;
       }
     )
@@ -336,7 +355,7 @@ module Make(Io : IO) = struct
 
   (* Constructor functions *)
   let obj ?doc name ~fields =
-    let rec o = Object { name; doc; fields = lazy (fields o)} in
+    let rec o = Object { name; doc; fields = lazy (fields o); interfaces = ref []} in
     o
 
   let field ?doc ?(deprecated=NotDeprecated) name ~typ ~args ~resolve =
@@ -344,6 +363,9 @@ module Make(Io : IO) = struct
 
   let io_field ?doc ?(deprecated=NotDeprecated) name ~typ ~args ~resolve =
     Field { name; doc; deprecated; typ; args; resolve; lift = id }
+
+  let abstract_field ?doc ?(deprecated=NotDeprecated) name ~typ ~args =
+    AbstractField (Field { lift = Io.ok; name; doc; deprecated; typ; args; resolve = Obj.magic () })
 
   let enum ?doc name ~values =
     Enum { name; doc; values }
@@ -356,6 +378,23 @@ module Make(Io : IO) = struct
 
   let non_null typ =
     NonNullable typ
+
+  let union ?doc name =
+    Abstract { name; doc; types = []; kind = `Union }
+
+  let interface ?doc name ~fields =
+    let rec i = Abstract { name; doc; types = []; kind = `Interface (lazy (fields i)) } in
+    i
+
+  let add_type abstract_typ typ =
+    match abstract_typ with
+    | Abstract a ->
+        (* TODO add subtype check here *)
+        a.types <- (AnyTyp typ)::a.types;
+        fun src ->
+          AbstractValue (typ, src)
+    | _ ->
+        invalid_arg "The first argument must be a union or interface"
 
   (* Built-in scalars *)
   let int : 'ctx. ('ctx, int option) typ = Scalar {
@@ -390,9 +429,6 @@ module Make(Io : IO) = struct
 
 module Introspection = struct
   (* any_typ, any_field and any_arg hide type parameters to avoid scope escaping errors *)
-  type any_typ =
-    | AnyTyp : (_, _) typ -> any_typ
-    | AnyArgTyp : _ Arg.arg_typ -> any_typ
   type any_field =
     | AnyField : (_, _) field -> any_field
     | AnyArgField : _ Arg.arg -> any_field
@@ -406,7 +442,7 @@ module Introspection = struct
       f (result, visited)
 
   (* Extracts all types contained in a single type *)
-  let rec types : type src. ?memo:(any_typ list * StringSet.t) -> ('ctx, src) typ -> (any_typ list * StringSet.t) = fun ?(memo=([], StringSet.empty)) typ ->
+  let rec types : type ctx src. ?memo:(any_typ list * StringSet.t) -> (ctx, src) typ -> (any_typ list * StringSet.t) = fun ?(memo=([], StringSet.empty)) typ ->
     match typ with
     | List typ -> types ~memo typ
     | NonNullable typ -> types ~memo typ
@@ -428,6 +464,13 @@ module Introspection = struct
           in
           List.fold_left reducer (result', visited') (Lazy.force o.fields)
         )
+   | Abstract a as abstract ->
+      unless_visited memo a.name (fun (result, visited) ->
+        let result' = (AnyTyp abstract)::result in
+        let visited' = StringSet.add a.name visited in
+        List.fold_left (fun memo (AnyTyp typ) -> types ~memo typ) (result', visited') a.types
+      )
+
   and arg_types : type a. (any_typ list * StringSet.t) -> a Arg.arg_typ -> (any_typ list * StringSet.t) = fun memo argtyp ->
     match argtyp with
     | Arg.List typ -> arg_types memo typ
@@ -463,6 +506,8 @@ module Introspection = struct
     | arg::args ->
         let memo' = List.cons (AnyArg arg) memo in
         args_to_list ~memo:memo' args
+
+  let no_interfaces = ref []
 
   let __type_kind = Enum {
     name = "__TypeKind";
@@ -522,6 +567,7 @@ module Introspection = struct
   let __enum_value : 'ctx. ('ctx, any_enum_value option) typ = Object {
     name = "__EnumValue";
     doc = None;
+    interfaces = no_interfaces;
     fields = lazy [
       Field {
         name = "name";
@@ -568,6 +614,7 @@ module Introspection = struct
   let rec __input_value : 'ctx. ('ctx, any_arg option) typ = Object {
     name = "__InputValue";
     doc = None;
+    interfaces = no_interfaces;
     fields = lazy [
       Field {
         name = "name";
@@ -617,6 +664,7 @@ module Introspection = struct
   and __type : 'ctx . ('ctx, any_typ option) typ = Object {
     name = "__Type";
     doc = None;
+    interfaces = no_interfaces;
     fields = lazy [
       Field {
         name = "kind";
@@ -627,6 +675,8 @@ module Introspection = struct
         lift = Io.ok;
         resolve = fun _ t -> match t with
           | AnyTyp (Object _) -> `Object
+          | AnyTyp (Abstract { kind = `Union; _ }) -> `Union
+          | AnyTyp (Abstract { kind = `Interface _; _ }) -> `Interface
           | AnyTyp (List _) -> `List
           | AnyTyp (Scalar _) -> `Scalar
           | AnyTyp (Enum _) -> `Enum
@@ -648,6 +698,7 @@ module Introspection = struct
           | AnyTyp (Object o) -> Some o.name
           | AnyTyp (Scalar s) -> Some s.name
           | AnyTyp (Enum e) -> Some e.name
+          | AnyTyp (Abstract a) -> Some a.name
           | AnyArgTyp (Arg.Object o) -> Some o.name
           | AnyArgTyp (Arg.Scalar s) -> Some s.name
           | AnyArgTyp (Arg.Enum e) -> Some e.name
@@ -664,6 +715,7 @@ module Introspection = struct
           | AnyTyp (Object o) -> o.doc
           | AnyTyp (Scalar s) -> s.doc
           | AnyTyp (Enum e) -> e.doc
+          | AnyTyp (Abstract a) -> a.doc
           | AnyArgTyp (Arg.Object o) -> o.doc
           | AnyArgTyp (Arg.Scalar s) -> s.doc
           | AnyArgTyp (Arg.Enum e) -> e.doc
@@ -679,6 +731,8 @@ module Introspection = struct
         resolve = fun _ t -> match t with
           | AnyTyp (Object o) ->
               Some (List.map (fun f -> AnyField f) (Lazy.force o.fields))
+          | AnyTyp (Abstract { kind = `Interface fields; _ }) ->
+              Some (List.map (fun (AbstractField f) -> AnyField f) (Lazy.force fields))
           | AnyArgTyp (Arg.Object o) ->
               let arg_list = args_to_list o.fields in
               Some (List.map (fun (AnyArg f) -> AnyArgField f) arg_list)
@@ -688,21 +742,25 @@ module Introspection = struct
         name = "interfaces";
         doc = None;
         deprecated = NotDeprecated;
-        typ = List __type;
+        typ = List (NonNullable __type);
         args = Arg.[];
         lift = Io.ok;
         resolve = fun _ t -> match t with
-          | AnyTyp (Object _) -> Some []
+          | AnyTyp (Object i) ->
+              Some (List.map (fun i -> AnyTyp (Abstract i)) !(i.interfaces))
           | _ -> None
       };
       Field {
         name = "possibleTypes";
         doc = None;
         deprecated = NotDeprecated;
-        typ = List __type;
+        typ = List (NonNullable __type);
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ t -> None
+        resolve = fun _ t -> match t with
+          | AnyTyp (Abstract a) ->
+              Some a.types
+          | _ -> None
       };
       Field {
         name = "ofType";
@@ -748,6 +806,7 @@ module Introspection = struct
   and __field : 'ctx. ('ctx, any_field option) typ = Object {
     name = "__Field";
     doc = None;
+    interfaces = no_interfaces;
     fields = lazy [
       Field {
         name = "name";
@@ -824,6 +883,7 @@ module Introspection = struct
   let __directive = Object {
     name = "__Directive";
     doc = None;
+    interfaces = no_interfaces;
     fields = lazy [
       Field {
         name = "name";
@@ -840,6 +900,7 @@ module Introspection = struct
   let __schema : 'ctx. ('ctx, 'ctx schema option) typ = Object {
     name = "__Schema";
     doc = None;
+    interfaces = no_interfaces;
     fields = lazy [
       Field {
         name = "types";
@@ -948,7 +1009,7 @@ end
     | Serial -> Io.map_s ~memo:[]
     | Parallel -> Io.map_p
 
-  let rec present : type src. 'ctx execution_context -> src -> Graphql_parser.field -> ('ctx, src) typ -> (Yojson.Basic.json * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t =
+  let rec present : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) typ -> (Yojson.Basic.json * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t =
     fun ctx src query_field typ ->
       match typ with
       | Scalar s -> coerce_or_null src (fun x -> Io.ok (s.coerce x, []))
@@ -971,8 +1032,12 @@ end
             | Some enum_value -> Io.ok (`String enum_value.name, [])
             | None -> Io.ok (`Null, [])
           )
+      | Abstract u ->
+          coerce_or_null src (fun (AbstractValue (typ', src')) ->
+            present ctx (Some src') query_field typ'
+          )
 
-  and resolve_field : type src. 'ctx execution_context -> src -> Graphql_parser.field -> ('ctx, src) field -> ((string * Yojson.Basic.json) * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t =
+  and resolve_field : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) field -> ((string * Yojson.Basic.json) * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t =
     fun ctx src query_field (Field field) ->
       let open Io.Infix in
       let name = alias_or_name query_field in
@@ -999,7 +1064,7 @@ end
       | Error err ->
           Io.error (`Argument_error err)
 
-  and resolve_fields : type src. 'ctx execution_context -> ?execution_order:execution_order -> src -> ('ctx, src) obj -> Graphql_parser.field list -> (Yojson.Basic.json * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t =
+  and resolve_fields : type ctx src. ctx execution_context -> ?execution_order:execution_order -> src -> (ctx, src) obj -> Graphql_parser.field list -> (Yojson.Basic.json * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t =
     fun ctx ?execution_order:(execution_order=Parallel) src obj fields ->
       map_fields_with_order execution_order (fun (query_field : Graphql_parser.field) ->
         if query_field.name = "__typename" then
