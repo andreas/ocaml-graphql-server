@@ -1,9 +1,9 @@
-GraphQL Servers in OCaml
+GraphQL in OCaml
 -----------------------------------------------
 
 ![Build Status](https://travis-ci.org/andreas/ocaml-graphql-server.svg?branch=master)
 
-This repo contains a library for creating GraphQL servers in OCaml. Note that the API is still under active development.
+This repo contains a library for creating GraphQL servers and queries in OCaml. Note that the API is still under active development.
 
 Current feature set:
 
@@ -16,16 +16,18 @@ Current feature set:
 - [x] Lwt support
 - [x] Async support
 - [x] Example with HTTP server and GraphiQL
+- [x] PPX for writing type-safe GraphQL queries
 
 ![GraphiQL Example](https://cloud.githubusercontent.com/assets/2518/22173954/8d1e5bbe-dfd1-11e6-9a7e-4f93d0ce2e24.png)
 
 ## Documentation
 
-Three OPAM packages are provided:
+Four OPAM packages are provided:
 
 - `graphql` provides the core functionality and is IO-agnostic. It provides a functor `Graphql.Schema.Make(IO)` to instantiate with your own IO monad.
 - `graphql-lwt` provides the module `Graphql_lwt.Schema` with [Lwt](https://github.com/ocsigen/lwt) support in field resolvers.
 - `graphql-async` provides the module `Graphql_async.Schema` with [Async](https://github.com/janestreet/async) support in field resolvers.
+- `graphql-ppx` provides the ppx `[%graphql {| query { ... } |}]` and returns type-safe functions to interact with the query (more below).
 
 API documentation:
 
@@ -225,56 +227,92 @@ Schema.(obj "math"
 
 Note that you must use `arg'` to provide a default value.
 
-## Design
+## PPX
 
-Only valid schemas should pass the type checker. If a schema compiles, the following holds:
+Given a GraphQL schema (introspection query response) and a GraphQL query, `graphql-ppx` generates three values: (1) a GraphQL query (2) a function to construct the associated query variables, and (3) a function for parsing the GraphQL JSON response into a typed value (object type).
 
-1. The type of a field agrees with the return type of the resolve function.
-2. The arguments of a field agrees with the accepted arguments of the resolve function.
-3. The source of a field agrees with the type of the object to which it belongs.
-4. The context argument for all resolver functions in a schema agree.
-
-The following types ensure this:
+Here's an example of using `graphql-ppx` and the generated values (the schema is shown at the top in [GraphQL Schema Language](https://raw.githubusercontent.com/sogko/graphql-shorthand-notation-cheat-sheet/master/graphql-shorthand-notation-cheat-sheet.png)):
 
 ```ocaml
-type ('ctx, 'src) obj = {
-  name   : string;
-  fields : ('ctx, 'src) field list Lazy.t;
+(*
+enum ROLE {
+  USER
+  ADMIN
 }
-and ('ctx, 'src) field =
-  Field : {
-    name    : string;
-    typ     : ('ctx, 'out) typ;
-    args    : ('out, 'args) Arg.arg_list;
-    resolve : 'ctx -> 'src -> 'args;
-  } -> ('ctx, 'src) field
-and ('ctx, 'src) typ =
-  | Object      : ('ctx, 'src) obj -> ('ctx, 'src option) typ
-  | List        : ('ctx, 'src) typ -> ('ctx, 'src list option) typ
-  | NonNullable : ('ctx, 'src option) typ -> ('ctx, 'src) typ
-  | Scalar      : 'src scalar -> ('ctx, 'src option) typ
-  | Enum        : 'src enum -> ('ctx, 'src option) typ
+
+type User {
+  id: ID!
+  role: ROLE
+  contacts: [User!]!
+}
+
+type Query {
+  user(id: ID!): User
+}
+
+schema {
+  query: Query
+}
+*)
+
+let query, kvariables, parse = [%graphql {|
+  query FindUser($id: ID!) {
+    user(id: $id) {
+      id
+      role
+      contacts {
+        id
+      }
+    }
+  }
+|}] in
+(* ... *)
 ```
 
-The type parameters can be interpreted as follows:
+In this example, the following values are generated:
 
-- `'ctx` is a value that is passed all resolvers when executing a query against a schema,
-- `'src` is the domain-specific source value, e.g. a user record,
-- `'args` is the arguments of the resolver, and will be of the type `'arg¹ -> ... -> 'argⁿ -> 'out`,
-- `'out` is the result of the resolver, which must agree with the type of the field.
+- `query` (type `string`) is the GraphQL query to be submitted. Currently it's an unmodified version of the string provided to `%graphql`, but it will likely be modified in the future, e.g. to inject `__typename` for interface disambiguation.
+- `kvariables` (type `(Yojson.Basic.json -> 'a) -> id:string -> unit -> 'a`) is a function to construct the JSON value to submit as query variables ([doc](http://graphql.org/learn/serving-over-http/#post-request)). Note that the first argument is a continuation to handle the resulting JSON value -- this makes it easier to write nice clients (see more below). The type is extracted from the query. Required variables appear as labeled arguments, optional variables appear as optional arguments.
+- `parse` is a function for parsing the JSON response from the server and has the type:
+  
+  ```
+  Yojson.Basic.json ->
+    <user:
+      <id: string;
+      role: [> `USER | `ADMIN] option;
+      contacts: <id: string> list>
+    >
+  ```
+  This type captures the shape of the GraphQL response in a type-safe fashion based on the provided schema. Scalars are converted to their OCaml equivalent (e.g. a GraphQL `String` is an OCaml `string`), nullable types are converted to `option` types, enums to polymorphic variants, lists to list types and GraphQL objects to OCaml objects. Note that this function will likely return a `result` type in the future, as the GraphQL query can fail.
 
-Particularly noteworthy is `('ctx, 'src) field`, which hides the type `'out`. The type `'out` is used to ensure that the output of a resolver function agrees with the input type of the field's type.
-
-For introspection, three additional types are used to hide the type parameters `'ctx` and `src`:
+With the above, it's possible to write quite executable queries quite easily:
 
 ```ocaml
-  type any_typ =
-    | AnyTyp : (_, _) typ -> any_typ
-    | AnyArgTyp : (_, _) Arg.arg_typ -> any_typ
-  type any_field =
-    | AnyField : (_, _) field -> any_field
-    | AnyArgField : (_, _) Arg.arg -> any_field
-  type any_arg = AnyArg : (_, _) Arg.arg -> any_ar
-```
+let executable_query (query, kvariables, parse) =
+  kvariables (fun variables ->
+    let response_body = (* construct HTTP body here and submit to GraphQL endpoint *) in
+    Yojson.Basic.of_string response_body
+    |> parse
+  )
 
-This is to avoid "type parameter would avoid it's scope"-errors.
+let find_user_role = executable_query [%graphql {|
+  query FindUserRole($id: ID!) {
+    user(id: $id) {
+      role
+    }
+  }
+|}]
+```
+Here  `find_user_role` has the type ```id:string -> unit -> <user: <role: [`USER | `ADMIN] option> option>```. See [`github.ml`](https://github.com/andreas/ocaml-graphql-server/blob/ppx/graphql-ppx/examples/github.ml) for a real example using `Lwt` and `Cohttp`.
+
+`[%graphql ...]` expects a file `schema.json` to be present in the same directory as the source file. This file should contain an introspection query response.
+
+For use with jbuilder, use the `preprocess`- and `preprocessor_deps`-stanza:
+
+```
+(executable
+  (preprocess (pps (graphql_ppx)))
+  (preprocessor_deps ((file schema.json)))
+  ...
+)
+```
