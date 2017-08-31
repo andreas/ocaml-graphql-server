@@ -69,41 +69,6 @@ let schema = Schema.(schema [
   ]
 )
 
-let json_err = function
-  | Ok _ as ok -> ok
-  | Error err -> Error (`String err)
-
-let execute variables query =
-  let open Lwt_result in
-  Lwt.return @@ json_err @@ Graphql_parser.parse query >>= fun doc ->
-  Schema.execute schema () ~variables doc
-
-let callback conn (req : Cohttp.Request.t) body =
-  Lwt_io.printf "Req: %s\n" req.resource;
-  match (req.meth, req.resource) with
-  | `GET, _ -> C.Server.respond_file "./index.html" ()
-  | `POST, _ ->
-    begin
-      Cohttp_lwt_body.to_string body >>= fun query_json ->
-      Lwt_io.printf "Body: %s\n" query_json;
-      let query = Yojson.Basic.(from_string query_json |> Util.member "query" |> Util.to_string)
-      in
-      let variables =
-        try
-          Yojson.Basic.(from_string query_json |> Util.member "variables" |> Util.to_assoc)
-        with _ -> []
-      in
-      Lwt_io.printf "Query: %s\n" query;
-      execute (variables :> (string * Graphql_parser.const_value) list) query >>= function
-      | Ok data ->
-          let body = Yojson.Basic.to_string data in
-          C.Server.respond_string ~status:`OK ~body ()
-      | Error err ->
-          let body = Yojson.Basic.to_string err in
-          C.Server.respond_error ~body ()
-    end
-  | _ -> C.Server.respond_string ~status:`Not_found ~body:"" ()
-
 let () =
-  C.Server.create ~mode:(`TCP (`Port 8080)) (C.Server.make ~callback ())
+  Server.start ~ctx:(fun () -> ()) schema
   |> Lwt_main.run
