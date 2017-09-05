@@ -123,7 +123,7 @@ let ignored = scan_state `Whitespace (fun state c ->
       if c = '\n' then Some `Whitespace else Some `Comment
   | `Whitespace ->
       match c with
-      | ' ' | ',' | '\n' -> Some `Whitespace
+      | ' ' | ',' | '\t' | '\n' -> Some `Whitespace
       | '#' -> Some `Comment
       | _ -> None
 ) >>| fun _ -> ()
