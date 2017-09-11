@@ -5,7 +5,6 @@
   (wrapped false)
   (modules
    (echo_schema
-    parser_test
     schema_test
     test_common
     test_schema
@@ -22,5 +21,5 @@
 (alias
  ((name runtest)
   (package graphql)
-  (deps (test.exe (files_recursively_in "data")))
+  (deps (test.exe))
   (action (run ${<}))))

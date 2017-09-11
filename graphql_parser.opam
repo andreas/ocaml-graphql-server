@@ -9,9 +9,9 @@ build: [["jbuilder" "build" "-p" name "-j" jobs]]
 build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
 depends: [
   "jbuilder" {build}
-  "graphql_parser"
-  "yojson"
-  "rresult"
+  "angstrom" {>= "0.4.0"}
+  "sexplib"
+  "ppx_sexp_conv" {>= "0.9.0"}
   "alcotest" {test}
 ]
 available: [

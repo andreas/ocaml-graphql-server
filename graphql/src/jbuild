@@ -4,5 +4,4 @@
  ((name graphql)
   (public_name graphql)
   (wrapped false)
-  (preprocess (pps (ppx_sexp_conv)))
-  (libraries (angstrom sexplib yojson rresult))))
+  (libraries (graphql_parser yojson rresult))))
