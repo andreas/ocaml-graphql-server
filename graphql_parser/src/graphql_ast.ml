@@ -1,5 +1,3 @@
-open Result
-
 type const_value = [
   | `Null
   | `Int of int
@@ -108,5 +106,3 @@ type definition =
 type document =
   definition list
   [@@deriving show]
-
-val parse : string -> (document, string) result

@@ -1,0 +1,11 @@
+query Named($a: String, $b: Float) {
+  x
+}
+
+query List($a: [Bool], $b: [[Int]]) {
+  x
+}
+
+query NonNull($a: ID!, $b: [Foo]!, $c: [Foo!], $d: [Foo!]!) {
+  x
+}

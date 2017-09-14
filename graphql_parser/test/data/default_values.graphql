@@ -1,0 +1,8 @@
+query DefaultValues(
+    $a: Int = 1,
+    $b: [String] = ["a"],
+    $c: Obj = {x: {y: true}, z: RED},
+    $d: [Obj]! = [{x: {y: null}, z: BLUE}]
+  ) {
+  x
+}

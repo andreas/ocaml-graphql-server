@@ -1,8 +1,14 @@
 (jbuild_version 1)
 
-(library
- ((name graphql_parser)
+(ocamllex (graphql_lexer))
+
+(menhir (
+  (modules (graphql_grammar))
+))
+
+(library (
+  (name graphql_parser)
   (public_name graphql_parser)
+  (libraries (result))
   (wrapped false)
-  (preprocess (pps (ppx_sexp_conv)))
-  (libraries (angstrom sexplib))))
+))

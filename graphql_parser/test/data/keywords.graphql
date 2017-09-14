@@ -1,0 +1,38 @@
+query Keywords($fragment: Int, $false: Int, $mutation: Int, $null: Int, $on: Int, $query: Int, $subscription: Int, $true: Int) {
+  fragment
+  false
+  mutation
+  null
+  on
+  query
+  subscription
+  true
+}
+
+fragment fragment on Foo {
+  a
+}
+
+fragment false on Foo {
+  a
+}
+
+fragment mutation on Foo {
+  a
+}
+
+fragment null on Foo {
+  a
+}
+
+fragment query on Foo {
+  a
+}
+
+fragment subscription on Foo {
+  a
+}
+
+fragment true on Foo {
+  a
+}

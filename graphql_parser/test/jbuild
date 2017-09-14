@@ -9,6 +9,6 @@
 (alias (
   (name runtest)
   (package graphql_parser)
-  (deps (test.exe (files_recursively_in "data")))
-  (action (run ${<}))
+  (deps (test.exe))
+  (action (run ${<} -v))
 ))
