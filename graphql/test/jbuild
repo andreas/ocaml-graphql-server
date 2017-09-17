@@ -22,4 +22,4 @@
  ((name runtest)
   (package graphql)
   (deps (test.exe))
-  (action (run ${<}))))
+  (action (run ${<} -v))))
