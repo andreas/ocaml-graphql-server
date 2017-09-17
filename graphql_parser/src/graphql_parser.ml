@@ -306,4 +306,4 @@ let definition = operation_definition <|> fragment_definition
 
 let document = many1 (ignored *> definition)
 
-let parse query = Angstrom.parse_only document (`String query)
+let parse query = Angstrom.parse_string document query
