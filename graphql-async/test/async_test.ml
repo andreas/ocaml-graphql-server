@@ -33,7 +33,7 @@ let schema = Graphql_async.Schema.(schema [
       io_field "io_int"
         ~typ:(non_null int)
         ~args:Arg.[]
-        ~resolve:(fun () () -> Deferred.return 42)
+        ~resolve:(fun () () -> Deferred.return (Ok 42))
     ]
 )
 
