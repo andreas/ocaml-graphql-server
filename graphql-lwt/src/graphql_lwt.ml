@@ -21,7 +21,7 @@ module Server = struct
     Schema.execute schema ctx ~variables doc
 
   let execute_request ctx schema req body =
-    Cohttp_lwt_body.to_string body >>= fun body' ->
+    Cohttp_lwt.Body.to_string body >>= fun body' ->
     Lwt_io.printf "Body: %s\n" body';
     let json = Yojson.Basic.from_string body' in
     let query = Yojson.Basic.(json |> Util.member "query" |> Util.to_string) in

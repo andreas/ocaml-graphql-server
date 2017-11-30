@@ -12,7 +12,7 @@ depends: [
   "graphql"
   "alcotest" {test}
   "lwt"
-  "cohttp-lwt-unix" {>= "0.99"}
+  "cohttp-lwt-unix" {>= "1.0.0"}
   "crunch"
 ]
 available: [
