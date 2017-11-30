@@ -2,51 +2,135 @@ let test_query = Test_common.test_query Echo_schema.schema ()
 
 let suite : (string * [>`Quick] * (unit -> unit)) list = [
   ("string argument", `Quick, fun () ->
-    test_query "{ string(x: \"foo bar baz\") }" "{\"data\":{\"string\":\"foo bar baz\"}}"
+    let query = "{ string(x: \"foo bar baz\") }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "string", `String "foo bar baz"
+      ]
+    ])
   );
   ("float argument", `Quick, fun () ->
-    test_query "{ float(x: 42.5) }" "{\"data\":{\"float\":42.5}}"
+    let query = "{ float(x: 42.5) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "float", `Float 42.5
+      ]
+    ])
   );
   ("int argument", `Quick, fun () ->
-    test_query "{ int(x: 42) }" "{\"data\":{\"int\":42}}"
+    let query = "{ int(x: 42) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "int", `Int 42
+      ]
+    ])
   );
   ("bool argument", `Quick, fun () ->
-    test_query "{ bool(x: false) }" "{\"data\":{\"bool\":false}}"
+    let query = "{ bool(x: false) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "bool", `Bool false
+      ]
+    ])
   );
   ("enum argument", `Quick, fun () ->
-    test_query "{ enum(x: RED) }" "{\"data\":{\"enum\":\"RED\"}}"
+    let query = "{ enum(x: RED) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "enum", `String "RED"
+      ]
+    ])
   );
   ("list argument", `Quick, fun () ->
-    test_query "{ bool_list(x: [false, true]) }" "{\"data\":{\"bool_list\":[false,true]}}"
+    let query = "{ bool_list(x: [false, true]) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "bool_list", `List [`Bool false; `Bool true]
+      ]
+    ])
   );
   ("input object argument", `Quick, fun () ->
-    test_query "{ input_obj(x: {title: \"Mr\", first_name: \"John\", last_name: \"Doe\"}) }" "{\"data\":{\"input_obj\":\"John Doe\"}}"
+    let query = "{ input_obj(x: {title: \"Mr\", first_name: \"John\", last_name: \"Doe\"}) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "input_obj", `String "John Doe"
+      ]
+    ])
   );
   ("null for optional argument", `Quick, fun () ->
-    test_query "{ string(x: null) }" "{\"data\":{\"string\":null}}"
+    let query = "{ string(x: null) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "string", `Null
+      ]
+    ])
   );
   ("null for required argument", `Quick, fun () ->
-    test_query "{ input_obj(x: null) }" "{\"errors\":[{\"message\":\"Missing required argument\"}]}"
+    let query = "{ input_obj(x: null) }" in
+    test_query query (`Assoc [
+      "errors", `List [`Assoc [
+        "message", `String "Missing required argument"]
+      ]
+    ])
   );
   ("missing optional argument", `Quick, fun () ->
-    test_query "{ string }" "{\"data\":{\"string\":null}}"
+    let query = "{ string }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "string", `Null
+      ]
+    ])
   );
   ("missing required argument", `Quick, fun () ->
-    test_query "{ input_obj }" "{\"errors\":[{\"message\":\"Missing required argument\"}]}"
+    let query = "{ input_obj }" in
+    test_query query (`Assoc [
+      "errors", `List [
+        `Assoc [
+          "message", `String "Missing required argument"
+        ]
+      ]
+    ])
   );
   ("input coercion: single value to list", `Quick, fun () ->
-    test_query "{ bool_list(x: false) }" "{\"data\":{\"bool_list\":[false]}}"
+    let query = "{ bool_list(x: false) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "bool_list", `List [
+          `Bool false
+        ]
+      ]
+    ])
   );
   ("input coercion: int to float", `Quick, fun () ->
-    test_query "{ float(x: 42) }" "{\"data\":{\"float\":42.0}}"
+    let query = "{ float(x: 42) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "float", `Float 42.0
+      ]
+    ])
   );
   ("input coercion: int to ID", `Quick, fun () ->
-    test_query "{ id(x: 42) }" "{\"data\":{\"id\":\"42\"}}"
+    let query = "{ id(x: 42) }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "id", `String "42"
+      ]
+    ])
   );
   ("input coercion: string to ID", `Quick, fun () ->
-    test_query "{ id(x: \"42\") }" "{\"data\":{\"id\":\"42\"}}"
+    let query = "{ id(x: \"42\") }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "id", `String "42"
+      ]
+    ])
   );
   ("default arguments", `Quick, fun () ->
-    test_query "{ sum_defaults }" "{\"data\":{\"sum_defaults\":45}}"
+    let query = "{ sum_defaults }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "sum_defaults", `Int 45
+      ]
+    ])
   )
 ]
