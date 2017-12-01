@@ -3,6 +3,8 @@
 
 - Parse tabs as whitespace (#62)
 - Move parser to separate package (#63)
+- Depend on angstrom 0.7.0 (#64)
+- Fix parsing of quoted strings (#64)
 
 0.3.0 2017-08-31
 ---------------------------------
