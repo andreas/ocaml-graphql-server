@@ -103,40 +103,40 @@ module Make(Io : IO) = struct
   module Arg = struct
     open Rresult
 
-    type (_, _) arg_typ =
+    type _ arg_typ =
       | Scalar : {
           name   : string;
           doc    : string option;
-          coerce : Graphql_parser.const_value -> ('b, string) result;
-        } -> ('a, 'b option -> 'a) arg_typ
+          coerce : Graphql_parser.const_value -> ('a, string) result;
+        } -> 'a option arg_typ
       | Object : {
           name   : string;
           doc    : string option;
           fields : ('a, 'b) arg_list;
           coerce : 'b;
-        } -> ('c, 'a option -> 'c) arg_typ
+        } -> 'a option arg_typ
       | Enum : {
           name   : string;
           doc    : string option;
-          values : 'b enum_value list;
-        } -> ('a, 'b option -> 'a) arg_typ
-      | List : ('a, 'b -> 'a) arg_typ -> ('a, 'b list option -> 'a) arg_typ
-      | NonNullable : ('a, 'b option -> 'a) arg_typ -> ('a, 'b -> 'a) arg_typ
-    and ('a, 'b) arg =
+          values : 'a enum_value list;
+        } -> 'a option arg_typ
+      | List : 'a arg_typ -> 'a list option arg_typ
+      | NonNullable : 'a option arg_typ -> 'a arg_typ
+    and _ arg =
       | Arg : {
           name : string;
           doc : string option;
-          typ : ('a, 'b) arg_typ;
-        } -> ('a, 'b) arg
+          typ : 'a arg_typ;
+        } -> 'a arg
       | DefaultArg : {
           name : string;
           doc : string option;
-          typ : ('a, 'b option -> 'a) arg_typ;
-          default : 'b;
-        } -> ('a, 'b -> 'a) arg
+          typ : 'a option arg_typ;
+          default : 'a;
+        } -> 'a arg
     and (_, _) arg_list =
       | [] : ('a, 'a) arg_list
-      | (::) : ('b, 'c -> 'b) arg * ('a, 'b) arg_list -> ('a, 'c -> 'b) arg_list
+      | (::) : 'a arg * ('b, 'c) arg_list -> ('b, 'a -> 'c) arg_list
 
     let arg ?doc name ~typ =
       Arg { name; doc; typ }
@@ -230,7 +230,7 @@ module Make(Io : IO) = struct
               eval_arglist variable_map arglist' key_values (f coerced)
             with StringMap.Missing_key key -> Error (Format.sprintf "Missing variable `%s`" key)
 
-    and eval_arg : type a b. variable_map -> (a, b -> a) arg_typ -> Graphql_parser.const_value option -> (b, string) result = fun variable_map typ value ->
+    and eval_arg : type a. variable_map ->  a arg_typ -> Graphql_parser.const_value option -> (a, string) result = fun variable_map typ value ->
       match (typ, value) with
       | NonNullable _, None -> Error "Missing required argument"
       | NonNullable _, Some `Null -> Error "Missing required argument"
@@ -260,7 +260,7 @@ module Make(Io : IO) = struct
               List.Result.all (eval_arg variable_map typ) option_values >>| fun coerced ->
               Some coerced
           | value -> eval_arg variable_map typ (Some value) >>| fun coerced ->
-              (Some [coerced] : b)
+              (Some [coerced] : a)
           end
       | NonNullable typ, value ->
           eval_arg variable_map typ value >>= (function
@@ -391,11 +391,11 @@ module Introspection = struct
   (* any_typ, any_field and any_arg hide type parameters to avoid scope escaping errors *)
   type any_typ =
     | AnyTyp : (_, _) typ -> any_typ
-    | AnyArgTyp : (_, _) Arg.arg_typ -> any_typ
+    | AnyArgTyp : _ Arg.arg_typ -> any_typ
   type any_field =
     | AnyField : (_, _) field -> any_field
-    | AnyArgField : (_, _) Arg.arg -> any_field
-  type any_arg = AnyArg : (_, _) Arg.arg -> any_arg
+    | AnyArgField : _ Arg.arg -> any_field
+  type any_arg = AnyArg : _ Arg.arg -> any_arg
   type any_enum_value = AnyEnumValue : _ enum_value -> any_enum_value
 
   let unless_visited (result, visited) name f =
@@ -427,7 +427,7 @@ module Introspection = struct
           in
           List.fold_left reducer (result', visited') (Lazy.force o.fields)
         )
-  and arg_types : type a b. any_typ list -> (a, b) Arg.arg_typ -> any_typ list = fun memo argtyp ->
+  and arg_types : type a. any_typ list -> a Arg.arg_typ -> any_typ list = fun memo argtyp ->
     match argtyp with
     | Arg.Scalar _ as scalar -> (AnyArgTyp scalar)::memo
     | Arg.Enum _ as enum -> (AnyArgTyp enum)::memo
