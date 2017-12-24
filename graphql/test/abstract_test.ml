@@ -94,57 +94,74 @@ let suite = [
   ("dog as pet", `Quick, fun () ->
     let query = "{ pet(type: \"DOG\") { ... on Dog { name puppies } } }" in
     test_query query (`Assoc [
-			"data", `Assoc [
-				"pet", `Assoc [
-					"name", `String "Fido";
-					"puppies", `Int 2
-				]
-			]
-		])
+      "data", `Assoc [
+        "pet", `Assoc [
+          "name", `String "Fido";
+          "puppies", `Int 2
+        ]
+      ]
+    ])
   );
   ("cat as pet", `Quick, fun () ->
     let query = "{ pet(type: \"CAT\") { ... on Cat { name kittens } } }" in
     test_query query (`Assoc [
-			"data", `Assoc [
-				"pet", `Assoc [
-					"name", `String "Meow";
-					"kittens", `Int 1
-				]
-			]
-		])
+      "data", `Assoc [
+        "pet", `Assoc [
+          "name", `String "Meow";
+          "kittens", `Int 1
+        ]
+      ]
+    ])
   );
   ("pets", `Quick, fun () ->
     let query = "{ pets { ... on Dog { name puppies } ... on Cat { name kittens } } }" in
     test_query query (`Assoc [
-			"data", `Assoc [
-				"pets", `List [
-					`Assoc [
-						"name", `String "Meow";
-						"kittens", `Int 1
-					];
-					`Assoc [
-						"name", `String "Fido";
-						"puppies", `Int 2
-					]
-				]
-			]
-		])
+      "data", `Assoc [
+        "pets", `List [
+          `Assoc [
+            "name", `String "Meow";
+            "kittens", `Int 1
+          ];
+          `Assoc [
+            "name", `String "Fido";
+            "puppies", `Int 2
+          ]
+        ]
+      ]
+    ])
+  );
+  ("pets with fragment", `Quick, fun () ->
+    let query = "fragment Pet on Pet { ... on Dog { name puppies } ... on Cat { name kittens } } { pets { ... Pet } }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "pets", `List [
+          `Assoc [
+            "name", `String "Meow";
+            "kittens", `Int 1
+          ];
+          `Assoc [
+            "name", `String "Fido";
+            "puppies", `Int 2
+          ]
+        ]
+      ]
+    ])
   );
   ("named_objects", `Quick, fun () ->
     let query = "{ named_objects { name ... on Dog { puppies } ... on Cat { kittens } } }" in
     test_query query (`Assoc [
-			"data", `Assoc [
-				"named_objects", `List [
-					`Assoc [
-						"name", `String "Meow";
-						"kittens", `Int 1
-					];
-					`Assoc [
-						"name", `String "Fido";
-						"puppies", `Int 2
-					]
-				]
-			]
-		])
+      "data", `Assoc [
+        "named_objects", `List [
+          `Assoc [
+            "name", `String "Meow";
+            "kittens", `Int 1
+          ];
+          `Assoc [
+            "name", `String "Fido";
+            "puppies", `Int 2
+          ]
+        ]
+      ]
+    ])
   );
 ]
