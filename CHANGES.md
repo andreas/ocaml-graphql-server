@@ -1,11 +1,16 @@
+0.5.0 2018-01-18
+---------------------------------
+
+- Depend on angstrom 0.7.0 (#64)
+- Fix parsing of quoted strings (#64)
+- Make custom argument types generalizable (#72)
+- Deduplicate arg types in introspection result (#75)
+
 0.4.0 2017-09-17
 ---------------------------------
 
 - Parse tabs as whitespace (#62)
 - Move parser to separate package (#63)
-- Depend on angstrom 0.7.0 (#64)
-- Fix parsing of quoted strings (#64)
-- Make custom argument types generalizable (#72)
 
 0.3.0 2017-08-31
 ---------------------------------
