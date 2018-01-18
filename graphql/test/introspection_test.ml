@@ -98,4 +98,30 @@ let suite = [
       ]
     ])
   );
+  ("deduplicates argument types", `Quick, fun () ->
+    let schema = Schema.(schema [
+      field "sum"
+        ~typ:(non_null int)
+        ~args:Arg.[
+          arg "x" ~typ:(non_null int);
+          arg "y" ~typ:(non_null int);
+        ]
+        ~resolve:(fun _ _ x y -> x + y)
+    ]) in
+    let query = "{ __schema { types { name } } }" in
+    test_query schema query (`Assoc [
+      "data", `Assoc [
+        "__schema", `Assoc [
+          "types", `List [
+            `Assoc [
+              "name", `String "Int"
+            ];
+            `Assoc [
+              "name", `String "query"
+            ]
+          ]
+        ]
+      ]
+    ])
+  );
 ]
