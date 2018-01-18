@@ -422,21 +422,29 @@ module Introspection = struct
           let result'  = (AnyTyp obj)::result in
           let visited' = StringSet.add o.name visited in
           let reducer = fun memo (Field f) ->
-            let result', visited' = types ~memo f.typ in
-            arg_list_types result' f.args, visited'
+            let memo' = types ~memo f.typ in
+            arg_list_types memo' f.args
           in
           List.fold_left reducer (result', visited') (Lazy.force o.fields)
         )
-  and arg_types : type a. any_typ list -> a Arg.arg_typ -> any_typ list = fun memo argtyp ->
+  and arg_types : type a. (any_typ list * StringSet.t) -> a Arg.arg_typ -> (any_typ list * StringSet.t) = fun memo argtyp ->
     match argtyp with
-    | Arg.Scalar _ as scalar -> (AnyArgTyp scalar)::memo
-    | Arg.Enum _ as enum -> (AnyArgTyp enum)::memo
     | Arg.List typ -> arg_types memo typ
     | Arg.NonNullable typ -> arg_types memo typ
+    | Arg.Scalar s as scalar ->
+        unless_visited memo s.name (fun (result, visited) ->
+          (AnyArgTyp scalar)::result, StringSet.add s.name visited
+        )
+    | Arg.Enum e as enum ->
+        unless_visited memo e.name (fun (result, visited) ->
+          (AnyArgTyp enum)::result, StringSet.add e.name visited
+        )
     | Arg.Object o as obj ->
-        let memo' = (AnyArgTyp obj)::memo in
-        arg_list_types memo' o.fields
-  and arg_list_types : type a b. any_typ list -> (a, b) Arg.arg_list -> any_typ list = fun memo arglist ->
+        unless_visited memo o.name (fun (result, visited) ->
+          let memo' = (AnyArgTyp obj)::result, StringSet.add o.name visited in
+          arg_list_types memo' o.fields
+        )
+  and arg_list_types : type a b. (any_typ list * StringSet.t) -> (a, b) Arg.arg_list -> (any_typ list * StringSet.t) = fun memo arglist ->
     let open Arg in
     match arglist with
     | [] -> memo
