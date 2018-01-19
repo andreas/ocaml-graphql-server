@@ -175,7 +175,7 @@ let string_chars = scan_state `Unescaped (fun state c ->
             Buffer.add_char string_buf c;
             Some `Unescaped
   ) >>= fun _ ->
-  let s = Buffer.to_bytes string_buf in
+  let s = Buffer.contents string_buf in
   Buffer.clear string_buf;
   return s
 
