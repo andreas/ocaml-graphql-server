@@ -5,6 +5,7 @@
 - Fix parsing of quoted strings (#64)
 - Make custom argument types generalizable (#72)
 - Deduplicate arg types in introspection result (#75)
+- 4.06 compatibility (#76)
 
 0.4.0 2017-09-17
 ---------------------------------
