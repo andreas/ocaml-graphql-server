@@ -1017,6 +1017,39 @@ end
       | Graphql_parser.Fragment f -> StringMap.add f.name f memo
     ) StringMap.empty doc
 
+  exception FragmentCycle of string list
+  let rec validate_fragments fragment_map =
+    try
+      StringMap.iter (fun name _ ->
+        ignore (validate_fragment fragment_map StringSet.empty name)
+      ) fragment_map;
+      Ok fragment_map
+    with FragmentCycle fragment_names ->
+      let cycle = String.concat ", " fragment_names in
+      Error (Format.sprintf "Fragment cycle detected: %s" cycle)
+
+  and validate_fragment (fragment_map : fragment_map) visited name =
+    match StringMap.find name fragment_map with
+    | None -> visited
+    | Some fragment when StringSet.mem fragment.name visited ->
+        raise (FragmentCycle (StringSet.elements visited))
+    | Some fragment ->
+        let visited' = StringSet.add fragment.name visited in
+        List.fold_left (validate_fragment_selection fragment_map) visited' fragment.selection_set
+
+  and validate_fragment_selection fragment_map visited selection =
+    match selection with
+    | Graphql_parser.Field field ->
+        List.fold_left (validate_fragment_selection fragment_map) visited field.selection_set
+    | InlineFragment inline_fragment ->
+        List.fold_left (validate_fragment_selection fragment_map) visited inline_fragment.selection_set
+    | FragmentSpread fragment_spread ->
+        validate_fragment fragment_map visited fragment_spread.name
+
+  let collect_and_validate_fragments doc =
+    let fragments = collect_fragments doc in
+    validate_fragments fragments
+
   let collect_operations doc =
     List.fold_left (fun memo -> function
       | Graphql_parser.Operation op -> op::memo
@@ -1038,7 +1071,7 @@ end
   let execute schema ctx ?variables:(variables=[]) ?operation_name doc =
     let open Io.Infix in
     let execute' schema ctx doc =
-      let fragments = collect_fragments doc in
+      Io.return (collect_and_validate_fragments doc) >>=? fun fragments ->
       let variables = List.fold_left (fun memo (name, value) -> StringMap.add name value memo) StringMap.empty variables in
       let execution_ctx = { fragments; ctx; variables } in
       let schema' = Introspection.add_schema_field schema in
