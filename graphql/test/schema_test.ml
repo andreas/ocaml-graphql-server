@@ -106,4 +106,30 @@ let suite = [
       ]
     ])
   );
+  ("fragments cannot form cycles", `Quick, fun () ->
+    let query = "
+      fragment F1 on Foo {
+        ... on Bar {
+          baz {
+            ... F2
+          }
+        }
+      }
+
+      fragment F2 on Qux {
+        ... F1
+      }
+
+      {
+        ... F1
+      }
+    " in
+    test_query query (`Assoc [
+      "errors", `List [
+        `Assoc [
+          "message", `String "Fragment cycle detected: F1, F2"
+        ]
+      ]
+    ])
+  );
 ]
