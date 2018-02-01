@@ -24,7 +24,7 @@ Four OPAM packages are provided:
 - `graphql` provides the core functionality and is IO-agnostic. It provides a functor `Graphql.Schema.Make(IO)` to instantiate with your own IO monad.
 - `graphql-lwt` provides the module `Graphql_lwt.Schema` with [Lwt](https://github.com/ocsigen/lwt) support in field resolvers.
 - `graphql-async` provides the module `Graphql_async.Schema` with [Async](https://github.com/janestreet/async) support in field resolvers.
-- graphql_parser` provides query parsing functionality.
+- `graphql_parser` provides query parsing functionality.
 
 API documentation:
 
