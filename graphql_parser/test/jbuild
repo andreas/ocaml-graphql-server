@@ -3,12 +3,12 @@
 (executable (
   (name test)
   (modules (test parser_test))
-  (libraries (graphql_parser alcotest))
+  (libraries (graphql_parser alcotest str))
 ))
 
 (alias (
   (name runtest)
   (package graphql_parser)
-  (deps (test.exe (files_recursively_in "data")))
+  (deps (test.exe))
   (action (run ${<}))
 ))

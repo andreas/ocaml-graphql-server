@@ -1,4 +1,4 @@
 let () =
-  Alcotest.run "graphql-server" [
-    "parser", Parser_test.suite;
+  Alcotest.run "graphql_parser" [
+    "parse", Parser_test.suite;
   ]

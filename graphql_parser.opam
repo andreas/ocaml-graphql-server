@@ -11,7 +11,7 @@ depends: [
   "jbuilder" {build}
   "angstrom" {>= "0.7.0"}
   "sexplib"
-  "ppx_sexp_conv" {>= "0.9.0"}
+  "fmt"
   "alcotest" {test}
 ]
 available: [
