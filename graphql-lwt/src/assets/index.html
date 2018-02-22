@@ -57,11 +57,9 @@ add "&raw" to the end of the URL within a browser.
         otherParams[k] = parameters[k];
       }
     }
-    var fetchURL = "http://localhost:8080";
-
     // Defines a GraphQL fetcher using the fetch API.
     function graphQLFetcher(graphQLParams) {
-      return fetch(fetchURL, {
+      return fetch(window.location, {
         method: 'post',
         headers: {
           'Accept': 'application/json',
@@ -107,10 +105,10 @@ add "&raw" to the end of the URL within a browser.
         onEditQuery: onEditQuery,
         onEditVariables: onEditVariables,
         onEditOperationName: onEditOperationName,
-        query: null,
-        response: null,
-        variables: null,
-        operationName: null,
+        query: parameters.query,
+        response: parameters.response,
+        variables: parameters.variables,
+        operationName: parameters.operationName,
       }),
       document.body
     );

@@ -9,9 +9,7 @@ build: [["jbuilder" "build" "-p" name "-j" jobs]]
 build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
 depends: [
   "jbuilder" {build}
-  "angstrom" {>= "0.4.0"}
-  "sexplib"
-  "ppx_sexp_conv" {>= "0.9.0"}
+  "graphql_parser"
   "yojson"
   "rresult"
   "alcotest" {test}

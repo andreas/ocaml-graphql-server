@@ -9,11 +9,10 @@ build: [["jbuilder" "build" "-p" name "-j" jobs]]
 build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
 depends: [
   "jbuilder" {build}
-  "graphql"
+  "angstrom" {>= "0.7.0"}
+  "sexplib"
+  "ppx_sexp_conv" {>= "0.9.0"}
   "alcotest" {test}
-  "lwt"
-  "cohttp-lwt-unix" {>= "1.0.0"}
-  "crunch"
 ]
 available: [
   ocaml-version >= "4.03.0"

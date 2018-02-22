@@ -1,3 +1,12 @@
+let yojson = (module struct
+  type t = Yojson.Basic.json
+
+  let pp formatter t =
+    Format.pp_print_text formatter (Yojson.Basic.pretty_to_string t)
+
+  let equal = (=)
+end : Alcotest.TESTABLE with type t = Yojson.Basic.json)
+
 let test_query schema ctx ?variables ?operation_name query expected =
   match Graphql_parser.parse query with
   | Error err -> failwith err
@@ -6,4 +15,4 @@ let test_query schema ctx ?variables ?operation_name query expected =
       | Ok data -> data
       | Error err -> err
       in
-      Alcotest.(check string) "invalid execution result" expected (Yojson.Basic.to_string result)
+      Alcotest.check yojson "invalid execution result" expected result

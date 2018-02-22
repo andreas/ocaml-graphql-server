@@ -17,21 +17,21 @@ Current feature set:
 - [x] Async support
 - [x] Example with HTTP server and GraphiQL
 
-![GraphiQL Example](https://cloud.githubusercontent.com/assets/2518/22173954/8d1e5bbe-dfd1-11e6-9a7e-4f93d0ce2e24.png)
-
 ## Documentation
 
-Three OPAM packages are provided:
+Four OPAM packages are provided:
 
 - `graphql` provides the core functionality and is IO-agnostic. It provides a functor `Graphql.Schema.Make(IO)` to instantiate with your own IO monad.
 - `graphql-lwt` provides the module `Graphql_lwt.Schema` with [Lwt](https://github.com/ocsigen/lwt) support in field resolvers.
 - `graphql-async` provides the module `Graphql_async.Schema` with [Async](https://github.com/janestreet/async) support in field resolvers.
+- `graphql_parser` provides query parsing functionality.
 
 API documentation:
 
 - [`graphql`](https://andreas.github.io/ocaml-graphql-server/graphql)
 - [`graphql-lwt`](https://andreas.github.io/ocaml-graphql-server/graphql-lwt)
 - [`graphql-async`](https://andreas.github.io/ocaml-graphql-server/graphql-async)
+- [`graphql_parser`](https://andreas.github.io/ocaml-graphql-server/graphql_parser)
 
 ## Examples
 
@@ -82,17 +82,17 @@ let user = Schema.(obj "user"
       ~doc:"Unique user identifier"
       ~typ:(non_null int)
       ~args:Arg.[]
-      ~resolve:(fun () p -> p.id)
+      ~resolve:(fun ctx p -> p.id)
     ;
     field "name"
       ~typ:(non_null string)
       ~args:Arg.[]
-      ~resolve:(fun () p -> p.name)
+      ~resolve:(fun ctx p -> p.name)
     ;
     field "role"
       ~typ:(non_null role)
       ~args:Arg.[]
-      ~resolve:(fun () p -> p.role)
+      ~resolve:(fun ctx p -> p.role)
   ])
 )
 
@@ -100,7 +100,7 @@ let schema = Schema.(schema [
   field "users"
     ~typ:(non_null (list (non_null user)))
     ~args:Arg.[]
-    ~resolve:(fun () () -> users)
+    ~resolve:(fun ctx () -> users)
 ])
 ```
 
@@ -180,7 +180,9 @@ let schema = Schema.(schema [
     ~args:Arg.[
       arg "duration" ~typ:float;
     ]
-    ~resolve:(fun () () -> Lwt_unix.sleep duration >|= fun () -> duration)
+    ~resolve:(fun ctx () ->
+      Lwt_unix.sleep duration >|= fun () -> duration
+    )
 ])
 ```
 
@@ -197,7 +199,9 @@ let schema = Schema.(schema [
     ~args:Arg.[
       arg "duration" ~typ:float;
     ]
-    ~resolve:(fun () () -> after (Time.Span.of_float duration) >>| fun () -> duration)
+    ~resolve:(fun ctx () ->
+      after (Time.Span.of_float duration) >>| fun () -> duration
+    )
 ])
 ```
 
@@ -215,7 +219,7 @@ Schema.(obj "math"
         arg  "y" ~typ:int;            (* <-- optional *)
         arg' "z" ~typ:int ~default:7  (* <-- optional w/ default *)
       ]
-      ~resolve:(fun x y z ->
+      ~resolve:(fun ctx () x y z ->
         let y' = match y with Some n -> n | None -> 42 in
         x + y' + z
       )
@@ -234,47 +238,7 @@ Only valid schemas should pass the type checker. If a schema compiles, the follo
 3. The source of a field agrees with the type of the object to which it belongs.
 4. The context argument for all resolver functions in a schema agree.
 
-The following types ensure this:
+The following blog posts introduces the core design concepts:
 
-```ocaml
-type ('ctx, 'src) obj = {
-  name   : string;
-  fields : ('ctx, 'src) field list Lazy.t;
-}
-and ('ctx, 'src) field =
-  Field : {
-    name    : string;
-    typ     : ('ctx, 'out) typ;
-    args    : ('out, 'args) Arg.arg_list;
-    resolve : 'ctx -> 'src -> 'args;
-  } -> ('ctx, 'src) field
-and ('ctx, 'src) typ =
-  | Object      : ('ctx, 'src) obj -> ('ctx, 'src option) typ
-  | List        : ('ctx, 'src) typ -> ('ctx, 'src list option) typ
-  | NonNullable : ('ctx, 'src option) typ -> ('ctx, 'src) typ
-  | Scalar      : 'src scalar -> ('ctx, 'src option) typ
-  | Enum        : 'src enum -> ('ctx, 'src option) typ
-```
-
-The type parameters can be interpreted as follows:
-
-- `'ctx` is a value that is passed all resolvers when executing a query against a schema,
-- `'src` is the domain-specific source value, e.g. a user record,
-- `'args` is the arguments of the resolver, and will be of the type `'arg¹ -> ... -> 'argⁿ -> 'out`,
-- `'out` is the result of the resolver, which must agree with the type of the field.
-
-Particularly noteworthy is `('ctx, 'src) field`, which hides the type `'out`. The type `'out` is used to ensure that the output of a resolver function agrees with the input type of the field's type.
-
-For introspection, three additional types are used to hide the type parameters `'ctx` and `src`:
-
-```ocaml
-  type any_typ =
-    | AnyTyp : (_, _) typ -> any_typ
-    | AnyArgTyp : (_, _) Arg.arg_typ -> any_typ
-  type any_field =
-    | AnyField : (_, _) field -> any_field
-    | AnyArgField : (_, _) Arg.arg -> any_field
-  type any_arg = AnyArg : (_, _) Arg.arg -> any_ar
-```
-
-This is to avoid "type parameter would avoid it's scope"-errors.
+- https://andreas.github.io/2017/11/29/type-safe-graphql-with-ocaml-part-1/
+- https://andreas.github.io/2018/01/05/modeling-graphql-type-modifiers-with-gadts/

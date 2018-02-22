@@ -123,7 +123,7 @@ let ignored = scan_state `Whitespace (fun state c ->
       if c = '\n' then Some `Whitespace else Some `Comment
   | `Whitespace ->
       match c with
-      | ' ' | ',' | '\n' -> Some `Whitespace
+      | ' ' | ',' | '\t' | '\n' -> Some `Whitespace
       | '#' -> Some `Comment
       | _ -> None
 ) >>| fun _ -> ()
@@ -160,15 +160,24 @@ let is_number_char =
   function | '0' .. '9' | 'e' | 'E' | '.' | '-' | '+' -> true | _ -> false
 let number_chars = take_while1 is_number_char
 
-let string_chars = scan_string `Unescaped (fun state c ->
-  match state with
-  | `Escaped -> Some `Unescaped
-  | `Unescaped ->
-      match c with
-      | '\\' -> Some `Escaped
-      | '"' -> None
-      | _ -> Some `Unescaped
-)
+let string_buf = Buffer.create 8
+
+let string_chars = scan_state `Unescaped (fun state c ->
+    match state with
+    | `Escaped ->
+        Buffer.add_char string_buf c;
+        Some `Unescaped
+    | `Unescaped ->
+        match c with
+        | '\\' -> Some `Escaped
+        | '"' -> None
+        | _ ->
+            Buffer.add_char string_buf c;
+            Some `Unescaped
+  ) >>= fun _ ->
+  let s = Buffer.contents string_buf in
+  Buffer.clear string_buf;
+  return s
 
 let null = string "null" *> return `Null
 
@@ -306,4 +315,4 @@ let definition = operation_definition <|> fragment_definition
 
 let document = many1 (ignored *> definition)
 
-let parse query = Angstrom.parse_only document (`String query)
+let parse query = Angstrom.parse_string document query

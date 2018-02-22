@@ -103,40 +103,40 @@ module Make(Io : IO) = struct
   module Arg = struct
     open Rresult
 
-    type (_, _) arg_typ =
+    type _ arg_typ =
       | Scalar : {
           name   : string;
           doc    : string option;
-          coerce : Graphql_parser.const_value -> ('b, string) result;
-        } -> ('a, 'b option -> 'a) arg_typ
+          coerce : Graphql_parser.const_value -> ('a, string) result;
+        } -> 'a option arg_typ
       | Object : {
           name   : string;
           doc    : string option;
           fields : ('a, 'b) arg_list;
           coerce : 'b;
-        } -> ('c, 'a option -> 'c) arg_typ
+        } -> 'a option arg_typ
       | Enum : {
           name   : string;
           doc    : string option;
-          values : 'b enum_value list;
-        } -> ('a, 'b option -> 'a) arg_typ
-      | List : ('a, 'b -> 'a) arg_typ -> ('a, 'b list option -> 'a) arg_typ
-      | NonNullable : ('a, 'b option -> 'a) arg_typ -> ('a, 'b -> 'a) arg_typ
-    and ('a, 'b) arg =
+          values : 'a enum_value list;
+        } -> 'a option arg_typ
+      | List : 'a arg_typ -> 'a list option arg_typ
+      | NonNullable : 'a option arg_typ -> 'a arg_typ
+    and _ arg =
       | Arg : {
           name : string;
           doc : string option;
-          typ : ('a, 'b) arg_typ;
-        } -> ('a, 'b) arg
+          typ : 'a arg_typ;
+        } -> 'a arg
       | DefaultArg : {
           name : string;
           doc : string option;
-          typ : ('a, 'b option -> 'a) arg_typ;
-          default : 'b;
-        } -> ('a, 'b -> 'a) arg
+          typ : 'a option arg_typ;
+          default : 'a;
+        } -> 'a arg
     and (_, _) arg_list =
       | [] : ('a, 'a) arg_list
-      | (::) : ('b, 'c -> 'b) arg * ('a, 'b) arg_list -> ('a, 'c -> 'b) arg_list
+      | (::) : 'a arg * ('b, 'c) arg_list -> ('b, 'a -> 'c) arg_list
 
     let arg ?doc name ~typ =
       Arg { name; doc; typ }
@@ -230,7 +230,7 @@ module Make(Io : IO) = struct
               eval_arglist variable_map arglist' key_values (f coerced)
             with StringMap.Missing_key key -> Error (Format.sprintf "Missing variable `%s`" key)
 
-    and eval_arg : type a b. variable_map -> (a, b -> a) arg_typ -> Graphql_parser.const_value option -> (b, string) result = fun variable_map typ value ->
+    and eval_arg : type a. variable_map ->  a arg_typ -> Graphql_parser.const_value option -> (a, string) result = fun variable_map typ value ->
       match (typ, value) with
       | NonNullable _, None -> Error "Missing required argument"
       | NonNullable _, Some `Null -> Error "Missing required argument"
@@ -260,7 +260,7 @@ module Make(Io : IO) = struct
               List.Result.all (eval_arg variable_map typ) option_values >>| fun coerced ->
               Some coerced
           | value -> eval_arg variable_map typ (Some value) >>| fun coerced ->
-              (Some [coerced] : b)
+              (Some [coerced] : a)
           end
       | NonNullable typ, value ->
           eval_arg variable_map typ value >>= (function
@@ -396,11 +396,11 @@ module Introspection = struct
   (* any_typ, any_field and any_arg hide type parameters to avoid scope escaping errors *)
   type any_typ =
     | AnyTyp : (_, _) typ -> any_typ
-    | AnyArgTyp : (_, _) Arg.arg_typ -> any_typ
+    | AnyArgTyp : _ Arg.arg_typ -> any_typ
   type any_field =
     | AnyField : (_, _) field -> any_field
-    | AnyArgField : (_, _) Arg.arg -> any_field
-  type any_arg = AnyArg : (_, _) Arg.arg -> any_arg
+    | AnyArgField : _ Arg.arg -> any_field
+  type any_arg = AnyArg : _ Arg.arg -> any_arg
   type any_enum_value = AnyEnumValue : _ enum_value -> any_enum_value
 
   let unless_visited (result, visited) name f =
@@ -427,21 +427,29 @@ module Introspection = struct
           let result'  = (AnyTyp obj)::result in
           let visited' = StringSet.add o.name visited in
           let reducer = fun memo (Field f) ->
-            let result', visited' = types ~memo f.typ in
-            arg_list_types result' f.args, visited'
+            let memo' = types ~memo f.typ in
+            arg_list_types memo' f.args
           in
           List.fold_left reducer (result', visited') (Lazy.force o.fields)
         )
-  and arg_types : type a b. any_typ list -> (a, b) Arg.arg_typ -> any_typ list = fun memo argtyp ->
+  and arg_types : type a. (any_typ list * StringSet.t) -> a Arg.arg_typ -> (any_typ list * StringSet.t) = fun memo argtyp ->
     match argtyp with
-    | Arg.Scalar _ as scalar -> (AnyArgTyp scalar)::memo
-    | Arg.Enum _ as enum -> (AnyArgTyp enum)::memo
     | Arg.List typ -> arg_types memo typ
     | Arg.NonNullable typ -> arg_types memo typ
+    | Arg.Scalar s as scalar ->
+        unless_visited memo s.name (fun (result, visited) ->
+          (AnyArgTyp scalar)::result, StringSet.add s.name visited
+        )
+    | Arg.Enum e as enum ->
+        unless_visited memo e.name (fun (result, visited) ->
+          (AnyArgTyp enum)::result, StringSet.add e.name visited
+        )
     | Arg.Object o as obj ->
-        let memo' = (AnyArgTyp obj)::memo in
-        arg_list_types memo' o.fields
-  and arg_list_types : type a b. any_typ list -> (a, b) Arg.arg_list -> any_typ list = fun memo arglist ->
+        unless_visited memo o.name (fun (result, visited) ->
+          let memo' = (AnyArgTyp obj)::result, StringSet.add o.name visited in
+          arg_list_types memo' o.fields
+        )
+  and arg_list_types : type a b. (any_typ list * StringSet.t) -> (a, b) Arg.arg_list -> (any_typ list * StringSet.t) = fun memo arglist ->
     let open Arg in
     match arglist with
     | [] -> memo
@@ -1018,6 +1026,39 @@ end
       | Graphql_parser.Fragment f -> StringMap.add f.name f memo
     ) StringMap.empty doc
 
+  exception FragmentCycle of string list
+  let rec validate_fragments fragment_map =
+    try
+      StringMap.iter (fun name _ ->
+        ignore (validate_fragment fragment_map StringSet.empty name)
+      ) fragment_map;
+      Ok fragment_map
+    with FragmentCycle fragment_names ->
+      let cycle = String.concat ", " fragment_names in
+      Error (Format.sprintf "Fragment cycle detected: %s" cycle)
+
+  and validate_fragment (fragment_map : fragment_map) visited name =
+    match StringMap.find name fragment_map with
+    | None -> visited
+    | Some fragment when StringSet.mem fragment.name visited ->
+        raise (FragmentCycle (StringSet.elements visited))
+    | Some fragment ->
+        let visited' = StringSet.add fragment.name visited in
+        List.fold_left (validate_fragment_selection fragment_map) visited' fragment.selection_set
+
+  and validate_fragment_selection fragment_map visited selection =
+    match selection with
+    | Graphql_parser.Field field ->
+        List.fold_left (validate_fragment_selection fragment_map) visited field.selection_set
+    | InlineFragment inline_fragment ->
+        List.fold_left (validate_fragment_selection fragment_map) visited inline_fragment.selection_set
+    | FragmentSpread fragment_spread ->
+        validate_fragment fragment_map visited fragment_spread.name
+
+  let collect_and_validate_fragments doc =
+    let fragments = collect_fragments doc in
+    validate_fragments fragments
+
   let collect_operations doc =
     List.fold_left (fun memo -> function
       | Graphql_parser.Operation op -> op::memo
@@ -1039,7 +1080,7 @@ end
   let execute schema ctx ?variables:(variables=[]) ?operation_name doc =
     let open Io.Infix in
     let execute' schema ctx doc =
-      let fragments = collect_fragments doc in
+      Io.return (collect_and_validate_fragments doc) >>=? fun fragments ->
       let variables = List.fold_left (fun memo (name, value) -> StringMap.add name value memo) StringMap.empty variables in
       let execution_ctx = { fragments; ctx; variables } in
       let schema' = Introspection.add_schema_field schema in
