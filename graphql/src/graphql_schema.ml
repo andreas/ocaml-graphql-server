@@ -1027,15 +1027,15 @@ end
     ) StringMap.empty doc
 
   exception FragmentCycle of string list
-  let rec validate_fragments fragment_map =
-    try
-      StringMap.iter (fun name _ ->
-        ignore (validate_fragment fragment_map StringSet.empty name)
-      ) fragment_map;
-      Ok fragment_map
-    with FragmentCycle fragment_names ->
-      let cycle = String.concat ", " fragment_names in
-      Error (Format.sprintf "Fragment cycle detected: %s" cycle)
+  let rec validate_fragments fragment_map = Ok fragment_map
+    (* try *)
+    (*   StringMap.iter (fun name _ -> *)
+    (*     ignore (validate_fragment fragment_map StringSet.empty name) *)
+    (*   ) fragment_map; *)
+    (*   Ok fragment_map *)
+    (* with FragmentCycle fragment_names -> *)
+    (*   let cycle = String.concat ", " fragment_names in *)
+    (*   Error (Format.sprintf "Fragment cycle detected: %s" cycle) *)
 
   and validate_fragment (fragment_map : fragment_map) visited name =
     match StringMap.find name fragment_map with
