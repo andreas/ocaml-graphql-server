@@ -1021,7 +1021,7 @@ end
   let rec validate_fragments fragment_map =
     try
       StringMap.iter (fun name _ ->
-        ignore (validate_fragment fragment_map StringSet.empty name)
+        validate_fragment fragment_map StringSet.empty name
       ) fragment_map;
       Ok fragment_map
     with FragmentCycle fragment_names ->
@@ -1030,19 +1030,19 @@ end
 
   and validate_fragment (fragment_map : fragment_map) visited name =
     match StringMap.find name fragment_map with
-    | None -> visited
+    | None -> ()
     | Some fragment when StringSet.mem fragment.name visited ->
         raise (FragmentCycle (StringSet.elements visited))
     | Some fragment ->
         let visited' = StringSet.add fragment.name visited in
-        List.fold_left (validate_fragment_selection fragment_map) visited' fragment.selection_set
+        List.iter (validate_fragment_selection fragment_map visited') fragment.selection_set
 
   and validate_fragment_selection fragment_map visited selection =
     match selection with
     | Graphql_parser.Field field ->
-        List.fold_left (validate_fragment_selection fragment_map) visited field.selection_set
+        List.iter (validate_fragment_selection fragment_map visited) field.selection_set
     | InlineFragment inline_fragment ->
-        List.fold_left (validate_fragment_selection fragment_map) visited inline_fragment.selection_set
+        List.iter (validate_fragment_selection fragment_map visited) inline_fragment.selection_set
     | FragmentSpread fragment_spread ->
         validate_fragment fragment_map visited fragment_spread.name
 
