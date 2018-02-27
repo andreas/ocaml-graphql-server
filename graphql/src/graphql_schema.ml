@@ -294,6 +294,7 @@ module Make(Io : IO) = struct
   type 'ctx resolve_params = {
     ctx : 'ctx;
     field : Graphql_parser.field;
+    variables : variable_map;
   }
 
   type ('ctx, 'src) obj = {
@@ -981,6 +982,7 @@ end
     let resolve_params = {
       ctx = ctx.ctx;
       field = query_field;
+      variables = ctx.variables
     } in
     let resolver = field.resolve resolve_params src in
     match Arg.eval_arglist ctx.variables field.args query_field.arguments resolver with
