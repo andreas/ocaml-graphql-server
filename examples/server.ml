@@ -1,5 +1,5 @@
 open Lwt
-module C = Cohttp_lwt_unix
+open Cohttp_lwt_unix
 
 open Graphql_lwt
 
