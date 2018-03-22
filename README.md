@@ -48,7 +48,7 @@ jbuilder build server.exe
 ./_build/default/server.exe
 ```
 
-Now open [http://localhost:8080](http://localhost:8080).
+Now open [http://localhost:8080/graphql](http://localhost:8080/graphql).
 
 ### Defining a Schema
 
