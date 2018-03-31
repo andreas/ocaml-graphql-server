@@ -1,7 +1,8 @@
-Unreleased
+0.6.0 2018-03-31
 ---------------------------------
 
 - Prevent fragment cycles (#78)
+- graphql-lwt depends on cohttp 1.0.0 (#71)
 
 0.5.0 2018-01-18
 ---------------------------------
