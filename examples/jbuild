@@ -1,7 +1,7 @@
 (jbuild_version 1)
 
 (executable
- ((libraries (cohttp-lwt-unix cohttp.lwt graphql-lwt yojson))
+ ((libraries (cohttp.lwt graphql-lwt yojson))
   (name server)))
 
 (alias
