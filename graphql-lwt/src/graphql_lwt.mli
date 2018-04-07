@@ -4,5 +4,5 @@ module Schema : sig
 end
 
 module Server : sig
-  val start : ?port:int -> ctx:(unit -> 'ctx) -> 'ctx Schema.schema -> unit Lwt.t
+  val start : ?port:int -> ctx:(Cohttp.Request.t -> 'ctx) -> 'ctx Schema.schema -> unit Lwt.t
 end
