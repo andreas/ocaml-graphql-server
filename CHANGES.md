@@ -1,3 +1,8 @@
+Unreleased
+---------------------------------
+
+- Expose HTTP request to context construction function in Graphql_lwt.Server.start (#88)
+
 0.6.0 2018-03-31
 ---------------------------------
 
