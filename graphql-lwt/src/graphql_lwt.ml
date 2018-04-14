@@ -43,7 +43,7 @@ module Server = struct
       match req.meth, path_parts with
       | `GET,  ["graphql"]       -> static_file_response "index.html"
       | `GET,  ["graphql"; path] -> static_file_response path
-      | `POST, ["graphql"]       -> execute_request (mk_context ()) schema req body
+      | `POST, ["graphql"]       -> execute_request (mk_context req) schema req body
       | _ -> C.Server.respond_string ~status:`Not_found ~body:"" ()
 
   let start ?(port=8080) ~ctx schema =
