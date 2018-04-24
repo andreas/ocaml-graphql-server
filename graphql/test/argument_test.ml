@@ -68,8 +68,11 @@ let suite : (string * [>`Quick] * (unit -> unit)) list = [
   ("null for required argument", `Quick, fun () ->
     let query = "{ input_obj(x: null) }" in
     test_query query (`Assoc [
-      "errors", `List [`Assoc [
-        "message", `String "Missing required argument"]
+      "data", `Null;
+      "errors", `List [
+        `Assoc [
+          "message", `String "Missing required argument"
+        ]
       ]
     ])
   );
@@ -84,6 +87,7 @@ let suite : (string * [>`Quick] * (unit -> unit)) list = [
   ("missing required argument", `Quick, fun () ->
     let query = "{ input_obj }" in
     test_query query (`Assoc [
+      "data", `Null;
       "errors", `List [
         `Assoc [
           "message", `String "Missing required argument"

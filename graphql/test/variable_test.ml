@@ -82,6 +82,7 @@ let suite : (string * [>`Quick] * (unit -> unit)) list = [
     let variables = ["x", `Null] in
     let query = "{ input_obj(x: $x) }" in
     test_query variables query (`Assoc [
+      "data", `Null;
       "errors", `List [
         `Assoc [
           "message", `String "Missing required argument"

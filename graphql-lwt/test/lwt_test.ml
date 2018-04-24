@@ -32,7 +32,7 @@ let schema = Graphql_lwt.Schema.(schema [
       io_field "io_int"
         ~typ:(non_null int)
         ~args:Arg.[]
-        ~resolve:(fun () () -> Lwt.return 42)
+        ~resolve:(fun () () -> Lwt.return (Ok 42))
     ]
 )
 
