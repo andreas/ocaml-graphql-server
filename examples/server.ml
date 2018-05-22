@@ -52,7 +52,7 @@ let schema = Schema.(schema [
     io_field "users"
       ~args:Arg.[]
       ~typ:(non_null (list (non_null user)))
-      ~resolve:(fun () () -> Lwt.return users)
+      ~resolve:(fun () () -> Lwt_result.return users)
     ;
     field "greeter"
       ~typ:string
