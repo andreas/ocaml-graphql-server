@@ -1,6 +1,4 @@
 open Lwt
-module C = Cohttp_lwt_unix
-
 open Graphql_lwt
 
 type role = User | Admin
