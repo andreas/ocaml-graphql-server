@@ -387,12 +387,15 @@ module Make(Io : IO) = struct
     i
 
   let add_type abstract_typ typ =
-    match abstract_typ with
-    | Abstract a ->
+    match (abstract_typ, typ) with
+    | Abstract ({ kind = `Interface _; _ } as a), Object o ->
         (* TODO add subtype check here *)
         a.types <- (AnyTyp typ)::a.types;
-        fun src ->
-          AbstractValue (typ, src)
+        o.interfaces := a :: !(o.interfaces);
+        fun src -> AbstractValue (typ, src)
+    | Abstract a, _ ->
+        a.types <- (AnyTyp typ)::a.types;
+        fun src -> AbstractValue (typ, src)
     | _ ->
         invalid_arg "The first argument must be a union or interface"
 
