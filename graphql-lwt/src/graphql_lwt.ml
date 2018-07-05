@@ -29,12 +29,9 @@ module Server = struct
     Lwt_io.printf "Query: %s\n" query;
     let result = execute_query ctx schema (variables :> (string * Graphql_parser.const_value) list) query in
     result >>= function
-    | Ok data ->
+    | Ok data | Error data ->
         let body = Yojson.Basic.to_string data in
         C.Server.respond_string ~status:`OK ~body ()
-    | Error err ->
-        let body = Yojson.Basic.to_string err in
-        C.Server.respond_error ~body ()
 
   let mk_callback mk_context schema conn (req : Cohttp.Request.t) body =
     Lwt_io.printf "Req: %s\n" req.resource;
