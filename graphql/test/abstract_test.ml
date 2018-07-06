@@ -164,4 +164,96 @@ let suite = [
       ]
     ])
   );
+  ("introspection", `Quick, fun () ->
+      let query = "{ __schema { types { name kind possibleTypes { name kind } interfaces { name kind } } } }" in
+      test_query
+        query
+        (Yojson.Basic.from_string
+           {|
+             {
+               "data": {
+                 "__schema": {
+                   "types": [
+                     {
+                       "name": "Named",
+                       "kind": "INTERFACE",
+                       "possibleTypes": [
+                         {
+                           "name": "Dog",
+                           "kind": "OBJECT"
+                         },
+                         {
+                           "name": "Cat",
+                           "kind": "OBJECT"
+                         }
+                       ],
+                       "interfaces": null
+                     },
+                     {
+                       "name": "pet_type",
+                       "kind": "ENUM",
+                       "possibleTypes": null,
+                       "interfaces": null
+                     },
+                     {
+                       "name": "Cat",
+                       "kind": "OBJECT",
+                       "possibleTypes": null,
+                        "interfaces": [
+                         {
+                           "name": "Named",
+                           "kind": "INTERFACE"
+                         }
+                       ]
+                     },
+                     {
+                       "name": "Int",
+                       "kind": "SCALAR",
+                       "possibleTypes": null,
+                       "interfaces": null
+                     },
+                     {
+                       "name": "String",
+                       "kind": "SCALAR",
+                       "possibleTypes": null,
+                       "interfaces": null
+                     },
+                     {
+                       "name": "Dog",
+                       "kind": "OBJECT",
+                       "possibleTypes": null,
+                       "interfaces": [
+                         {
+                           "name": "Named",
+                           "kind": "INTERFACE"
+                         }
+                       ]
+                     },
+                     {
+                       "name": "Pet",
+                       "kind": "UNION",
+                       "possibleTypes": [
+                         {
+                           "name": "Dog",
+                           "kind": "OBJECT"
+                         },
+                         {
+                           "name": "Cat",
+                           "kind": "OBJECT"
+                         }
+                       ],
+                       "interfaces": null
+                     },
+                     {
+                       "name": "query",
+                       "kind": "OBJECT",
+                       "possibleTypes": null,
+                       "interfaces": []
+                     }
+                   ]
+                 }
+               }
+             }
+           |})
+  );
 ]
