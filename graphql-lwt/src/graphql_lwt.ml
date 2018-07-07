@@ -34,7 +34,7 @@ module Server = struct
         C.Server.respond_string ~status:`OK ~body ()
     | Error err ->
         let body = Yojson.Basic.to_string err in
-        C.Server.respond_error ~body ()
+        C.Server.respond_string ~status:`Internal_server_error ~body ()
 
   let mk_callback mk_context schema conn (req : Cohttp.Request.t) body =
     Lwt_io.printf "Req: %s\n" req.resource;
