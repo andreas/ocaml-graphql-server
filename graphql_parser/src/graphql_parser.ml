@@ -158,7 +158,21 @@ let name = take_while1 is_name_char
 
 let is_number_char =
   function | '0' .. '9' | 'e' | 'E' | '.' | '-' | '+' -> true | _ -> false
-let number_chars = take_while1 is_number_char
+let is_leading_number_char = function | '0'..'9'|'-'|'+' -> true | _ -> false
+let leading_number_char =
+  peek_char >>=
+    (function
+     | None  -> fail "none"
+     | (Some (c)) ->
+         (match is_leading_number_char c with
+          | true  -> return()
+          | false  -> fail "no leading number char"))
+let number_chars =
+  leading_number_char >>=
+    (fun () ->
+       (take_while1 is_number_char))
+
+let number_chars (take_while1 is_number_char);
 
 let string_buf = Buffer.create 8
 
