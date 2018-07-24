@@ -108,6 +108,7 @@ module Make(Io : IO) = struct
       | Scalar : {
           name   : string;
           doc    : string option;
+          default_doc: 'a -> Yojson.Basic.json;
           coerce : Graphql_parser.const_value -> ('a, string) result;
         } -> 'a option arg_typ
       | Object : {
@@ -145,8 +146,8 @@ module Make(Io : IO) = struct
     let arg' ?doc name ~typ ~default =
       DefaultArg { name; doc; typ; default }
 
-    let scalar ?doc name ~coerce =
-      Scalar { name; doc; coerce }
+    let scalar ?doc name ~default_doc ~coerce =
+      Scalar { name; doc; default_doc; coerce }
 
     let enum ?doc name ~values =
       Enum { name; doc; values }
@@ -158,6 +159,7 @@ module Make(Io : IO) = struct
     let int = Scalar {
       name = "Int";
       doc = None;
+      default_doc = (fun n -> `Int n);
       coerce = function
         | `Int n -> Ok n
         | _ -> Error "Invalid int"
@@ -166,6 +168,7 @@ module Make(Io : IO) = struct
     let string = Scalar {
       name = "String";
       doc = None;
+      default_doc = (fun s -> `String s);
       coerce = function
         | `String s -> Ok s
         | _ -> Error "Invalid string"
@@ -174,6 +177,7 @@ module Make(Io : IO) = struct
     let float = Scalar {
       name = "Float";
       doc = None;
+      default_doc = (fun f -> `Float f);
       coerce = function
         | `Float f -> Ok f
         | `Int n -> Ok (float_of_int n)
@@ -183,6 +187,7 @@ module Make(Io : IO) = struct
     let bool = Scalar {
       name = "Boolean";
       doc = None;
+      default_doc = (fun b -> `Bool b);
       coerce = function
         | `Bool b -> Ok b
         | _ -> Error "Invalid boolean"
@@ -191,6 +196,7 @@ module Make(Io : IO) = struct
     let guid = Scalar {
       name = "ID";
       doc = None;
+      default_doc = (fun s -> `String s);
       coerce = function
         | `String s -> Ok s
         | `Int n -> Ok (string_of_int n)
@@ -656,7 +662,10 @@ module Introspection = struct
         typ = string;
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ (AnyArg v) -> None
+        resolve = fun _ (AnyArg arg) -> match arg with
+          | Arg.DefaultArg { typ = Arg.Scalar { default_doc; _ }; default; _ } ->
+              Some (Yojson.Basic.to_string (default_doc default))
+          | _ -> None
       }
     ]
   }
