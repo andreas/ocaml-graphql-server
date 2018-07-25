@@ -56,7 +56,7 @@ module type Schema = sig
 
     val scalar : ?doc:string ->
                  string ->
-                 default_doc:('a -> Yojson.Basic.json) ->
+                 ?default_doc:('a -> Yojson.Basic.json) ->
                  coerce:(Graphql_parser.const_value -> ('a, string) result) ->
                  'a option arg_typ
 

@@ -146,7 +146,7 @@ module Make(Io : IO) = struct
     let arg' ?doc name ~typ ~default =
       DefaultArg { name; doc; typ; default }
 
-    let scalar ?doc name ~default_doc ~coerce =
+    let scalar ?doc name ?(default_doc=(fun _ -> `Null)) ~coerce =
       Scalar { name; doc; default_doc; coerce }
 
     let enum ?doc name ~values =
