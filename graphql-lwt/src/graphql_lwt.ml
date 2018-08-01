@@ -1,6 +1,16 @@
 open Graphql
 
-module Schema = Graphql_schema.Make(Lwt)
+module Io = Lwt
+
+module Stream = struct
+  type +'a io = 'a Lwt.t
+  type 'a t = 'a Lwt_stream.t * (unit -> unit)
+
+  let map (stream, destroy) f =
+    Lwt_stream.map_s f stream, destroy
+end
+
+module Schema = Graphql_schema.Make (Io) (Stream)
 
 module Server = struct
   module C = Cohttp_lwt_unix
@@ -33,7 +43,7 @@ module Server = struct
     Lwt_io.printf "Query: %s\n" query;
     let result = execute_query ctx schema (variables :> (string * Graphql_parser.const_value) list) operation_name query in
     result >>= function
-    | Ok data ->
+    | Ok (`Response data) ->
         let body = Yojson.Basic.to_string data in
         C.Server.respond_string ~status:`OK ~body ()
     | Error err ->

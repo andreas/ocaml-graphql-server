@@ -1,12 +1,15 @@
 (** GraphQL schema signature *)
 module type Schema = sig
   type +'a io
+  type 'a stream
 
   (** {3 Base types } *)
 
   type 'ctx schema
 
   type ('ctx, 'src) field
+
+  type 'ctx subscription_field
 
   type ('ctx, 'src) typ
 
@@ -16,6 +19,8 @@ module type Schema = sig
 
   val schema : ?mutation_name:string ->
                ?mutations:('ctx, unit) field list ->
+               ?subscription_name:string ->
+               ?subscriptions:'ctx subscription_field list ->
                ?query_name:string ->
                ('ctx, unit) field list ->
                'ctx schema
@@ -96,6 +101,14 @@ module type Schema = sig
                  resolve:('ctx -> 'src -> 'b) ->
                  ('ctx, 'src) field
 
+  val subscription_field : ?doc:string ->
+                           ?deprecated:deprecated ->
+                           string ->
+                           typ:('ctx, 'out) typ ->
+                           args:(('out stream, string) result io, 'args) Arg.arg_list ->
+                           resolve:('ctx -> 'args) ->
+                           'ctx subscription_field
+
   val enum : ?doc:string ->
              string ->
              values:'a enum_value list ->
@@ -144,7 +157,9 @@ module type Schema = sig
 
   type variables = (string * Graphql_parser.const_value) list
 
-  val execute : 'ctx schema -> 'ctx -> ?variables:variables -> ?operation_name:string -> Graphql_parser.document -> (Yojson.Basic.json, Yojson.Basic.json) result io
+  type 'a response = ('a, Yojson.Basic.json) result
+
+  val execute : 'ctx schema -> 'ctx -> ?variables:variables -> ?operation_name:string -> Graphql_parser.document -> [ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response stream] response io
   (** [execute schema ctx variables doc] evaluates the [doc] against [schema]
       with the given context [ctx] and [variables]. *)
 end

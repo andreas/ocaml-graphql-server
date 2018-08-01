@@ -4,4 +4,4 @@
  ((name graphql)
   (public_name graphql)
   (wrapped false)
-  (libraries (graphql_parser yojson rresult))))
+  (libraries (graphql_parser yojson rresult seq))))
