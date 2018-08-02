@@ -49,10 +49,10 @@ let user = Schema.(obj "user"
 )
 
 let schema = Schema.(schema [
-    io_field "users"
+    field "users"
       ~args:Arg.[]
       ~typ:(non_null (list (non_null user)))
-      ~resolve:(fun () () -> Lwt_result.return users)
+      ~resolve:(fun () () -> users)
     ;
     field "greeter"
       ~typ:string
