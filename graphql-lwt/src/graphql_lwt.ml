@@ -15,10 +15,10 @@ module Server = struct
     | Ok _ as ok -> ok
     | Error err -> Error (`String err)
 
-  let execute_query ctx schema variables query =
+  let execute_query ctx schema variables operation_name query =
     let open Lwt_result in
     Lwt.return @@ json_err @@ Graphql_parser.parse query >>= fun doc ->
-    Schema.execute schema ctx ~variables doc
+    Schema.execute schema ctx ~variables ?operation_name doc
 
   let execute_request ctx schema req body =
     Cohttp_lwt.Body.to_string body >>= fun body' ->
@@ -26,8 +26,12 @@ module Server = struct
     let json = Yojson.Basic.from_string body' in
     let query = Yojson.Basic.(json |> Util.member "query" |> Util.to_string) in
     let variables = try Yojson.Basic.Util.(json |> member "variables" |> to_assoc) with _ -> [] in
+    let operation_name =
+      try Some Yojson.Basic.Util.(json |> member "operationName" |> to_string)
+      with _ -> None
+    in    
     Lwt_io.printf "Query: %s\n" query;
-    let result = execute_query ctx schema (variables :> (string * Graphql_parser.const_value) list) query in
+    let result = execute_query ctx schema (variables :> (string * Graphql_parser.const_value) list) operation_name query in
     result >>= function
     | Ok data ->
         let body = Yojson.Basic.to_string data in
