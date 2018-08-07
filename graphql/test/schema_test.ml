@@ -106,6 +106,26 @@ let suite = [
       ]
     ])
   );
+  ("undefined field on query root", `Quick, fun () ->
+    let query = "{ foo { bar } }" in
+    test_query query (`Assoc [
+      "errors", `List [
+        `Assoc [
+          "message", `String "Field 'foo' is not defined on type 'query'"
+        ]
+      ]
+    ])
+  );
+  ("undefined field on object type", `Quick, fun () ->
+    let query = "{ users { id foo } }" in
+    test_query query (`Assoc [
+      "errors", `List [
+        `Assoc [
+          "message", `String "Field 'foo' is not defined on type 'user'"
+        ]
+      ]
+    ])
+  );
   ("fragments cannot form cycles", `Quick, fun () ->
     let query = "
       fragment F1 on Foo {

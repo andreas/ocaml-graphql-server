@@ -942,6 +942,15 @@ module Introspection = struct
         args = Arg.[];
         lift = Io.ok;
         resolve = fun _ s -> []
+      };
+      Field {
+        name = "subscriptionType";
+        doc = None;
+        deprecated = NotDeprecated;
+        typ = __type;
+        args = Arg.[];
+        lift = Io.ok;
+        resolve = fun _ s -> None
       }
     ]
   }
@@ -1014,7 +1023,7 @@ end
     | Serial -> Io.map_s ~memo:[]
     | Parallel -> Io.map_p
 
-  let rec present : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) typ -> (Yojson.Basic.json * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t =
+  let rec present : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) typ -> (Yojson.Basic.json * string list, [`Validation_error of string | `Argument_error of string | `Resolve_error of string]) result Io.t =
     fun ctx src query_field typ ->
       match typ with
       | Scalar s -> coerce_or_null src (fun x -> Io.ok (s.coerce x, []))
@@ -1042,7 +1051,7 @@ end
             present ctx (Some src') query_field typ'
           )
 
-  and resolve_field : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) field -> ((string * Yojson.Basic.json) * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t =
+  and resolve_field : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) field -> ((string * Yojson.Basic.json) * string list, [`Validation_error of string | `Argument_error of string | `Resolve_error of string]) result Io.t =
     fun ctx src query_field (Field field) ->
       let open Io.Infix in
       let name = alias_or_name query_field in
@@ -1057,7 +1066,8 @@ end
           lifted_value >>| (function
           | Ok (value, errors) ->
               Ok ((name, value), errors)
-          | Error (`Argument_error _) as err ->
+          | Error (`Argument_error _)
+          | Error (`Validation_error _) as err ->
               err
           | Error (`Resolve_error err) as error ->
               match field.typ with
@@ -1069,7 +1079,7 @@ end
       | Error err ->
           Io.error (`Argument_error err)
 
-  and resolve_fields : type ctx src. ctx execution_context -> ?execution_order:execution_order -> src -> (ctx, src) obj -> Graphql_parser.field list -> (Yojson.Basic.json * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t =
+  and resolve_fields : type ctx src. ctx execution_context -> ?execution_order:execution_order -> src -> (ctx, src) obj -> Graphql_parser.field list -> (Yojson.Basic.json * string list, [`Validation_error of string | `Argument_error of string | `Resolve_error of string]) result Io.t =
     fun ctx ?execution_order:(execution_order=Parallel) src obj fields ->
       map_fields_with_order execution_order (fun (query_field : Graphql_parser.field) ->
         if query_field.name = "__typename" then
@@ -1079,7 +1089,8 @@ end
           | Some field ->
               resolve_field ctx src query_field field
           | None ->
-              Io.ok ((alias_or_name query_field, `Null), [])
+              let error_message = Printf.sprintf "Field '%s' is not defined on type '%s'" query_field.name obj.name in
+              Io.error (`Validation_error error_message)
       ) fields
       |> Io.map ~f:List.Result.join
       |> Io.Result.map ~f:(fun xs -> (`Assoc (List.map fst xs), List.map snd xs |> List.concat))
@@ -1101,13 +1112,13 @@ end
       | Graphql_parser.Query ->
           let query  = schema.query in
           let fields = collect_fields fragments query operation.selection_set in
-          (resolve_fields ctx () query fields : (Yojson.Basic.json * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t :> (Yojson.Basic.json * string list, [> execute_error]) result Io.t)
+          (resolve_fields ctx () query fields : (Yojson.Basic.json * string list, [`Validation_error of string | `Argument_error of string | `Resolve_error of string]) result Io.t :> (Yojson.Basic.json * string list, [> execute_error]) result Io.t)
       | Graphql_parser.Mutation ->
           begin match schema.mutation with
           | None -> Io.error `Mutations_not_configured
           | Some mut ->
               let fields = collect_fields fragments mut operation.selection_set in
-              (resolve_fields ~execution_order:Serial ctx () mut fields : (Yojson.Basic.json * string list, [`Argument_error of string | `Resolve_error of string]) result Io.t :> (Yojson.Basic.json * string list, [> execute_error]) result Io.t)
+              (resolve_fields ~execution_order:Serial ctx () mut fields : (Yojson.Basic.json * string list, [`Validation_error of string | `Argument_error of string | `Resolve_error of string]) result Io.t :> (Yojson.Basic.json * string list, [> execute_error]) result Io.t)
           end
       | Graphql_parser.Subscription ->
           Io.error `Subscriptions_not_implemented
