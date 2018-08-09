@@ -100,7 +100,8 @@
     ((Field
       ((alias ()) (name unnamed)
        (arguments
-        ((truthy (Bool true)) (falsey (Bool false)) (nullish Null)))
+        ((truthy (Bool true)) (falsey (Bool false)) (nullish Null)
+         (enum (Enum ECHO))))
        (directives ()) (selection_set ())))
      (Field
       ((alias ()) (name query) (arguments ()) (directives ())

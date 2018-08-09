@@ -188,11 +188,14 @@ let string_value = lift (fun s -> `String s) (quote *> string_chars <* quote)
 let boolean_value = string "true"  *> return (`Bool true) <|>
                     string "false" *> return (`Bool false)
 
-let number_value = lift (fun n ->
+let number_value = number_chars >>= fun n ->
   try
-    `Int (int_of_string n)
+    return (`Int (int_of_string n))
   with Failure _ ->
-    `Float (float_of_string n)) number_chars
+    try
+      return (`Float (float_of_string n))
+    with Failure _ ->
+      fail (Format.sprintf "Invalid number value: %s" n)
 
 let enum_value = name >>= function
   | "true"
