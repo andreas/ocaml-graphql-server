@@ -16,7 +16,8 @@ let suite = [
       ];
       "errors", `List [
         `Assoc [
-          "message", `String "boom"
+          "message", `String "boom";
+          "path", `List [`String "nullable"]
         ]
       ]
     ])
@@ -33,7 +34,8 @@ let suite = [
       "data", `Null;
       "errors", `List [
         `Assoc [
-          "message", `String "boom"
+          "message", `String "boom";
+          "path", `List [`String "non_nullable"]
         ]
       ]
     ])
@@ -61,7 +63,51 @@ let suite = [
       ];
       "errors", `List [
         `Assoc [
-          "message", `String "boom"
+          "message", `String "boom";
+          "path", `List [`String "nullable"; `String "non_nullable"]
+        ]
+      ]
+    ])
+  );
+  ("error in list", `Quick, fun () ->
+    let foo = Schema.(obj "Foo"
+        ~fields:(fun _ -> [
+          io_field "id"
+            ~typ:int
+            ~args:Arg.[]
+            ~resolve:(fun _ (id, should_fail) ->
+              if should_fail then Error "boom" else Ok (Some id)
+            )
+        ]))
+    in
+    let schema = Schema.(schema [
+      field "foos"
+        ~typ:(non_null (list (non_null foo)))
+        ~args:Arg.[]
+        ~resolve:(fun _ () ->
+          [0, false; 1, false; 2, true]
+        )
+      ])
+    in
+    let query = "{ foos { id } }" in
+    test_query schema () query (`Assoc [
+      "data", `Assoc [
+        "foos", `List [
+          `Assoc [
+            "id", `Int 0
+          ];
+          `Assoc [
+            "id", `Int 1
+          ];
+          `Assoc [
+            "id", `Null
+          ];
+        ]
+      ];
+      "errors", `List [
+        `Assoc [
+          "message", `String "boom";
+          "path", `List [`String "foos"; `Int 2; `String "id"]
         ]
       ]
     ])
