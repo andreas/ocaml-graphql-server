@@ -160,24 +160,49 @@ let is_number_char =
   function | '0' .. '9' | 'e' | 'E' | '.' | '-' | '+' -> true | _ -> false
 let number_chars = take_while1 is_number_char
 
-let string_buf = Buffer.create 8
+let string_buf = Buffer.create 0x1000
 
 let string_chars = scan_state `Unescaped (fun state c ->
+    let add_char c =
+      Buffer.add_char string_buf c;
+      Some `Unescaped
+    in
     match state with
+    | `Error err -> None
     | `Escaped ->
-        Buffer.add_char string_buf c;
-        Some `Unescaped
+        begin match c with
+        | '"'  -> add_char '"';
+        | '\\' -> add_char '\\';
+        | '/'  -> add_char '/';
+        | 'b'  -> add_char '\b';
+        | 'f'  -> add_char '\012';
+        | 'n'  -> add_char '\n';
+        | 't'  -> add_char '\t';
+        | 'r'  -> add_char '\r';
+        | _    -> Some (`Error "Invalid escape sequence")
+        end
     | `Unescaped ->
-        match c with
+        begin match c with
         | '\\' -> Some `Escaped
-        | '"' -> None
-        | _ ->
-            Buffer.add_char string_buf c;
-            Some `Unescaped
-  ) >>= fun _ ->
-  let s = Buffer.contents string_buf in
-  Buffer.clear string_buf;
-  return s
+        | '"'  -> None
+        | c ->
+            if c >= '\032' then
+              add_char c
+            else
+              let err = Printf.sprintf "Unexpected character '%c'" c in
+              Some (`Error err)
+        end
+  ) >>= function
+  | `Error err ->
+      Buffer.clear string_buf;
+      fail err
+  | `Escaped ->
+      Buffer.clear string_buf;
+      fail "Unterminated string"
+  | `Unescaped ->
+      let s = Buffer.contents string_buf in
+      Buffer.clear string_buf;
+      return s
 
 let null = string "null" *> return `Null
 
