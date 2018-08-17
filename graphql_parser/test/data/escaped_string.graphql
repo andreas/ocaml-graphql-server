@@ -1,0 +1,12 @@
+query {
+  escaped_quote(x: "\"")
+  backslash(x: "\\")
+  slash(x: "/")
+  escaped_slash(x: "\/")
+  escaped_backspace(x: "\b")
+  escaped_form_feed(x: "\f")
+  escaped_newline(x: "\n")
+  escaped_carriage_return(x: "\r")
+  tab(x: "  ")
+  escaped_tab(x: "\t")
+}

@@ -1,5 +1,0 @@
-query {
-  goomba(alias: "test\"") {
-    id
-  }
-}

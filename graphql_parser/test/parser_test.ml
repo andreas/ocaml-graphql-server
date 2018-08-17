@@ -20,5 +20,5 @@ let test_query_file filename () =
 let suite = [
   "introspection", `Quick, test_query_file "introspection";
   "kitchen_sink",  `Quick, test_query_file "kitchen_sink";
-  "quoted_string", `Quick, test_query_file "quoted_string";
+  "escaped_string", `Quick, test_query_file "escaped_string";
 ]
