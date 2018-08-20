@@ -9,9 +9,9 @@ build: [["jbuilder" "build" "-p" name "-j" jobs]]
 build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
 depends: [
   "jbuilder" {build}
-  "graphql"
-  "alcotest" {test}
-  "lwt"
+  "graphql-lwt"
+  "cohttp" {>= "1.0.0"}
+  "crunch"
 ]
 available: [
   ocaml-version >= "4.03.0"

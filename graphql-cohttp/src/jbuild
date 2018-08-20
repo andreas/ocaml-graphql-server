@@ -1,0 +1,12 @@
+(jbuild_version 1)
+
+(rule
+ ((targets (assets.ml))
+  (deps ((files_recursively_in assets)))
+  (action (run ${bin:ocaml-crunch} -m plain assets -o assets.ml))))
+
+(library
+ ((name graphql_cohttp)
+  (public_name graphql-cohttp)
+  (wrapped false)
+  (libraries (str graphql-lwt lwt cohttp.lwt))))
