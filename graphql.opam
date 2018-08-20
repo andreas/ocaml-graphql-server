@@ -12,6 +12,7 @@ depends: [
   "graphql_parser"
   "yojson"
   "rresult"
+  "seq"
   "alcotest" {test}
 ]
 available: [

@@ -48,6 +48,32 @@ let user = Schema.(obj "user"
   ])
 )
 
+let rec consume_stream stream =
+  Lwt.catch (fun () ->
+    Lwt_stream.next stream >>= fun x ->
+      let Ok x | Error x = x in
+      Printf.eprintf "stream response: '%s'\n%!" (Yojson.Basic.to_string x);
+    if Lwt_stream.is_closed stream then
+      Lwt.return_unit
+    else
+      consume_stream stream)
+  (function
+    | Lwt_stream.Closed | Lwt_stream.Empty -> Lwt.return_unit
+   | _ -> Lwt.return_unit)
+
+let set_interval s f destroy =
+  let rec set_interval_loop s f n =
+    let timeout = Lwt_timeout.create s (fun () ->
+      if n > 0 then begin
+      f ();
+      set_interval_loop s f (n - 1)
+      end else
+        destroy ())
+    in
+    Lwt_timeout.start timeout
+  in
+  set_interval_loop s f 5
+
 let schema = Schema.(schema [
     io_field "users"
       ~args:Arg.[]
@@ -67,6 +93,19 @@ let schema = Schema.(schema [
       )
     ;
   ]
+  ~subscriptions:[
+      subscription_field "subscribe_to_user"
+        ~typ:(non_null user)
+        ~args:Arg.[arg' "intarg" ~typ:int ~default:42]
+        ~resolve:(fun _ctx _intarg ->
+          let user_stream, push_to_user_stream = Lwt_stream.create () in
+          let destroy_stream = (fun () -> push_to_user_stream None) in
+          set_interval 2 (fun () ->
+            let idx = Random.int (List.length users) in
+            push_to_user_stream (Some (List.nth users idx)))
+            destroy_stream;
+          Lwt_result.return (user_stream, destroy_stream))
+    ]
 )
 
 let () =
