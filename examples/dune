@@ -1,6 +1,6 @@
 (executable
  (name server)
- (libraries cohttp.lwt graphql-lwt yojson))
+ (libraries cohttp-lwt cohttp-lwt-unix graphql-lwt graphql-cohttp yojson))
 
 (alias
  (name DEFAULT)

@@ -13,11 +13,13 @@ build: [
 
 depends: [
   "ocaml" {>= "4.03.0"}
-  "dune" {build}
-  "angstrom" {>= "0.7.0"}
-  "sexplib"
-  "ppx_sexp_conv" {>= "0.9.0"}
-  "alcotest" {with-test}
+  "jbuilder" {build}
+  "graphql" {>= "0.8.0"}
+  "cohttp" {>= "1.0.0"}
+  "crunch"
 ]
 
-synopsis: "Library for parsing GraphQL queries"
+synopsis: "Run GraphQL servers with `cohttp`"
+
+description: """
+This package allows you to execute Cohttp HTTP requests against GraphQL schemas build with `graphql`. The package is agnostic to Lwt/Async."""
