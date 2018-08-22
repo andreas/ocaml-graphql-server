@@ -393,39 +393,31 @@ module Make (Io : IO) = struct
 
   type ('ctx, 'a) abstract_typ = ('ctx, ('ctx, 'a) abstract_value option) typ
 
+  type directive_location = [
+    | `Query
+    | `Mutation
+    | `Subscription
+    | `Field
+    | `Fragment_definition
+    | `Fragment_spread
+    | `Inline_fragment
+    | `Variable_definition
+    ]
+
+  type ('ctx, 'out) directive =
+    Directive : {
+      name       : string;
+      doc        : string option;
+      locations  : directive_location list;
+      typ        : ('ctx, 'out) typ;
+      args       : ('out, 'args) Arg.arg_list;
+      resolve    : 'ctx -> 'args;
+    } -> ('ctx, 'out) directive
+
   type 'ctx schema = {
     query : ('ctx, unit) obj;
     mutation : ('ctx, unit) obj option;
     subscription : 'ctx subscription_obj option;
-  }
-
-  let schema ?(mutation_name="mutation")
-             ?mutations
-             ?(subscription_name="subscription")
-             ?subscriptions
-             ?(query_name="query")
-             fields = {
-    query = {
-      name = query_name;
-      doc = None;
-      abstracts = ref [];
-      fields = lazy fields;
-    };
-    mutation = Option.map mutations ~f:(fun fields ->
-      {
-        name = mutation_name;
-        doc = None;
-        abstracts = ref [];
-        fields = lazy fields;
-      }
-    );
-    subscription = Option.map subscriptions ~f:(fun fields ->
-      {
-        name = subscription_name;
-        doc = None;
-        fields;
-      }
-    )
   }
 
   (* Constructor functions *)
@@ -474,14 +466,6 @@ module Make (Io : IO) = struct
     | _ ->
         invalid_arg "Arguments must be Interface/Union and Object"
 
-  let obj_of_subscription_obj {name; doc; fields} =
-    let fields = List.map
-      (fun (SubscriptionField {name; doc; deprecated; typ; args; resolve}) ->
-        Field { lift = Obj.magic (); name; doc; deprecated; typ; args; resolve = (fun ctx () -> resolve ctx) })
-      fields
-    in
-    { name; doc; abstracts = ref []; fields = lazy fields }
-
   (* Built-in scalars *)
   let int : 'ctx. ('ctx, int option) typ = Scalar {
     name   = "Int";
@@ -512,6 +496,67 @@ module Make (Io : IO) = struct
     doc    = None;
     coerce = fun x -> `String x;
   }
+
+  (* Mandatory directives: skip and include *)
+  let skip_directive = Directive {
+    name = "skip";
+    doc = Some "Directs the executor to skip this field or fragment when the `if` argument is true.";
+    locations = [`Field; `Fragment_spread; `Inline_fragment];
+    typ = non_null bool;
+    args = Arg.[
+      arg "if" ~doc:"Skipped when true." ~typ:(non_null bool)
+    ];
+    resolve = fun _ctx if_ -> if_
+  }
+
+  let include_directive = Directive {
+    name = "include";
+    doc = Some "Directs the executor to include this field or fragment only when the `if` argument is true.";
+    locations = [`Field; `Fragment_spread; `Inline_fragment];
+    typ = non_null bool;
+    args = Arg.[
+      arg "if" ~doc:"Included when true." ~typ:(non_null bool)
+    ];
+    resolve = fun _ctx if_ -> if_
+  }
+
+  (* Schema construction function *)
+  let schema ?(mutation_name="mutation")
+             ?mutations
+             ?(subscription_name="subscription")
+             ?subscriptions
+             ?(query_name="query")
+             fields = {
+    query = {
+      name = query_name;
+      doc = None;
+      abstracts = ref [];
+      fields = lazy fields;
+    };
+    mutation = Option.map mutations ~f:(fun fields ->
+      {
+        name = mutation_name;
+        doc = None;
+        abstracts = ref [];
+        fields = lazy fields;
+      }
+    );
+    subscription = Option.map subscriptions ~f:(fun fields ->
+      {
+        name = subscription_name;
+        doc = None;
+        fields;
+      }
+    )
+  }
+
+  let obj_of_subscription_obj {name; doc; fields} =
+    let fields = List.map
+      (fun (SubscriptionField {name; doc; deprecated; typ; args; resolve}) ->
+        Field { lift = Obj.magic (); name; doc; deprecated; typ; args; resolve = (fun ctx () -> resolve ctx) })
+      fields
+    in
+    { name; doc; abstracts = ref []; fields = lazy fields }
 
 module Introspection = struct
   (* any_typ, any_field and any_arg hide type parameters to avoid scope escaping errors *)
@@ -970,7 +1015,62 @@ module Introspection = struct
     ]
   }
 
-  let __directive = Object {
+  let __directive_location = Enum {
+    name = "__DirectiveLocation";
+    doc = None;
+    values = [
+      {
+        name="QUERY";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Query;
+      };
+      {
+        name="MUTATION";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Mutation;
+      };
+      {
+        name="SUBSCRIPTION";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Subscription;
+      };
+      {
+        name="FIELD";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Field;
+      };
+      {
+        name="FRAGMENT_DEFINITION";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Fragment_definition;
+      };
+      {
+        name="FRAGMENT_SPREAD";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Fragment_spread;
+      };
+      {
+        name="INLINE_FRAGMENT";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Inline_fragment;
+      };
+      {
+        name="VARIABLE_DEFINITION";
+        doc=None;
+        deprecated=NotDeprecated;
+        value=`Variable_definition;
+      };
+    ]
+  }
+
+  let __directive : 'ctx 'out. ('ctx, ('ctx, 'out) directive option) typ = Object {
     name = "__Directive";
     doc = None;
     abstracts = no_abstracts;
@@ -982,7 +1082,34 @@ module Introspection = struct
         typ = NonNullable string;
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ d -> d.name
+        resolve = fun _ (Directive d) -> d.name
+      };
+      Field {
+        name = "description";
+        doc = None;
+        deprecated = NotDeprecated;
+        typ = string;
+        args = Arg.[];
+        lift = Io.ok;
+        resolve = fun _ (Directive d) -> d.doc
+      };
+      Field {
+        name = "locations";
+        doc = None;
+        deprecated = NotDeprecated;
+        typ = NonNullable (List (NonNullable __directive_location));
+        args = Arg.[];
+        lift = Io.ok;
+        resolve = fun _ (Directive d) -> d.locations
+      };
+      Field {
+        name = "args";
+        doc = None;
+        deprecated = NotDeprecated;
+        typ = NonNullable (List (NonNullable __input_value));
+        args = Arg.[];
+        lift = Io.ok;
+        resolve = fun _ (Directive d) -> args_to_list d.args
       }
     ]
   }
@@ -1106,23 +1233,68 @@ end
     obj.name = type_condition ||
       List.exists (fun (abstract : abstract) -> abstract.name = type_condition) !(obj.abstracts)
 
-  let rec collect_fields : fragment_map -> ('ctx, 'src) obj -> Graphql_parser.selection list -> Graphql_parser.field list = fun fragment_map obj fields ->
+  let should_include ctx directives =
+    let Directive skip_directive = skip_directive in
+    let Directive include_directive = include_directive in
+    let skip = List.find_opt
+      (fun (directive: Graphql_parser.directive) ->
+        directive.name = skip_directive.name)
+      directives
+    in
+    let includ = List.find_opt
+      (fun (directive: Graphql_parser.directive) -> directive.name = include_directive.name)
+      directives
+    in
+    match skip, includ with
+    | None, None -> true
+    | Some {Graphql_parser.arguments}, None ->
+      let resolver = skip_directive.resolve () in
+      begin match Arg.eval_arglist ctx.variables skip_directive.args arguments resolver with
+      | Ok res -> not res
+      | Error _ -> assert false
+      end
+    | None, Some {Graphql_parser.arguments} ->
+      let resolver = include_directive.resolve () in
+      begin match Arg.eval_arglist ctx.variables include_directive.args arguments resolver with
+      | Ok res -> res
+      | Error _ -> assert false
+      end
+    | Some skip, Some includ ->
+        let skip_resolver = skip_directive.resolve () in
+        let skip_args = skip.arguments in
+        let include_resolver = include_directive.resolve () in
+        let includ_args = includ.arguments in
+        begin match Arg.eval_arglist ctx.variables skip_directive.args skip_args skip_resolver with
+        | Ok skip_res ->
+            begin match Arg.eval_arglist ctx.variables include_directive.args includ_args include_resolver with
+            | Ok include_res -> not skip_res && include_res
+            | Error _ -> assert false
+            end
+        | Error _ -> assert false
+        end
+
+  let rec collect_fields : 'ctx execution_context -> ('ctx, 'src) obj -> Graphql_parser.selection list -> Graphql_parser.field list =
+    fun ctx obj fields ->
     List.map (function
     | Graphql_parser.Field field ->
-        [field]
+        if should_include ctx field.directives then [field] else []
     | Graphql_parser.FragmentSpread spread ->
-        begin match StringMap.find spread.name fragment_map with
-          | Some fragment when matches_type_condition fragment.type_condition obj ->
-            collect_fields fragment_map obj fragment.selection_set
-        | _ ->
+        begin match StringMap.find spread.name ctx.fragments with
+          | Some fragment
+            when matches_type_condition fragment.type_condition obj &&
+                 should_include ctx fragment.directives ->
+            collect_fields ctx obj fragment.selection_set
+          | _ ->
             []
         end
     | Graphql_parser.InlineFragment fragment ->
         match fragment.type_condition with
         | None ->
-            collect_fields fragment_map obj fragment.selection_set
-        | Some condition when matches_type_condition condition obj ->
-            collect_fields fragment_map obj fragment.selection_set
+            collect_fields ctx obj fragment.selection_set
+        | Some condition
+          when matches_type_condition condition obj &&
+               should_include ctx fragment.directives ->
+            collect_fields ctx obj fragment.selection_set
         | _ -> []
     ) fields
     |> List.concat
@@ -1180,7 +1352,7 @@ end
       | NonNullable t -> present ctx (Some src) query_field t path
       | Object o ->
           coerce_or_null src (fun src' ->
-            let fields = collect_fields ctx.fragments o query_field.selection_set in
+            let fields = collect_fields ctx o query_field.selection_set in
             resolve_fields ctx src' o fields path
           )
       | Enum e ->
@@ -1309,14 +1481,14 @@ end
       match operation.optype with
       | Graphql_parser.Query ->
           let query  = schema.query in
-          let fields = collect_fields fragments query operation.selection_set in
+          let fields = collect_fields ctx query operation.selection_set in
           (resolve_fields ctx () query fields [] : (Yojson.Basic.json * error list, resolve_error) result Io.t :> (Yojson.Basic.json * error list, [> execute_error]) result Io.t)
           |> Io.Result.map ~f:(fun data_errs -> `Response (data_to_json data_errs))
       | Graphql_parser.Mutation ->
           begin match schema.mutation with
           | None -> Io.error `Mutations_not_configured
           | Some mut ->
-              let fields = collect_fields fragments mut operation.selection_set in
+              let fields = collect_fields ctx mut operation.selection_set in
               (resolve_fields ~execution_order:Serial ctx () mut fields [] : (Yojson.Basic.json * error list, resolve_error) result Io.t :> (Yojson.Basic.json * error list, [> execute_error]) result Io.t)
               |> Io.Result.map ~f:(fun data_errs -> `Response (data_to_json data_errs))
           end
@@ -1324,7 +1496,7 @@ end
           begin match schema.subscription with
           | None -> Io.error `Subscriptions_not_configured
           | Some subs ->
-              begin match collect_fields fragments (obj_of_subscription_obj subs) operation.selection_set with
+              begin match collect_fields ctx (obj_of_subscription_obj subs) operation.selection_set with
               | [field] ->
                   (match field_from_subscription_object subs field.name with
                    | Some subscription_field ->
