@@ -7,6 +7,10 @@ module List = struct
   let find_exn = find
   let find cond xs = try Some (find_exn cond xs) with Not_found -> None
 
+  let rec find_opt p = function
+    | [] -> None
+    | x :: l -> if p x then Some x else find_opt p l
+
   module Result = struct
     let rec join ?(memo=[]) = function
       | [] -> Ok (List.rev memo)
