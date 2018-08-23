@@ -19,10 +19,7 @@ module List = struct
 end
 
 module Option = struct
-  let return x = Some x
-  let bind x f = match x with None -> None | Some y -> f y
   let map x ~f = match x with None -> None | Some y -> Some (f y)
-  let or_default x default = match x with None -> default | Some x -> x
 end
 
 (* IO *)
@@ -53,7 +50,7 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
     let ok x = Io.return (Ok x)
     let error x = Io.return (Error x)
 
-    let rec all ?(memo=[]) = function
+    let rec all = function
       | [] -> Io.return []
       | x::xs ->
           bind (all xs) (fun xs' ->
@@ -61,7 +58,6 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
           )
 
     module Result = struct
-      let return x = return (Ok x)
       let bind x f = bind x (function Ok x' -> f x' | Error _ as err -> Io.return err)
       let map_error x ~f = map x ~f:(function Ok _ as ok -> ok | Error err -> Error (f err))
       let map x ~f = map x ~f:(function Ok x' -> Ok (f x') | Error _ as err -> err)
@@ -72,14 +68,11 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
       | x::xs ->
           bind (f x) (fun x' -> map_s ~memo:(x'::memo) f xs)
 
-    let rec map_p f xs =
-      List.map f xs |> all
+    let map_p f xs = List.map f xs |> all
 
     module Infix = struct
-      let (>>=) = bind
-      let (>>|) = map
+      let (>>|) x f = map x ~f
       let (>>=?) = Result.bind
-      let (>>|?) = Result.map
     end
   end
 
@@ -517,7 +510,10 @@ module Introspection = struct
       unless_visited memo a.name (fun (result, visited) ->
         let result' = (AnyTyp abstract)::result in
         let visited' = StringSet.add a.name visited in
-        List.fold_left (fun memo (AnyTyp typ) -> types ~memo typ) (result', visited') a.types
+        List.fold_left (fun memo typ -> match typ with
+          | AnyTyp typ -> types ~memo typ
+          | AnyArgTyp _ -> failwith "Abstracts can't have argument types")
+          (result', visited') a.types
       )
 
   and arg_types : type a. (any_typ list * StringSet.t) -> a Arg.arg_typ -> (any_typ list * StringSet.t) = fun memo argtyp ->
@@ -705,7 +701,7 @@ module Introspection = struct
         typ = string;
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ (AnyArg v) -> None
+        resolve = fun _ (AnyArg _) -> None
       }
     ]
   }
@@ -913,7 +909,7 @@ module Introspection = struct
         args = Arg.[];
         lift = Io.ok;
         resolve = fun _ f -> match f with
-          | AnyField (Field { deprecated = Deprecated _ }) -> true
+          | AnyField (Field { deprecated = Deprecated _; _ }) -> true
           | _ -> false
       };
       Field {
@@ -924,7 +920,7 @@ module Introspection = struct
         args = Arg.[];
         lift = Io.ok;
         resolve = fun _ f -> match f with
-          | AnyField (Field { deprecated = Deprecated reason }) -> reason
+          | AnyField (Field { deprecated = Deprecated reason; _ }) -> reason
           | _ -> None
       }
     ]
@@ -966,7 +962,7 @@ module Introspection = struct
               | None -> memo
               | Some op -> types ~memo (Object op))
             ([], StringSet.empty)
-            [Some s.query; s.mutation; Option.map s.subscription obj_of_subscription_obj]
+            [Some s.query; s.mutation; Option.map s.subscription ~f:obj_of_subscription_obj]
           in
           types
       };
@@ -1005,7 +1001,7 @@ module Introspection = struct
         typ = NonNullable (List (NonNullable __directive));
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ s -> []
+        resolve = fun _ _ -> []
       };
       Field {
         name = "subscriptionType";
@@ -1014,7 +1010,7 @@ module Introspection = struct
         typ = __type;
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ s -> None
+        resolve = fun _ _ -> None
       }
     ]
   }
@@ -1035,7 +1031,6 @@ end
 
   (* Execution *)
   type variables = (string * Graphql_parser.const_value) list
-  type json_variables = (string * Yojson.Basic.json) list
   type fragment_map = Graphql_parser.fragment StringMap.t
   type execution_order = Serial | Parallel
   type 'ctx execution_context = {
@@ -1147,7 +1142,7 @@ end
             | Some enum_value -> Io.ok (`String enum_value.name, [])
             | None -> Io.ok (`Null, [])
           )
-      | Abstract u ->
+      | Abstract _ ->
           coerce_or_null src (fun (AbstractValue (typ', src')) ->
             present ctx (Some src') query_field typ' path
           )
@@ -1208,7 +1203,7 @@ end
         ]
 
   let to_response = function
-    | Ok response as res -> res
+    | Ok _ as res -> res
     | Error `No_operation_found ->
         Error (error_response "No operation found")
     | Error `Operation_not_found ->
@@ -1252,8 +1247,8 @@ end
           )
       | Error err -> Io.error (`Argument_error err)
 
-  let execute_operation : 'ctx schema -> 'ctx execution_context -> fragment_map -> variable_map -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response stream], [> execute_error]) result Io.t =
-    fun schema ctx fragments variables operation ->
+  let execute_operation : 'ctx schema -> 'ctx execution_context -> fragment_map -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response stream], [> execute_error]) result Io.t =
+    fun schema ctx fragments operation ->
       match operation.optype with
       | Graphql_parser.Query ->
           let query  = schema.query in
@@ -1330,7 +1325,7 @@ end
       | Graphql_parser.Fragment _ -> memo
     ) [] doc
 
-  let rec select_operation ?operation_name doc =
+  let select_operation ?operation_name doc =
     let operations = collect_operations doc in
     match operation_name, operations with
     | _, [] -> Error `No_operation_found
@@ -1350,7 +1345,7 @@ end
       let execution_ctx = { fragments; ctx; variables } in
       let schema' = Introspection.add_schema_field schema in
       Io.return (select_operation ?operation_name doc) >>=? fun op ->
-      execute_operation schema' execution_ctx fragments variables op
+      execute_operation schema' execution_ctx fragments op
     in
     execute' schema ctx doc >>| to_response
 end

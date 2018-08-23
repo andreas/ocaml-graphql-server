@@ -1,7 +1,0 @@
-(jbuild_version 1)
-
-(library
- ((name graphql)
-  (public_name graphql)
-  (wrapped false)
-  (libraries (graphql_parser yojson rresult seq))))

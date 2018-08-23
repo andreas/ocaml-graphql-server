@@ -1,4 +1,3 @@
-open Graphql
 open Async_kernel
 open Async_unix
 

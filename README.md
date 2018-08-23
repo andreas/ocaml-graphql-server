@@ -41,12 +41,12 @@ API documentation:
 To run a sample GraphQL server also serving GraphiQL, do the following:
 
 ```bash
-opam install graphql-lwt jbuilder
+opam install graphql-lwt dune
 git clone git@github.com:andreas/ocaml-graphql-server.git
 cd ocaml-graphql-server
 cd examples
-jbuilder build server.exe
-./_build/default/server.exe
+dune build server.exe
+dune exec ./examples/server.exe
 ```
 
 Now open [http://localhost:8080/graphql](http://localhost:8080/graphql).

@@ -24,7 +24,7 @@ let test_query schema ctx ?variables ?operation_name query expected =
       | Ok (`Response data) -> data
       | Ok (`Stream stream) ->
           begin try match stream () with
-          | Seq.Cons (Ok data, _) -> `List (list_of_seq stream)
+          | Seq.Cons (Ok _, _) -> `List (list_of_seq stream)
           | Seq.Cons (Error err, _) -> err
           | Seq.Nil -> `Null
           with _ -> `String "caught stream exn" end
