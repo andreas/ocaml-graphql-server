@@ -81,5 +81,14 @@ let suite = [
       ]
     ])
   );
+  ("wrong type for argument", `Quick, fun () ->
+    let query = "{ users { name role @skip(if: 42) } }" in
+    test_query query (`Assoc [
+      "data", `Null;
+      "errors", `List [
+        `Assoc [ "message", `String "Invalid boolean" ]
+      ]
+    ])
+  );
 ]
 

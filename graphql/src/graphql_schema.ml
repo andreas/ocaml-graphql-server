@@ -1234,6 +1234,7 @@ end
       List.exists (fun (abstract : abstract) -> abstract.name = type_condition) !(obj.abstracts)
 
   let should_include ctx directives =
+    let open Rresult in
     let Directive skip_directive = skip_directive in
     let Directive include_directive = include_directive in
     let skip = List.find_opt
@@ -1246,58 +1247,51 @@ end
       directives
     in
     match skip, includ with
-    | None, None -> true
+    | None, None -> Ok true
     | Some {Graphql_parser.arguments}, None ->
       let resolver = skip_directive.resolve () in
-      begin match Arg.eval_arglist ctx.variables skip_directive.args arguments resolver with
-      | Ok res -> not res
-      | Error _ -> assert false
-      end
+      Arg.eval_arglist ctx.variables skip_directive.args arguments resolver
+      |> Rresult.R.map not
     | None, Some {Graphql_parser.arguments} ->
       let resolver = include_directive.resolve () in
-      begin match Arg.eval_arglist ctx.variables include_directive.args arguments resolver with
-      | Ok res -> res
-      | Error _ -> assert false
-      end
+      Arg.eval_arglist ctx.variables include_directive.args arguments resolver
     | Some skip, Some includ ->
         let skip_resolver = skip_directive.resolve () in
         let skip_args = skip.arguments in
         let include_resolver = include_directive.resolve () in
         let includ_args = includ.arguments in
-        begin match Arg.eval_arglist ctx.variables skip_directive.args skip_args skip_resolver with
-        | Ok skip_res ->
-            begin match Arg.eval_arglist ctx.variables include_directive.args includ_args include_resolver with
-            | Ok include_res -> not skip_res && include_res
-            | Error _ -> assert false
-            end
-        | Error _ -> assert false
-        end
+        Arg.eval_arglist ctx.variables skip_directive.args skip_args skip_resolver >>= fun skip_res ->
+        Arg.eval_arglist ctx.variables include_directive.args includ_args include_resolver >>| fun include_res ->
+          not skip_res && include_res
 
-  let rec collect_fields : 'ctx execution_context -> ('ctx, 'src) obj -> Graphql_parser.selection list -> Graphql_parser.field list =
+  let rec collect_fields : 'ctx execution_context -> ('ctx, 'src) obj -> Graphql_parser.selection list -> (Graphql_parser.field list, string) result =
     fun ctx obj fields ->
+    let open Rresult in
     List.map (function
     | Graphql_parser.Field field ->
-        if should_include ctx field.directives then [field] else []
+        should_include ctx field.directives >>| fun should_include ->
+          if should_include then [field] else []
     | Graphql_parser.FragmentSpread spread ->
         begin match StringMap.find spread.name ctx.fragments with
-          | Some fragment
-            when matches_type_condition fragment.type_condition obj &&
-                 should_include ctx fragment.directives ->
-            collect_fields ctx obj fragment.selection_set
-          | _ ->
-            []
+          | Some fragment when matches_type_condition fragment.type_condition obj ->
+            should_include ctx fragment.directives >>= fun should_include ->
+              if should_include then
+                collect_fields ctx obj fragment.selection_set
+              else Ok []
+          | _ -> Ok []
         end
     | Graphql_parser.InlineFragment fragment ->
         match fragment.type_condition with
-        | None ->
-            collect_fields ctx obj fragment.selection_set
-        | Some condition
-          when matches_type_condition condition obj &&
-               should_include ctx fragment.directives ->
-            collect_fields ctx obj fragment.selection_set
-        | _ -> []
+        | None -> collect_fields ctx obj fragment.selection_set
+        | Some condition when matches_type_condition condition obj ->
+          should_include ctx fragment.directives >>= fun should_include ->
+            if should_include then
+              collect_fields ctx obj fragment.selection_set
+            else Ok []
+        | _ -> Ok []
     ) fields
-    |> List.concat
+    |> List.Result.join
+    |> Rresult.R.map List.concat
 
   let alias_or_name : Graphql_parser.field -> string = fun field ->
     match field.alias with
@@ -1340,6 +1334,7 @@ end
 
   let rec present : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) typ -> path -> (Yojson.Basic.json * error list, [> resolve_error]) result Io.t =
     fun ctx src query_field typ path ->
+      let open Io.Infix in
       match typ with
       | Scalar s -> coerce_or_null src (fun x -> Io.ok (s.coerce x, []))
       | List t ->
@@ -1352,9 +1347,9 @@ end
       | NonNullable t -> present ctx (Some src) query_field t path
       | Object o ->
           coerce_or_null src (fun src' ->
-            let fields = collect_fields ctx o query_field.selection_set in
-            resolve_fields ctx src' o fields path
-          )
+            Io.return (collect_fields ctx o query_field.selection_set)
+            |> Io.Result.map_error ~f:(fun e -> `Argument_error e) >>=? fun fields ->
+              resolve_fields ctx src' o fields path)
       | Enum e ->
           coerce_or_null src (fun src' ->
             match List.find (fun enum_value -> src' == enum_value.value) e.values with
@@ -1478,17 +1473,20 @@ end
 
   let execute_operation : 'ctx schema -> 'ctx execution_context -> fragment_map -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response Io.Stream.t], [> execute_error]) result Io.t =
     fun schema ctx fragments operation ->
+      let open Io.Infix in
       match operation.optype with
       | Graphql_parser.Query ->
           let query  = schema.query in
-          let fields = collect_fields ctx query operation.selection_set in
+          Io.return (collect_fields ctx query operation.selection_set)
+          |> Io.Result.map_error ~f:(fun e -> `Argument_error e) >>=? fun fields ->
           (resolve_fields ctx () query fields [] : (Yojson.Basic.json * error list, resolve_error) result Io.t :> (Yojson.Basic.json * error list, [> execute_error]) result Io.t)
           |> Io.Result.map ~f:(fun data_errs -> `Response (data_to_json data_errs))
       | Graphql_parser.Mutation ->
           begin match schema.mutation with
           | None -> Io.error `Mutations_not_configured
           | Some mut ->
-              let fields = collect_fields ctx mut operation.selection_set in
+              Io.return (collect_fields ctx mut operation.selection_set)
+              |> Io.Result.map_error ~f:(fun e -> `Argument_error e) >>=? fun fields ->
               (resolve_fields ~execution_order:Serial ctx () mut fields [] : (Yojson.Basic.json * error list, resolve_error) result Io.t :> (Yojson.Basic.json * error list, [> execute_error]) result Io.t)
               |> Io.Result.map ~f:(fun data_errs -> `Response (data_to_json data_errs))
           end
@@ -1496,7 +1494,9 @@ end
           begin match schema.subscription with
           | None -> Io.error `Subscriptions_not_configured
           | Some subs ->
-              begin match collect_fields ctx (obj_of_subscription_obj subs) operation.selection_set with
+              Io.return (collect_fields ctx (obj_of_subscription_obj subs) operation.selection_set)
+              |> Io.Result.map_error ~f:(fun e -> `Argument_error e) >>=? fun fields ->
+              begin match fields with
               | [field] ->
                   (match field_from_subscription_object subs field.name with
                    | Some subscription_field ->
