@@ -16,6 +16,7 @@ Current feature set:
 - [x] Lwt support
 - [x] Async support
 - [x] Example with HTTP server and GraphiQL
+- [x] GraphQL Subscriptions
 
 ## Documentation
 
@@ -185,7 +186,7 @@ let schema = Schema.(schema [
       arg "duration" ~typ:float;
     ]
     ~resolve:(fun ctx () ->
-      Lwt_unix.sleep duration >|= fun () -> duration
+      Lwt_result.ok (Lwt_unix.sleep duration >|= fun () -> duration)
     )
 ])
 ```
@@ -232,6 +233,22 @@ Schema.(obj "math"
 ```
 
 Note that you must use `arg'` to provide a default value.
+
+### Subscriptions
+
+```ocaml
+Schema.(schema [
+     ...
+  ]
+  ~subscriptions:[
+    subscription_field "user_created"
+      ~typ:(non_null user)
+      ~resolve:(fun ctx ->
+        let user_stream, push_to_user_stream = Lwt_stream.create () in
+        let destroy_stream = (fun () -> push_to_user_stream None) in
+        Lwt_result.return (user_stream, destroy_stream))
+    ])
+```
 
 ## Design
 
