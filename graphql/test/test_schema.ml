@@ -49,10 +49,10 @@ let list_to_seq n l =
   aux n l
 
 let schema = Schema.(schema [
-      field "users"
-        ~typ:(non_null (list (non_null user)))
-        ~args:Arg.[]
-        ~resolve:(fun () () -> !users)
+    field "users"
+      ~typ:(non_null (list (non_null user)))
+      ~args:Arg.[]
+      ~resolve:(fun () () -> !users)
     ]
     ~mutations:[
       field "add_user"

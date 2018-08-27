@@ -274,6 +274,7 @@ let suite = [
       "errors", `List [
         `Assoc [
           "message", `String "stream error";
+          "path", `List [`String "subscribe_to_user"]
         ]
       ]
     ])
