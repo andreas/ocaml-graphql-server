@@ -7,10 +7,6 @@ module List = struct
   let find_exn = find
   let find cond xs = try Some (find_exn cond xs) with Not_found -> None
 
-  let rec find_opt p = function
-    | [] -> None
-    | x :: l -> if p x then Some x else find_opt p l
-
   module Result = struct
     let rec join ?(memo=[]) = function
       | [] -> Ok (List.rev memo)
@@ -413,7 +409,6 @@ module Make (Io : IO) = struct
       name       : string;
       doc        : string option;
       locations  : directive_location list;
-      typ        : ('ctx, 'out) typ;
       args       : (bool, 'args) Arg.arg_list;
       resolve    : 'args;
     } -> directive
@@ -422,6 +417,35 @@ module Make (Io : IO) = struct
     query : ('ctx, unit) obj;
     mutation : ('ctx, unit) obj option;
     subscription : 'ctx subscription_obj option;
+  }
+
+  let schema ?(mutation_name="mutation")
+             ?mutations
+             ?(subscription_name="subscription")
+             ?subscriptions
+             ?(query_name="query")
+             fields = {
+    query = {
+      name = query_name;
+      doc = None;
+      abstracts = ref [];
+      fields = lazy fields;
+    };
+    mutation = Option.map mutations ~f:(fun fields ->
+      {
+        name = mutation_name;
+        doc = None;
+        abstracts = ref [];
+        fields = lazy fields;
+      }
+    );
+    subscription = Option.map subscriptions ~f:(fun fields ->
+      {
+        name = subscription_name;
+        doc = None;
+        fields;
+      }
+    )
   }
 
   (* Constructor functions *)
@@ -470,6 +494,14 @@ module Make (Io : IO) = struct
     | _ ->
         invalid_arg "Arguments must be Interface/Union and Object"
 
+  let obj_of_subscription_obj {name; doc; fields} =
+    let fields = List.map
+      (fun (SubscriptionField {name; doc; deprecated; typ; args; resolve}) ->
+        Field { lift = Obj.magic (); name; doc; deprecated; typ; args; resolve = (fun ctx () -> resolve ctx) })
+      fields
+    in
+    { name; doc; abstracts = ref []; fields = lazy fields }
+
   (* Built-in scalars *)
   let int : 'ctx. ('ctx, int option) typ = Scalar {
     name   = "Int";
@@ -506,7 +538,6 @@ module Make (Io : IO) = struct
     name = "skip";
     doc = Some "Directs the executor to skip this field or fragment when the `if` argument is true.";
     locations = [`Field; `Fragment_spread; `Inline_fragment];
-    typ = non_null bool;
     args = Arg.[
       arg "if" ~doc:"Skipped when true." ~typ:(non_null bool)
     ];
@@ -517,50 +548,11 @@ module Make (Io : IO) = struct
     name = "include";
     doc = Some "Directs the executor to include this field or fragment only when the `if` argument is true.";
     locations = [`Field; `Fragment_spread; `Inline_fragment];
-    typ = non_null bool;
     args = Arg.[
       arg "if" ~doc:"Included when true." ~typ:(non_null bool)
     ];
     resolve = fun if_ -> if_
   }
-
-  (* Schema construction function *)
-  let schema ?(mutation_name="mutation")
-             ?mutations
-             ?(subscription_name="subscription")
-             ?subscriptions
-             ?(query_name="query")
-             fields = {
-    query = {
-      name = query_name;
-      doc = None;
-      abstracts = ref [];
-      fields = lazy fields;
-    };
-    mutation = Option.map mutations ~f:(fun fields ->
-      {
-        name = mutation_name;
-        doc = None;
-        abstracts = ref [];
-        fields = lazy fields;
-      }
-    );
-    subscription = Option.map subscriptions ~f:(fun fields ->
-      {
-        name = subscription_name;
-        doc = None;
-        fields;
-      }
-    )
-  }
-
-  let obj_of_subscription_obj {name; doc; fields} =
-    let fields = List.map
-      (fun (SubscriptionField {name; doc; deprecated; typ; args; resolve}) ->
-        Field { lift = Obj.magic (); name; doc; deprecated; typ; args; resolve = (fun ctx () -> resolve ctx) })
-      fields
-    in
-    { name; doc; abstracts = ref []; fields = lazy fields }
 
 module Introspection = struct
   (* any_typ, any_field and any_arg hide type parameters to avoid scope escaping errors *)
@@ -1237,22 +1229,25 @@ end
     obj.name = type_condition ||
       List.exists (fun (abstract : abstract) -> abstract.name = type_condition) !(obj.abstracts)
 
-  let rec should_include ctx (directives : Graphql_parser.directive list) =
+  let rec should_include_field ctx (directives : Graphql_parser.directive list) =
     let open Rresult in
     match directives with
     | [] -> Ok true
     | { name = "skip"; arguments }::rest ->
-        should_include ctx rest >>= fun should_include_rest ->
           let Directive directive = skip_directive in
           let resolver = directive.resolve in
-          Arg.eval_arglist ctx.variables directive.args arguments resolver
-          |> Rresult.R.map (fun skip -> not skip && should_include_rest)
+          Arg.eval_arglist ctx.variables directive.args arguments resolver >>= fun skip ->
+            let include_field = not skip in
+            if include_field then
+              should_include_field ctx rest
+            else Ok include_field
     | { name = "include"; arguments }::rest ->
-        should_include ctx rest >>= fun should_include_rest ->
           let Directive directive = include_directive in
           let resolver = directive.resolve in
-          Arg.eval_arglist ctx.variables directive.args arguments resolver
-          |> Rresult.R.map (fun includ -> includ && should_include_rest)
+          Arg.eval_arglist ctx.variables directive.args arguments resolver >>= fun includ ->
+            if includ then
+              should_include_field ctx rest
+            else Ok includ
     | { name; _ }::_ ->
         let err = Format.sprintf "Unknown directive: %s" name in
         Error err
@@ -1262,13 +1257,13 @@ end
     let open Rresult in
     List.map (function
     | Graphql_parser.Field field ->
-        should_include ctx field.directives >>| fun should_include_field ->
-          if should_include_field then [field] else []
+        should_include_field ctx field.directives >>| fun include_field ->
+          if include_field then [field] else []
     | Graphql_parser.FragmentSpread spread ->
         begin match StringMap.find spread.name ctx.fragments with
           | Some fragment when matches_type_condition fragment.type_condition obj ->
-            should_include ctx fragment.directives >>= fun should_include_field ->
-              if should_include_field then
+            should_include_field ctx fragment.directives >>= fun include_field ->
+              if include_field then
                 collect_fields ctx obj fragment.selection_set
               else Ok []
           | _ -> Ok []
@@ -1277,8 +1272,8 @@ end
         match fragment.type_condition with
         | None -> collect_fields ctx obj fragment.selection_set
         | Some condition when matches_type_condition condition obj ->
-          should_include ctx fragment.directives >>= fun should_include_field ->
-            if should_include_field then
+          should_include_field ctx fragment.directives >>= fun include_field ->
+            if include_field then
               collect_fields ctx obj fragment.selection_set
             else Ok []
         | _ -> Ok []
