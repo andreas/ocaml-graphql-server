@@ -408,15 +408,15 @@ module Make (Io : IO) = struct
     | `Variable_definition
     ]
 
-  type ('ctx, 'out) directive =
+  type directive =
     Directive : {
       name       : string;
       doc        : string option;
       locations  : directive_location list;
       typ        : ('ctx, 'out) typ;
-      args       : ('out, 'args) Arg.arg_list;
-      resolve    : 'ctx -> 'args;
-    } -> ('ctx, 'out) directive
+      args       : (bool, 'args) Arg.arg_list;
+      resolve    : 'args;
+    } -> directive
 
   type 'ctx schema = {
     query : ('ctx, unit) obj;
@@ -510,7 +510,7 @@ module Make (Io : IO) = struct
     args = Arg.[
       arg "if" ~doc:"Skipped when true." ~typ:(non_null bool)
     ];
-    resolve = fun _ctx if_ -> if_
+    resolve = fun if_ -> if_
   }
 
   let include_directive = Directive {
@@ -521,7 +521,7 @@ module Make (Io : IO) = struct
     args = Arg.[
       arg "if" ~doc:"Included when true." ~typ:(non_null bool)
     ];
-    resolve = fun _ctx if_ -> if_
+    resolve = fun if_ -> if_
   }
 
   (* Schema construction function *)
@@ -1074,7 +1074,7 @@ module Introspection = struct
     ]
   }
 
-  let __directive : 'ctx 'out. ('ctx, ('ctx, 'out) directive option) typ = Object {
+  let __directive = Object {
     name = "__Directive";
     doc = None;
     abstracts = no_abstracts;
@@ -1237,49 +1237,38 @@ end
     obj.name = type_condition ||
       List.exists (fun (abstract : abstract) -> abstract.name = type_condition) !(obj.abstracts)
 
-  let should_include ctx directives =
+  let rec should_include ctx (directives : Graphql_parser.directive list) =
     let open Rresult in
-    let Directive skip_directive = skip_directive in
-    let Directive include_directive = include_directive in
-    let skip = List.find_opt
-      (fun (directive: Graphql_parser.directive) ->
-        directive.name = skip_directive.name)
-      directives
-    in
-    let includ = List.find_opt
-      (fun (directive: Graphql_parser.directive) -> directive.name = include_directive.name)
-      directives
-    in
-    match skip, includ with
-    | None, None -> Ok true
-    | Some {Graphql_parser.arguments}, None ->
-      let resolver = skip_directive.resolve () in
-      Arg.eval_arglist ctx.variables skip_directive.args arguments resolver
-      |> Rresult.R.map not
-    | None, Some {Graphql_parser.arguments} ->
-      let resolver = include_directive.resolve () in
-      Arg.eval_arglist ctx.variables include_directive.args arguments resolver
-    | Some skip, Some includ ->
-        let skip_resolver = skip_directive.resolve () in
-        let skip_args = skip.arguments in
-        let include_resolver = include_directive.resolve () in
-        let includ_args = includ.arguments in
-        Arg.eval_arglist ctx.variables skip_directive.args skip_args skip_resolver >>= fun skip_res ->
-        Arg.eval_arglist ctx.variables include_directive.args includ_args include_resolver >>| fun include_res ->
-          not skip_res && include_res
+    match directives with
+    | [] -> Ok true
+    | { name = "skip"; arguments }::rest ->
+        should_include ctx rest >>= fun should_include_rest ->
+          let Directive directive = skip_directive in
+          let resolver = directive.resolve in
+          Arg.eval_arglist ctx.variables directive.args arguments resolver
+          |> Rresult.R.map (fun skip -> not skip && should_include_rest)
+    | { name = "include"; arguments }::rest ->
+        should_include ctx rest >>= fun should_include_rest ->
+          let Directive directive = include_directive in
+          let resolver = directive.resolve in
+          Arg.eval_arglist ctx.variables directive.args arguments resolver
+          |> Rresult.R.map (fun includ -> includ && should_include_rest)
+    | { name; _ }::_ ->
+        let err = Format.sprintf "Unknown directive: %s" name in
+        Error err
 
   let rec collect_fields : 'ctx execution_context -> ('ctx, 'src) obj -> Graphql_parser.selection list -> (Graphql_parser.field list, string) result =
     fun ctx obj fields ->
     let open Rresult in
     List.map (function
     | Graphql_parser.Field field ->
-        should_include ctx field.directives >>| fun should_include ->
-          if should_include then [field] else []
+        should_include ctx field.directives >>| fun should_include_field ->
+          if should_include_field then [field] else []
     | Graphql_parser.FragmentSpread spread ->
         begin match StringMap.find spread.name ctx.fragments with
           | Some fragment when matches_type_condition fragment.type_condition obj ->
-            should_include ctx fragment.directives >>= fun should_include ->
-              if should_include then
+            should_include ctx fragment.directives >>= fun should_include_field ->
+              if should_include_field then
                 collect_fields ctx obj fragment.selection_set
               else Ok []
           | _ -> Ok []
@@ -1288,8 +1277,8 @@ end
         match fragment.type_condition with
         | None -> collect_fields ctx obj fragment.selection_set
         | Some condition when matches_type_condition condition obj ->
-          should_include ctx fragment.directives >>= fun should_include ->
-            if should_include then
+          should_include ctx fragment.directives >>= fun should_include_field ->
+            if should_include_field then
               collect_fields ctx obj fragment.selection_set
             else Ok []
         | _ -> Ok []
