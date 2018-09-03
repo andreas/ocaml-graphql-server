@@ -1270,7 +1270,11 @@ end
         end
     | Graphql_parser.InlineFragment fragment ->
         match fragment.type_condition with
-        | None -> collect_fields ctx obj fragment.selection_set
+        | None ->
+          should_include_field ctx fragment.directives >>= fun include_field ->
+            if include_field then
+              collect_fields ctx obj fragment.selection_set
+            else Ok []
         | Some condition when matches_type_condition condition obj ->
           should_include_field ctx fragment.directives >>= fun include_field ->
             if include_field then
@@ -1459,8 +1463,8 @@ end
           )
       | Error err -> Io.error (`Argument_error err)
 
-  let execute_operation : 'ctx schema -> 'ctx execution_context -> fragment_map -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response Io.Stream.t], [> execute_error]) result Io.t =
-    fun schema ctx fragments operation ->
+  let execute_operation : 'ctx schema -> 'ctx execution_context -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response stream], [> execute_error]) result Io.t =
+    fun schema ctx operation ->
       let open Io.Infix in
       match operation.optype with
       | Graphql_parser.Query ->
@@ -1562,7 +1566,7 @@ end
       let execution_ctx = { fragments; ctx; variables } in
       let schema' = Introspection.add_schema_field schema in
       Io.return (select_operation ?operation_name doc) >>=? fun op ->
-      execute_operation schema' execution_ctx fragments op
+      execute_operation schema' execution_ctx op
     in
     execute' schema ctx doc >>| to_response
 end

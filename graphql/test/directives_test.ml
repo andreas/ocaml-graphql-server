@@ -90,5 +90,24 @@ let suite = [
       ]
     ])
   );
+  (* http://facebook.github.io/graphql/June2018/#example-77377 *)
+  ("directives + inline fragment", `Quick, fun () ->
+    let query = "{ users { name ... @include(if: false) { id }  } }" in
+    test_query query (`Assoc [
+      "data", `Assoc [
+        "users", `List [
+          `Assoc [
+            "name", `String "Alice"
+          ];
+          `Assoc [
+            "name", `String "Bob"
+          ];
+          `Assoc [
+            "name", `String "Charlie"
+          ]
+        ]
+      ]
+    ])
+  )
 ]
 
