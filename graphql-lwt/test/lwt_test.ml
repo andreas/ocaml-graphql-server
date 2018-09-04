@@ -1,4 +1,3 @@
-open Graphql
 open Lwt
 
 let yojson = (module struct
@@ -17,7 +16,7 @@ let test_query schema ctx query expected =
     | Ok doc ->
       Graphql_lwt.Schema.execute schema ctx doc >>= (function
       | Ok (`Response data) -> Lwt.return data
-      | Ok (`Stream (stream, destroy)) ->
+      | Ok (`Stream (stream, _)) ->
           Lwt_stream.to_list stream >|= fun lst ->
             `List (
               List.fold_right (fun x acc -> match x with

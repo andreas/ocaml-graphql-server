@@ -1,0 +1,7 @@
+(executable
+ (name server)
+ (libraries cohttp.lwt graphql-lwt yojson))
+
+(alias
+ (name DEFAULT)
+ (deps server.exe))

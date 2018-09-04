@@ -1,0 +1,9 @@
+(executable
+ (libraries graphql-async alcotest async_kernel async_unix)
+ (name async_test))
+
+(alias
+ (name runtest)
+ (package graphql-async)
+ (deps (:test async_test.exe))
+ (action (run %{test})))

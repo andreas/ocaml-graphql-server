@@ -20,7 +20,7 @@ let color_enum_values = Schema.([
 let color_enum     = Schema.enum "color" ~values:color_enum_values
 let color_enum_arg = Schema.Arg.enum "color" ~values:color_enum_values
 
-let person_arg = Schema.Arg.(obj "person" ~fields:Arg.[
+let person_arg = Schema.Arg.(obj "person" ~fields:[
     arg "title" ~typ:string;
     arg "first_name" ~typ:(non_null string);
     arg "last_name" ~typ:(non_null string);
@@ -42,7 +42,7 @@ let schema =
             ~args:Arg.[
               arg "x" ~typ:(non_null person_arg)
             ]
-            ~resolve:(fun () () (title, first, last) -> first ^ " " ^ last)
+            ~resolve:(fun () () (_, first, last) -> first ^ " " ^ last)
             ;
       field "sum_defaults"
             ~typ:int

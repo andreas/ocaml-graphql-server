@@ -1,14 +1,15 @@
-JBUILDER ?= jbuilder
+DUNE ?= dune
 
 all:
-	$(JBUILDER) build @install @DEFAULT
+	$(DUNE) build @install @DEFAULT
 
 check: tests
 
 test:
-	$(JBUILDER) runtest
+	$(DUNE) runtest
 
 clean:
-	rm -rf _build
+	dune clean
+	rm -rf *.install
 
 .PHONY: test all clean check

@@ -1,5 +1,3 @@
-open Sexplib.Std
-
 let read_all path =
   let file = open_in path in
   try

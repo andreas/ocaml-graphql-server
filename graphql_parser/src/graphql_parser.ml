@@ -148,8 +148,6 @@ let colon  = char ':'
 let equal  = char '='
 let dollar = char '$'
 let at     = char '@'
-let dot    = char '.'
-let dash   = char '-'
 let quote  = char '"'
 
 let is_name_char =
@@ -168,7 +166,7 @@ let string_chars = scan_state `Unescaped (fun state c ->
       Some `Unescaped
     in
     match state with
-    | `Error err -> None
+    | `Error _ -> None
     | `Escaped ->
         begin match c with
         | '"'  -> add_char '"';

@@ -109,5 +109,5 @@ let schema = Schema.(schema [
 )
 
 let () =
-  Server.start ~ctx:(fun req -> ()) schema
+  Server.start ~ctx:(fun _req -> ()) schema
   |> Lwt_main.run

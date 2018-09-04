@@ -1,8 +1,0 @@
-(jbuild_version 1)
-
-(library
- ((name graphql_parser)
-  (public_name graphql_parser)
-  (wrapped false)
-  (preprocess (pps (ppx_sexp_conv)))
-  (libraries (angstrom sexplib))))
