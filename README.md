@@ -46,7 +46,7 @@ git clone git@github.com:andreas/ocaml-graphql-server.git
 cd ocaml-graphql-server
 cd examples
 dune build server.exe
-dune exec ./examples/server.exe
+dune exec ./server.exe
 ```
 
 Now open [http://localhost:8080/graphql](http://localhost:8080/graphql).
