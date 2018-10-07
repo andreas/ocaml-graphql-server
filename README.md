@@ -41,7 +41,7 @@ API documentation:
 To run a sample GraphQL server also serving GraphiQL, do the following:
 
 ```bash
-opam install graphql-lwt dune async_kernel
+opam install graphql-lwt dune seq
 git clone git@github.com:andreas/ocaml-graphql-server.git
 cd ocaml-graphql-server/examples
 dune exec ./server.exe
