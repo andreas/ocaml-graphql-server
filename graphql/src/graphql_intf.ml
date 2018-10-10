@@ -18,6 +18,14 @@ end
 module type Schema = sig
   module Io : IO
 
+  module StringMap : sig
+    include Map.S with type key = string
+    (* Map.S with type key = String.t *)
+    exception Missing_key of key
+    val find_exn : key -> 'a t -> 'a
+    val find : key -> 'a t -> 'a option
+  end
+
   (** {3 Base types } *)
 
   type 'ctx schema
@@ -100,9 +108,13 @@ module type Schema = sig
     val non_null : 'a option arg_typ -> 'a arg_typ
   end
 
+  type variable_map = Graphql_parser.const_value StringMap.t
+  type fragment_map = Graphql_parser.fragment StringMap.t
   type 'ctx resolve_params = {
     ctx : 'ctx;
     field : Graphql_parser.field;
+    fragments : fragment_map;
+    variables : variable_map;
   }
 
   val field : ?doc:string ->
