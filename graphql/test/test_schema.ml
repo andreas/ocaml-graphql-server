@@ -26,7 +26,7 @@ let user = Schema.(obj "user"
     field "id"
       ~typ:(non_null int)
       ~args:Arg.[]
-      ~resolve:(fun _ p -> p.id)
+      ~resolve:(fun { ctx = () } p -> p.id)
     ;
     field "name"
       ~typ:(non_null string)
@@ -75,7 +75,7 @@ let schema = Schema.(schema [
           arg' "raise" ~typ:bool ~default:false;
           arg' "first" ~typ:int ~default:1;
         ]
-        ~resolve:(fun () return_error raise_in_stream first ->
+        ~resolve:(fun _ return_error raise_in_stream first ->
           if return_error then
             Error "stream error"
           else if raise_in_stream then

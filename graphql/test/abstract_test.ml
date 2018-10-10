@@ -18,12 +18,12 @@ let cat = Schema.(obj "Cat"
     field "name"
       ~typ:(non_null string)
       ~args:Arg.[]
-      ~resolve:(fun () (cat : cat) -> cat.name)
+      ~resolve:(fun _ (cat : cat) -> cat.name)
     ;
     field "kittens"
       ~typ:(non_null int)
       ~args:Arg.[]
-      ~resolve:(fun () (cat : cat) -> cat.kittens)
+      ~resolve:(fun _ (cat : cat) -> cat.kittens)
     ;
   ])
 )
@@ -33,12 +33,12 @@ let dog = Schema.(obj "Dog"
     field "name"
       ~typ:(non_null string)
       ~args:Arg.[]
-      ~resolve:(fun () (dog : dog) -> dog.name)
+      ~resolve:(fun _ (dog : dog) -> dog.name)
     ;
     field "puppies"
       ~typ:(non_null int)
       ~args:Arg.[]
-      ~resolve:(fun () (dog : dog) -> dog.puppies)
+      ~resolve:(fun _ (dog : dog) -> dog.puppies)
     ;
   ])
 )
@@ -69,7 +69,7 @@ let schema = Schema.(schema [
       ~args:Arg.[
         arg "type" ~typ:(non_null pet_type)
       ]
-      ~resolve:(fun () () pet_type ->
+      ~resolve:(fun _ () pet_type ->
         match pet_type with
         | `Cat ->
           cat_as_pet meow
@@ -80,12 +80,12 @@ let schema = Schema.(schema [
     field "pets"
       ~typ:(non_null (list (non_null pet)))
       ~args:Arg.[]
-      ~resolve:(fun () () -> [cat_as_pet meow; dog_as_pet fido])
+      ~resolve:(fun _ () -> [cat_as_pet meow; dog_as_pet fido])
     ;
     field "named_objects"
       ~typ:(non_null (list (non_null named)))
       ~args:Arg.[]
-      ~resolve:(fun () () -> [cat_as_named meow; dog_as_named fido])
+      ~resolve:(fun _ () -> [cat_as_named meow; dog_as_named fido])
   ])
 
 let test_query = Test_common.test_query schema ()

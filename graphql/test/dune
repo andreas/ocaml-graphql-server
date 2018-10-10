@@ -11,7 +11,8 @@
   introspection_test
   error_test
   abstract_test)
- (libraries graphql alcotest))
+ (libraries graphql alcotest)
+ (flags (:standard -w -9)))
 
 (executable
  (libraries graphql_test)

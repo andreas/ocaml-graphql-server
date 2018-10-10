@@ -27,22 +27,22 @@ let user = Schema.(obj "user"
     field "id"
       ~args:Arg.[]
       ~typ:(non_null int)
-      ~resolve:(fun () p -> p.id)
+      ~resolve:(fun _ p -> p.id)
     ;
     field "name"
       ~args:Arg.[]
       ~typ:(non_null string)
-      ~resolve:(fun () p -> p.name)
+      ~resolve:(fun _ p -> p.name)
     ;
     field "role"
       ~args:Arg.[]
       ~typ:(non_null role)
-      ~resolve:(fun () p -> p.role)
+      ~resolve:(fun _ p -> p.role)
     ;
     field "friends"
       ~args:Arg.[]
       ~typ:(list (non_null user))
-      ~resolve:(fun () p -> Some p.friends)
+      ~resolve:(fun _ p -> Some p.friends)
   ])
 )
 
@@ -76,7 +76,7 @@ let schema = Schema.(schema [
     io_field "users"
       ~args:Arg.[]
       ~typ:(non_null (list (non_null user)))
-      ~resolve:(fun () () -> Lwt_result.return users)
+      ~resolve:(fun _ () -> Lwt_result.return users)
     ;
     field "greeter"
       ~typ:string
@@ -86,7 +86,7 @@ let schema = Schema.(schema [
           arg "name" ~typ:(non_null string)
         ]))
       ]
-      ~resolve:(fun () () (greeting, name) ->
+      ~resolve:(fun _ () (greeting, name) ->
         Some (Format.sprintf "%s, %s" greeting name)
       )
     ;
@@ -95,7 +95,7 @@ let schema = Schema.(schema [
       subscription_field "subscribe_to_user"
         ~typ:(non_null user)
         ~args:Arg.[arg' "intarg" ~typ:int ~default:42]
-        ~resolve:(fun _ctx _intarg ->
+        ~resolve:(fun _params _intarg ->
           let user_stream, push_to_user_stream = Lwt_stream.create () in
           let destroy_stream = (fun () -> push_to_user_stream None) in
           set_interval 2 (fun () ->
