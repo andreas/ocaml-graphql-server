@@ -182,7 +182,7 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
       | List a -> Printf.sprintf "[%s]" (string_of_arg_typ a)
       | NonNullable a -> Printf.sprintf "%s!" (string_of_arg_typ a)
 
-    let eval_arg_error field_name arg_name arg_typ value =
+    let eval_arg_error ~field_name ~arg_name arg_typ value =
       let found_str =
         match value with
         | Some v -> Printf.sprintf "found %s" (string_of_const_value v)
@@ -252,13 +252,13 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
         let props' = List.map (fun (name, value) -> name, value_to_const_value variable_map value) props in
         `Assoc props'
 
-    let rec eval_arglist : type a b. variable_map -> string -> (a, b) arg_list -> (string * Graphql_parser.value) list -> b -> (a, string) result =
-      fun variable_map field_name arglist key_values f ->
+    let rec eval_arglist : type a b. variable_map -> field_name:string -> (a, b) arg_list -> (string * Graphql_parser.value) list -> b -> (a, string) result =
+      fun variable_map ~field_name arglist key_values f ->
         match arglist with
         | [] -> Ok f
         | (DefaultArg arg)::arglist' ->
             let arglist'' = (Arg { name = arg.name; doc = arg.doc; typ = arg.typ })::arglist' in
-            eval_arglist variable_map field_name arglist'' key_values (function
+            eval_arglist variable_map ~field_name arglist'' key_values (function
               | None -> f arg.default
               | Some value -> f value
             )
@@ -266,14 +266,14 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
             try
               let value = List.assoc arg.name key_values in
               let const_value = Option.map value ~f:(value_to_const_value variable_map) in
-              eval_arg variable_map field_name arg.name arg.typ const_value >>= fun coerced ->
-              eval_arglist variable_map field_name arglist' key_values (f coerced)
+              eval_arg variable_map ~field_name ~arg_name:arg.name arg.typ const_value >>= fun coerced ->
+              eval_arglist variable_map ~field_name arglist' key_values (f coerced)
             with StringMap.Missing_key key -> Error (Format.sprintf "Missing variable `%s`" key)
 
-    and eval_arg : type a. variable_map -> string -> string -> a arg_typ -> Graphql_parser.const_value option -> (a, string) result = fun variable_map field_name arg_name typ value ->
+    and eval_arg : type a. variable_map -> field_name:string -> arg_name:string -> a arg_typ -> Graphql_parser.const_value option -> (a, string) result = fun variable_map ~field_name ~arg_name typ value ->
       match (typ, value) with
-      | NonNullable _, None -> Error (eval_arg_error field_name arg_name typ value)
-      | NonNullable _, Some `Null -> Error (eval_arg_error field_name arg_name typ value)
+      | NonNullable _, None -> Error (eval_arg_error ~field_name ~arg_name typ value)
+      | NonNullable _, Some `Null -> Error (eval_arg_error ~field_name ~arg_name typ value)
       | Scalar _, None -> Ok None
       | Scalar _, Some `Null -> Ok None
       | Object _, None -> Ok None
@@ -285,29 +285,29 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
       | Scalar s, Some value ->
          begin match (s.coerce value) with
          | Ok coerced -> Ok (Some coerced)
-         | Error _ -> Error (eval_arg_error field_name arg_name typ (Some value))
+         | Error _ -> Error (eval_arg_error ~field_name ~arg_name typ (Some value))
          end
       | Object o, Some value ->
           begin match value with
           | `Assoc props ->
               let props' = (props :> (string * Graphql_parser.value) list) in
-              eval_arglist variable_map field_name o.fields props' o.coerce >>| fun coerced ->
+              eval_arglist variable_map ~field_name o.fields props' o.coerce >>| fun coerced ->
               Some coerced
-          | _ -> Error (eval_arg_error field_name arg_name typ (Some value))
+          | _ -> Error (eval_arg_error ~field_name ~arg_name typ (Some value))
           end
      | List typ, Some value ->
           begin match value with
           | `List values ->
               let option_values = List.map (fun x -> Some x) values in
-              List.Result.all (eval_arg variable_map field_name arg_name typ) option_values >>| fun coerced ->
+              List.Result.all (eval_arg variable_map ~field_name ~arg_name typ) option_values >>| fun coerced ->
               Some coerced
-          | value -> eval_arg variable_map field_name arg_name typ (Some value) >>| fun coerced ->
+          | value -> eval_arg variable_map ~field_name ~arg_name typ (Some value) >>| fun coerced ->
               (Some [coerced] : a)
           end
       | NonNullable typ, value ->
-          eval_arg variable_map field_name arg_name typ value >>= (function
+          eval_arg variable_map ~field_name ~arg_name typ value >>= (function
           | Some value -> Ok value
-          | None -> Error (eval_arg_error field_name arg_name typ None))
+          | None -> Error (eval_arg_error ~field_name ~arg_name typ None))
       | Enum e, Some value ->
           begin match value with
           | `Enum v
@@ -1192,7 +1192,7 @@ end
       let name = alias_or_name query_field in
       let path' = (`String name)::path in
       let resolver = field.resolve ctx.ctx src in
-      match Arg.eval_arglist ctx.variables field.name field.args query_field.arguments resolver with
+      match Arg.eval_arglist ctx.variables ~field_name:field.name field.args query_field.arguments resolver with
       | Ok unlifted_value ->
           let lifted_value =
             field.lift unlifted_value
@@ -1269,7 +1269,7 @@ end
       let name = alias_or_name field in
       let path = [`String name] in
       let resolver = subs_field.resolve ctx.ctx in
-      match Arg.eval_arglist ctx.variables subs_field.name subs_field.args field.arguments resolver with
+      match Arg.eval_arglist ctx.variables ~field_name:subs_field.name subs_field.args field.arguments resolver with
       | Ok result ->
           result
           |> Io.Result.map ~f:(fun source_stream ->
