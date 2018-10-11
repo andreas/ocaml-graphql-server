@@ -156,31 +156,42 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
     let obj ?doc name ~fields ~coerce =
       Object { name; doc; fields; coerce }
 
-    let rec string_of_const_value: Graphql_parser.const_value -> string = function
+    let rec string_of_const_value : Graphql_parser.const_value -> string = function
       | `Null -> "null"
-      | `Int i -> string_of_int(i)
-      | `Float f -> string_of_float(f)
+      | `Int i -> string_of_int i
+      | `Float f -> string_of_float f
       | `String s -> Printf.sprintf "\"%s\"" s
-      | `Bool b -> string_of_bool(b)
+      | `Bool b -> string_of_bool b
       | `Enum e -> e
-      | `List l -> Printf.sprintf "[%s]" (String.concat ", " (List.map (fun i -> (string_of_const_value i)) l))
-      | `Assoc a -> Printf.sprintf "{%s}" (String.concat ", " (List.map (fun (k, v) -> Printf.sprintf "%s: %s" k (string_of_const_value v)) a))
+      | `List l ->
+          let values = List.map (fun i -> string_of_const_value i) l in
+          Printf.sprintf "[%s]" (String.concat ", " values)
+      | `Assoc a ->
+          let values =
+            List.map
+              (fun (k, v) ->
+                Printf.sprintf "%s: %s" k (string_of_const_value v) )
+              a
+          in
+          Printf.sprintf "{%s}" (String.concat ", " values)
 
-     let rec string_of_arg_typ : type a. a arg_typ -> string = function
-      | Scalar(a) -> a.name
-      | Object(a) -> a.name
-      | Enum(a) -> a.name
-      | List(a) -> (Printf.sprintf "[%s]" (string_of_arg_typ a))
-      | NonNullable(a) -> (Printf.sprintf "%s!" (string_of_arg_typ a))
+    let rec string_of_arg_typ : type a. a arg_typ -> string = function
+      | Scalar a -> a.name
+      | Object a -> a.name
+      | Enum a -> a.name
+      | List a -> Printf.sprintf "[%s]" (string_of_arg_typ a)
+      | NonNullable a -> Printf.sprintf "%s!" (string_of_arg_typ a)
 
-     let eval_arg_error field_name arg_name arg_typ value =
+    let eval_arg_error field_name arg_name arg_typ value =
+      let found_str =
+        match value with
+        | Some v -> Printf.sprintf "found %s" (string_of_const_value v)
+        | None -> "but not provided"
+      in
       Printf.sprintf "Argument `%s` of type `%s` expected on field `%s`, %s."
-                     arg_name
-                     (string_of_arg_typ arg_typ)
-                     field_name
-                     (match value with
-                     | Some(v) -> Printf.sprintf "found %s" (string_of_const_value v)
-                     | None -> "but not provided")
+        arg_name
+        (string_of_arg_typ arg_typ)
+        field_name found_str
 
     (* Built-in argument types *)
     let int = Scalar {
@@ -272,11 +283,10 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
       | Enum _, None -> Ok None
       | Enum _, Some `Null -> Ok None
       | Scalar s, Some value ->
-         let result = match (s.coerce value) with
+         begin match (s.coerce value) with
          | Ok coerced -> Ok (Some coerced)
          | Error _ -> Error (eval_arg_error field_name arg_name typ (Some value))
-         in
-         result
+         end
       | Object o, Some value ->
           begin match value with
           | `Assoc props ->
