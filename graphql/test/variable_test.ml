@@ -85,7 +85,7 @@ let suite : (string * [>`Quick] * (unit -> unit)) list = [
       "data", `Null;
       "errors", `List [
         `Assoc [
-          "message", `String "Missing required argument"
+          "message", `String "Argument `x` of type `person!` expected on field `input_obj`, found null."
         ]
       ]
     ])
