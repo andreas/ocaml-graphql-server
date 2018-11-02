@@ -28,7 +28,6 @@ env:
   - DISTRO="ubuntu-16.04" OCAML_VERSION="4.05" PACKAGE="graphql-async"
   - DISTRO="ubuntu-16.04" OCAML_VERSION="4.06" PACKAGE="graphql-async"
   - DISTRO="ubuntu-16.04" OCAML_VERSION="4.07" PACKAGE="graphql-async"
-  - DISTRO="ubuntu-16.04" OCAML_VERSION="4.03" PACKAGE="graphql-cohttp"
   - DISTRO="ubuntu-16.04" OCAML_VERSION="4.04" PACKAGE="graphql-cohttp"
   - DISTRO="ubuntu-16.04" OCAML_VERSION="4.05" PACKAGE="graphql-cohttp"
   - DISTRO="ubuntu-16.04" OCAML_VERSION="4.06" PACKAGE="graphql-cohttp"

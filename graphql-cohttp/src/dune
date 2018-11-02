@@ -7,4 +7,4 @@
  (name graphql_cohttp)
  (public_name graphql-cohttp)
  (wrapped false)
- (libraries str graphql cohttp))
+ (libraries str graphql cohttp astring base64 ocplib-endian digestif.ocaml))
