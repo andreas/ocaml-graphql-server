@@ -1,19 +1,26 @@
-opam-version: "1.2"
+opam-version: "2.0"
 maintainer: "Andreas Garnaes <andreas.garnaes@gmail.com>"
 authors: "Andreas Garnaes <andreas.garnaes@gmail.com>"
 homepage: "https://github.com/andreas/ocaml-graphql-server"
 doc: "https://andreas.github.io/ocaml-graphql-server/"
 bug-reports: "https://github.com/andreas/ocaml-graphql-server/issues"
-dev-repo: "https://github.com/andreas/ocaml-graphql-server.git"
-build: [["dune" "build" "-p" name "-j" jobs]]
-build-test: [["dune" "runtest" "-p" name "-j" jobs]]
+dev-repo: "git+https://github.com/andreas/ocaml-graphql-server.git"
+
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+]
+
 depends: [
+  "ocaml" {>= "4.03.0"}
   "dune" {build}
   "graphql"
   "async_kernel" {>= "v0.9.0"}
-  "alcotest" {test}
-  "async_unix" {test & >= "v0.9.0"}
+  "alcotest" {with-test}
+  "async_unix" {with-test & >= "v0.9.0"}
 ]
-available: [
-  ocaml-version >= "4.03.0"
-]
+
+synopsis: "Build GraphQL schemas with Async support"
+
+description: """
+`graphql-async` adds support for Async to `graphql`, so you can use Async in your GraphQL schema resolver functions."""

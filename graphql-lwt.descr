@@ -1,3 +1,0 @@
-Build GraphQL schemas with Lwt support
-
-`graphql-lwt` adds support for Lwt to `graphql`, so you can use Lwt in your GraphQL schema resolver functions.

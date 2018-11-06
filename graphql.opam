@@ -1,20 +1,40 @@
-opam-version: "1.2"
+opam-version: "2.0"
 maintainer: "Andreas Garnaes <andreas.garnaes@gmail.com>"
 authors: "Andreas Garnaes <andreas.garnaes@gmail.com>"
 homepage: "https://github.com/andreas/ocaml-graphql-server"
 doc: "https://andreas.github.io/ocaml-graphql-server/"
 bug-reports: "https://github.com/andreas/ocaml-graphql-server/issues"
-dev-repo: "https://github.com/andreas/ocaml-graphql-server.git"
-build: [["dune" "build" "-p" name "-j" jobs]]
-build-test: [["dune" "runtest" "-p" name "-j" jobs]]
+dev-repo: "git+https://github.com/andreas/ocaml-graphql-server.git"
+
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+]
+
 depends: [
+  "ocaml" {>= "4.03.0"}
   "dune" {build}
   "graphql_parser"
   "yojson"
   "rresult"
   "seq"
-  "alcotest" {test}
+  "alcotest" {with-test}
 ]
-available: [
-  ocaml-version >= "4.03.0"
-]
+
+synopsis: "Build GraphQL schemas and execute queries against them"
+
+description: """
+`graphql` is a package for creating GraphQL servers. Current feature set includes:
+
+- Type-safe schema design
+- GraphQL parser in pure OCaml using [angstrom](https://github.com/inhabitedtype/angstrom) (April 2016 RFC draft)
+- Query execution
+- Introspection of schemas
+- Arguments for fields
+- Allows variables in queries
+- Subscriptions
+
+Supporting packages:
+
+- Use `graphql-lwt` for Lwt support.
+- Use `graphql-async` for Async support."""
