@@ -1,3 +1,0 @@
-Build GraphQL schemas with Async support
-
-`graphql-async` adds support for Async to `graphql`, so you can use Async in your GraphQL schema resolver functions.
