@@ -1,6 +1,6 @@
 open Graphql
 
-let echo : 'a. unit Schema.resolve_params -> unit -> 'a -> 'a = fun _ _ x -> x
+let echo : 'a. unit Schema.resolve_info -> unit -> 'a -> 'a = fun _ _ x -> x
 
 let echo_field name field_typ arg_typ = Schema.(
       field name

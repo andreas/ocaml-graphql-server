@@ -110,7 +110,7 @@ module type Schema = sig
 
   type variable_map = Graphql_parser.const_value StringMap.t
   type fragment_map = Graphql_parser.fragment StringMap.t
-  type 'ctx resolve_params = {
+  type 'ctx resolve_info = {
     ctx : 'ctx;
     field : Graphql_parser.field;
     fragments : fragment_map;
@@ -122,7 +122,7 @@ module type Schema = sig
               string ->
               typ:('ctx, 'a) typ ->
               args:('a, 'b) Arg.arg_list ->
-              resolve:('ctx resolve_params -> 'src -> 'b) ->
+              resolve:('ctx resolve_info -> 'src -> 'b) ->
               ('ctx, 'src) field
 
   val io_field : ?doc:string ->
@@ -130,7 +130,7 @@ module type Schema = sig
                  string ->
                  typ:('ctx, 'a) typ ->
                  args:(('a, string) result Io.t, 'b) Arg.arg_list ->
-                 resolve:('ctx resolve_params -> 'src -> 'b) ->
+                 resolve:('ctx resolve_info -> 'src -> 'b) ->
                  ('ctx, 'src) field
 
   val subscription_field : ?doc:string ->
@@ -138,7 +138,7 @@ module type Schema = sig
                            string ->
                            typ:('ctx, 'out) typ ->
                            args:(('out Io.Stream.t, string) result Io.t, 'args) Arg.arg_list ->
-                           resolve:('ctx resolve_params -> 'args) ->
+                           resolve:('ctx resolve_info -> 'args) ->
                            'ctx subscription_field
 
   val enum : ?doc:string ->

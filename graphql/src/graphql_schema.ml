@@ -331,7 +331,7 @@ module Make (Io : IO) = struct
   }
 
   type fragment_map = Graphql_parser.fragment StringMap.t
-  type 'ctx resolve_params = {
+  type 'ctx resolve_info = {
     ctx : 'ctx;
     field : Graphql_parser.field;
     fragments : fragment_map;
@@ -351,7 +351,7 @@ module Make (Io : IO) = struct
       deprecated : deprecated;
       typ        : ('ctx, 'out) typ;
       args       : ('a, 'args) Arg.arg_list;
-      resolve    : 'ctx resolve_params -> 'src -> 'args;
+      resolve    : 'ctx resolve_info -> 'src -> 'args;
       lift       : 'a -> ('out, string) result Io.t;
     } -> ('ctx, 'src) field
   and (_, _) typ =
@@ -382,7 +382,7 @@ module Make (Io : IO) = struct
       deprecated : deprecated;
       typ        : ('ctx, 'out) typ;
       args       : (('out Io.Stream.t, string) result Io.t, 'args) Arg.arg_list;
-      resolve    : 'ctx resolve_params -> 'args;
+      resolve    : 'ctx resolve_info -> 'args;
     } -> 'ctx subscription_field
 
   type 'ctx subscription_obj = {
@@ -1195,13 +1195,13 @@ end
       let open Io.Infix in
       let name = alias_or_name query_field in
       let path' = (`String name)::path in
-      let resolve_params = {
+      let resolve_info = {
         ctx = ctx.ctx;
         field = query_field;
         fragments = ctx.fragments;
         variables = ctx.variables;
       } in
-      let resolver = field.resolve resolve_params src in
+      let resolver = field.resolve resolve_info src in
       match Arg.eval_arglist ctx.variables ~field_name:field.name field.args query_field.arguments resolver with
       | Ok unlifted_value ->
           let lifted_value =
@@ -1278,13 +1278,13 @@ end
       let open Io.Infix in
       let name = alias_or_name field in
       let path = [`String name] in
-      let resolve_params = {
+      let resolve_info = {
         ctx = ctx.ctx;
         field;
         fragments = ctx.fragments;
         variables = ctx.variables
       } in
-      let resolver = subs_field.resolve resolve_params in
+      let resolver = subs_field.resolve resolve_info in
       match Arg.eval_arglist ctx.variables ~field_name:subs_field.name subs_field.args field.arguments resolver with
       | Ok result ->
           result
