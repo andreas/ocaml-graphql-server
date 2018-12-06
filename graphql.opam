@@ -37,4 +37,5 @@ description: """
 Supporting packages:
 
 - Use `graphql-lwt` for Lwt support.
-- Use `graphql-async` for Async support."""
+- Use `graphql-async` for Async support.
+- Use `graphql-cohttp` to run a GraphQL server with `cohttp`."""

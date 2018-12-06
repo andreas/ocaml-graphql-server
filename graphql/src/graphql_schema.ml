@@ -28,21 +28,18 @@ module type IO = sig
 
   val return : 'a -> 'a t
   val bind : 'a t -> ('a -> 'b t) -> 'b t
-end
 
-(* Stream *)
-module type Stream = sig
-  type +'a io
-  type 'a t
+  module Stream : sig
+    type +'a io
+    type 'a t
 
-  val map : 'a t -> ('a -> 'b io) -> 'b t
+    val map : 'a t -> ('a -> 'b io) -> 'b t
+    val close : 'a t -> unit
+  end with type 'a io := 'a t
 end
 
 (* Schema *)
-module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
-  type +'a io = 'a Io.t
-  type 'a stream = 'a Stream.t
-
+module Make (Io : IO) = struct
   module Io = struct
     include Io
 
@@ -376,7 +373,7 @@ module Make (Io : IO) (Stream: Stream with type 'a io = 'a Io.t) = struct
       doc        : string option;
       deprecated : deprecated;
       typ        : ('ctx, 'out) typ;
-      args       : (('out stream, string) result io, 'args) Arg.arg_list;
+      args       : (('out Io.Stream.t, string) result Io.t, 'args) Arg.arg_list;
       resolve    : 'ctx -> 'args;
     } -> 'ctx subscription_field
 
@@ -1262,7 +1259,7 @@ end
         let `Assoc errors = error_response ~path msg in
         Error (`Assoc (("data", `Null)::errors))
 
-  let subscribe : type ctx. ctx execution_context -> ctx subscription_field -> Graphql_parser.field -> (Yojson.Basic.json response Stream.t, [> resolve_error]) result Io.t
+  let subscribe : type ctx. ctx execution_context -> ctx subscription_field -> Graphql_parser.field -> (Yojson.Basic.json response Io.Stream.t, [> resolve_error]) result Io.t
   =
     fun ctx (SubscriptionField subs_field) field ->
       let open Io.Infix in
@@ -1273,7 +1270,7 @@ end
       | Ok result ->
           result
           |> Io.Result.map ~f:(fun source_stream ->
-            Stream.map source_stream (fun value ->
+            Io.Stream.map source_stream (fun value ->
               present ctx value field subs_field.typ path
               |> Io.Result.map ~f:(fun (data, errors) ->
                 data_to_json (`Assoc [name, data], errors)
@@ -1286,7 +1283,7 @@ end
           )
       | Error err -> Io.error (`Argument_error err)
 
-  let execute_operation : 'ctx schema -> 'ctx execution_context -> fragment_map -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response stream], [> execute_error]) result Io.t =
+  let execute_operation : 'ctx schema -> 'ctx execution_context -> fragment_map -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response Io.Stream.t], [> execute_error]) result Io.t =
     fun schema ctx fragments operation ->
       match operation.optype with
       | Graphql_parser.Query ->
@@ -1310,7 +1307,7 @@ end
               | [field] ->
                   (match field_from_subscription_object subs field.name with
                    | Some subscription_field ->
-                       (subscribe ctx subscription_field field : ((Yojson.Basic.json, Yojson.Basic.json) result Stream.t, resolve_error) result Io.t :> ((Yojson.Basic.json, Yojson.Basic.json) result Stream.t, [> execute_error]) result Io.t)
+                       (subscribe ctx subscription_field field : ((Yojson.Basic.json, Yojson.Basic.json) result Io.Stream.t, resolve_error) result Io.t :> ((Yojson.Basic.json, Yojson.Basic.json) result Io.Stream.t, [> execute_error]) result Io.t)
                        |> Io.Result.map ~f:(fun stream -> `Stream stream)
                    | None -> Io.ok (`Response (`Assoc [(alias_or_name field, `Null)])))
               (* see http://facebook.github.io/graphql/June2018/#sec-Response-root-field *)

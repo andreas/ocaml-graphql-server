@@ -1,10 +1,5 @@
-(rule
- (targets assets.ml)
- (deps (source_tree assets))
- (action (run %{bin:ocaml-crunch} -m plain assets -o assets.ml)))
-
 (library
  (name graphql_lwt)
  (public_name graphql-lwt)
  (wrapped false)
- (libraries str graphql lwt cohttp.lwt))
+ (libraries graphql lwt))

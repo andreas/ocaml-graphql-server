@@ -1,15 +1,13 @@
-module Io = struct
+module Schema = Graphql_schema.Make (struct
   type +'a t = 'a
 
-  let bind x f = f x
-  let return x = x
-end
+  let bind t f = f t
+  let return t = t
 
-module Stream = struct
-  type +'a io = 'a Io.t
-  type 'a t = 'a Seq.t
+  module Stream = struct
+    type 'a t = 'a Seq.t
 
-  let map x f = Seq.map f x
-end
-
-module Schema = Graphql_schema.Make (Io) (Stream)
+    let map t f = Seq.map f t
+    let close _t = ()
+  end
+end)

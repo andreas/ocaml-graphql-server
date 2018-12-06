@@ -26,6 +26,7 @@ Four OPAM packages are provided:
 - `graphql-lwt` provides the module `Graphql_lwt.Schema` with [Lwt](https://github.com/ocsigen/lwt) support in field resolvers.
 - `graphql-async` provides the module `Graphql_async.Schema` with [Async](https://github.com/janestreet/async) support in field resolvers.
 - `graphql_parser` provides query parsing functionality.
+- `graphql-cohttp` allows exposing a schema over HTTP using [Cohttp](https://github.com/mirage/ocaml-cohttp).
 
 API documentation:
 
@@ -33,6 +34,7 @@ API documentation:
 - [`graphql-lwt`](https://andreas.github.io/ocaml-graphql-server/graphql-lwt)
 - [`graphql-async`](https://andreas.github.io/ocaml-graphql-server/graphql-async)
 - [`graphql_parser`](https://andreas.github.io/ocaml-graphql-server/graphql_parser)
+- [`graphql-cohttp`](https://andreas.github.io/ocaml-graphql-server/graphql-cohttp)
 
 ## Examples
 
@@ -246,6 +248,27 @@ Schema.(schema [
         let destroy_stream = (fun () -> push_to_user_stream None) in
         Lwt_result.return (user_stream, destroy_stream))
     ])
+```
+
+### HTTP Server
+
+Using Lwt:
+
+```ocaml
+open Graphql_lwt
+
+let schema = Schema.(schema [
+  ...
+])
+
+module Graphql_cohttp_lwt = Graphql_cohttp.Make (Schema) (Cohttp_lwt.Body)
+
+let () =
+  let callback = Graphql_cohttp_lwt.make_callback (fun _req -> ()) schema in
+  let server = Cohttp_lwt_unix.Server.make ~callback () in
+  let mode = `TCP (`Port 8080) in
+  Cohttp_lwt_unix.Server.create ~mode server
+  |> Lwt_main.run
 ```
 
 ## Design
