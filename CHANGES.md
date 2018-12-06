@@ -1,3 +1,12 @@
+0.8.0 2018-12-06
+---------------------------------
+
+- Subscription support (#101)
+- Add path to errors in response (#112)
+- Improved escaped character handling (#114)
+- Improve error messages for invalid arguments (#128)
+
+
 0.7.0 2018-08-10
 ---------------------------------
 
