@@ -83,17 +83,17 @@ let user = Schema.(obj "user"
       ~doc:"Unique user identifier"
       ~typ:(non_null int)
       ~args:Arg.[]
-      ~resolve:(fun ctx p -> p.id)
+      ~resolve:(fun resolve_info p -> p.id)
     ;
     field "name"
       ~typ:(non_null string)
       ~args:Arg.[]
-      ~resolve:(fun ctx p -> p.name)
+      ~resolve:(fun resolve_info p -> p.name)
     ;
     field "role"
       ~typ:(non_null role)
       ~args:Arg.[]
-      ~resolve:(fun ctx p -> p.role)
+      ~resolve:(fun resolve_info p -> p.role)
   ])
 )
 
@@ -101,7 +101,7 @@ let schema = Schema.(schema [
   field "users"
     ~typ:(non_null (list (non_null user)))
     ~args:Arg.[]
-    ~resolve:(fun ctx () -> users)
+    ~resolve:(fun resolve_info () -> users)
 ])
 ```
 
@@ -142,12 +142,12 @@ let tweet = Schema.(obj "tweet"
     field "id"
       ~typ:(non_null int)
       ~args:Arg.[]
-      ~resolver:(fun ctx t -> t.id)
+      ~resolve:(fun resolve_info t -> t.id)
     ;
     field "replies"
       ~typ:(non_null (list tweet))
       ~args:Arg.[]
-      ~resolver:(fun ctx t -> t.replies)
+      ~resolve:(fun resolve_info t -> t.replies)
   ])
 )
 ```
@@ -162,14 +162,14 @@ let rec foo = lazy Schema.(obj "foo"
     field "bar"
       ~typ:Lazy.(force bar)
       ~args.Arg.[]
-      ~resolver:(fun ctx foo -> foo.bar)
+      ~resolve:(fun resolve_info foo -> foo.bar)
   ])
 and bar = lazy Schema.(obj "bar"
   ~fields:(fun _ -> [
     field "foo"
       ~typ:Lazy.(force foo)
       ~args.Arg.[]
-      ~resolver:(fun ctx bar -> bar.foo)
+      ~resolve:(fun resolve_info bar -> bar.foo)
   ])
 ```
 
@@ -185,7 +185,7 @@ let schema = Schema.(schema [
     ~args:Arg.[
       arg "duration" ~typ:float;
     ]
-    ~resolve:(fun ctx () ->
+    ~resolve:(fun resolve_info () ->
       Lwt_result.ok (Lwt_unix.sleep duration >|= fun () -> duration)
     )
 ])
@@ -204,7 +204,7 @@ let schema = Schema.(schema [
     ~args:Arg.[
       arg "duration" ~typ:float;
     ]
-    ~resolve:(fun ctx () ->
+    ~resolve:(fun resolve_info () ->
       after (Time.Span.of_float duration) >>| fun () -> duration
     )
 ])
@@ -224,7 +224,7 @@ Schema.(obj "math"
         arg  "y" ~typ:int;            (* <-- optional *)
         arg' "z" ~typ:int ~default:7  (* <-- optional w/ default *)
       ]
-      ~resolve:(fun ctx () x y z ->
+      ~resolve:(fun resolve_info () x y z ->
         let y' = match y with Some n -> n | None -> 42 in
         x + y' + z
       )
@@ -243,7 +243,7 @@ Schema.(schema [
   ~subscriptions:[
     subscription_field "user_created"
       ~typ:(non_null user)
-      ~resolve:(fun ctx ->
+      ~resolve:(fun resolve_info ->
         let user_stream, push_to_user_stream = Lwt_stream.create () in
         let destroy_stream = (fun () -> push_to_user_stream None) in
         Lwt_result.return (user_stream, destroy_stream))
