@@ -1229,24 +1229,24 @@ end
     obj.name = type_condition ||
       List.exists (fun (abstract : abstract) -> abstract.name = type_condition) !(obj.abstracts)
 
-  let rec should_include_field ctx (directives : Graphql_parser.directive list) =
+  let rec should_include_field ctx ~field_name (directives : Graphql_parser.directive list) =
     let open Rresult in
     match directives with
     | [] -> Ok true
     | { name = "skip"; arguments }::rest ->
           let Directive directive = skip_directive in
           let resolver = directive.resolve in
-          Arg.eval_arglist ctx.variables directive.args arguments resolver >>= fun skip ->
+          Arg.eval_arglist ctx.variables ~field_name directive.args arguments resolver >>= fun skip ->
             let include_field = not skip in
             if include_field then
-              should_include_field ctx rest
+              should_include_field ctx ~field_name rest
             else Ok include_field
     | { name = "include"; arguments }::rest ->
           let Directive directive = include_directive in
           let resolver = directive.resolve in
-          Arg.eval_arglist ctx.variables directive.args arguments resolver >>= fun includ ->
+          Arg.eval_arglist ctx.variables ~field_name directive.args arguments resolver >>= fun includ ->
             if includ then
-              should_include_field ctx rest
+              should_include_field ctx ~field_name rest
             else Ok includ
     | { name; _ }::_ ->
         let err = Format.sprintf "Unknown directive: %s" name in
@@ -1257,26 +1257,27 @@ end
     let open Rresult in
     List.map (function
     | Graphql_parser.Field field ->
-        should_include_field ctx field.directives >>| fun include_field ->
+        should_include_field ctx ~field_name:field.name field.directives >>| fun include_field ->
           if include_field then [field] else []
     | Graphql_parser.FragmentSpread spread ->
         begin match StringMap.find spread.name ctx.fragments with
-          | Some fragment when matches_type_condition fragment.type_condition obj ->
-            should_include_field ctx fragment.directives >>= fun include_field ->
-              if include_field then
-                collect_fields ctx obj fragment.selection_set
-              else Ok []
-          | _ -> Ok []
+        | Some { name; directives; type_condition; selection_set }
+          when matches_type_condition type_condition obj ->
+          should_include_field ctx ~field_name:name directives >>= fun include_field ->
+            if include_field then
+              collect_fields ctx obj selection_set
+            else Ok []
+        | _ -> Ok []
         end
     | Graphql_parser.InlineFragment fragment ->
         match fragment.type_condition with
         | None ->
-          should_include_field ctx fragment.directives >>= fun include_field ->
+          should_include_field ctx ~field_name:"inline fragment" fragment.directives >>= fun include_field ->
             if include_field then
               collect_fields ctx obj fragment.selection_set
             else Ok []
         | Some condition when matches_type_condition condition obj ->
-          should_include_field ctx fragment.directives >>= fun include_field ->
+          should_include_field ctx ~field_name:"inline fragment" fragment.directives >>= fun include_field ->
             if include_field then
               collect_fields ctx obj fragment.selection_set
             else Ok []
@@ -1463,7 +1464,7 @@ end
           )
       | Error err -> Io.error (`Argument_error err)
 
-  let execute_operation : 'ctx schema -> 'ctx execution_context -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response stream], [> execute_error]) result Io.t =
+  let execute_operation : 'ctx schema -> 'ctx execution_context -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response Io.Stream.t], [> execute_error]) result Io.t =
     fun schema ctx operation ->
       let open Io.Infix in
       match operation.optype with

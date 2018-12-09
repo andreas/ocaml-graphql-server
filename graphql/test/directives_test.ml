@@ -86,7 +86,7 @@ let suite = [
     test_query query (`Assoc [
       "data", `Null;
       "errors", `List [
-        `Assoc [ "message", `String "Invalid boolean" ]
+        `Assoc [ "message", `String "Argument `if` of type `Boolean` expected on field `role`, found 42." ]
       ]
     ])
   );
