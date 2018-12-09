@@ -1148,12 +1148,16 @@ end
     in
     (`Assoc (("message", `String msg)::props) : Yojson.Basic.json)
 
-  let error_response ?path msg =
-    `Assoc [
-      "errors", `List [
-        error_to_json ?path msg
-      ]
+  let error_response ?data ?path msg =
+    let errors = "errors", `List [
+      error_to_json ?path msg
     ]
+    in
+    let data = match data with
+    | None -> []
+    | Some data -> ["data", data]
+    in
+    `Assoc (errors :: data)
 
   let rec present : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) typ -> path -> (Yojson.Basic.json * error list, [> resolve_error]) result Io.t =
     fun ctx src query_field typ path ->
@@ -1234,8 +1238,8 @@ end
     | data, errors ->
         let errors = List.map (fun (msg, path) -> error_to_json ~path msg) errors in
         `Assoc [
+          "errors", `List errors;
           "data", data;
-          "errors", `List errors
         ]
 
   let to_response = function
@@ -1253,11 +1257,9 @@ end
     | Error (`Validation_error msg) ->
         Error (error_response msg)
     | Error (`Argument_error msg) ->
-        let `Assoc errors = error_response msg in
-        Error (`Assoc (("data", `Null)::errors))
+        Error (error_response ~data:`Null msg)
     | Error (`Resolve_error (msg, path)) ->
-        let `Assoc errors = error_response ~path msg in
-        Error (`Assoc (("data", `Null)::errors))
+        Error (error_response ~data:`Null ~path msg)
 
   let subscribe : type ctx. ctx execution_context -> ctx subscription_field -> Graphql_parser.field -> (Yojson.Basic.json response Io.Stream.t, [> resolve_error]) result Io.t
   =

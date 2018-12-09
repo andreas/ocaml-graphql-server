@@ -11,15 +11,15 @@ let suite = [
     ]) in
     let query = "{ nullable }" in
     test_query schema () query (`Assoc [
-      "data", `Assoc [
-        "nullable", `Null
-      ];
       "errors", `List [
         `Assoc [
           "message", `String "boom";
           "path", `List [`String "nullable"]
         ]
-      ]
+      ];
+      "data", `Assoc [
+        "nullable", `Null
+      ];
     ])
   );
   ("non-nullable error", `Quick, fun () ->
@@ -31,13 +31,13 @@ let suite = [
     ]) in
     let query = "{ non_nullable }" in
     test_query schema () query (`Assoc [
-      "data", `Null;
       "errors", `List [
         `Assoc [
           "message", `String "boom";
           "path", `List [`String "non_nullable"]
         ]
-      ]
+      ];
+      "data", `Null;
     ])
   );
   ("nested nullable error", `Quick, fun () ->
@@ -58,15 +58,15 @@ let suite = [
     in
     let query = "{ nullable { non_nullable } }" in
     test_query schema () query (`Assoc [
-      "data", `Assoc [
-        "nullable", `Null
-      ];
       "errors", `List [
         `Assoc [
           "message", `String "boom";
           "path", `List [`String "nullable"; `String "non_nullable"]
         ]
-      ]
+      ];
+      "data", `Assoc [
+        "nullable", `Null
+      ];
     ])
   );
   ("error in list", `Quick, fun () ->
@@ -91,6 +91,12 @@ let suite = [
     in
     let query = "{ foos { id } }" in
     test_query schema () query (`Assoc [
+      "errors", `List [
+        `Assoc [
+          "message", `String "boom";
+          "path", `List [`String "foos"; `Int 2; `String "id"]
+        ]
+      ];
       "data", `Assoc [
         "foos", `List [
           `Assoc [
@@ -104,12 +110,6 @@ let suite = [
           ];
         ]
       ];
-      "errors", `List [
-        `Assoc [
-          "message", `String "boom";
-          "path", `List [`String "foos"; `Int 2; `String "id"]
-        ]
-      ]
     ])
   );
 ]

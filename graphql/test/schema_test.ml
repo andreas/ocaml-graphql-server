@@ -270,13 +270,13 @@ let suite = [
   ("subscription returns an error", `Quick, fun () ->
     let query = "subscription { subscribe_to_user(error: true) { id name } }" in
     test_query query (`Assoc [
-      "data", `Null;
       "errors", `List [
         `Assoc [
           "message", `String "stream error";
           "path", `List [`String "subscribe_to_user"]
         ]
-      ]
+      ];
+      "data", `Null;
     ])
   );
   ("subscriptions: exn inside the stream", `Quick, fun () ->
