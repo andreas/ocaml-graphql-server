@@ -82,12 +82,12 @@ let suite : (string * [>`Quick] * (unit -> unit)) list = [
     let variables = ["x", `Null] in
     let query = "{ input_obj(x: $x) }" in
     test_query variables query (`Assoc [
-      "data", `Null;
       "errors", `List [
         `Assoc [
           "message", `String "Argument `x` of type `person!` expected on field `input_obj`, found null."
         ]
-      ]
+      ];
+      "data", `Null;
     ])
   );
   ("variable coercion: single value to list", `Quick, fun () ->

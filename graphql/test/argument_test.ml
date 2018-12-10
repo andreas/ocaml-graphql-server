@@ -68,12 +68,12 @@ let suite : (string * [>`Quick] * (unit -> unit)) list = [
   ("null for required argument", `Quick, fun () ->
     let query = "{ input_obj(x: null) }" in
     test_query query (`Assoc [
-      "data", `Null;
       "errors", `List [
         `Assoc [
           "message", `String "Argument `x` of type `person!` expected on field `input_obj`, found null."
         ]
-      ]
+      ];
+      "data", `Null;
     ])
   );
   ("missing optional argument", `Quick, fun () ->
@@ -87,12 +87,12 @@ let suite : (string * [>`Quick] * (unit -> unit)) list = [
   ("missing required argument", `Quick, fun () ->
     let query = "{ input_obj }" in
     test_query query (`Assoc [
-      "data", `Null;
       "errors", `List [
         `Assoc [
           "message", `String "Argument `x` of type `person!` expected on field `input_obj`, but not provided."
         ]
-      ]
+      ];
+      "data", `Null;
     ])
   );
   ("input coercion: single value to list", `Quick, fun () ->
