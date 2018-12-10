@@ -29,18 +29,18 @@ let schema = Graphql_async.Schema.(schema [
       field "direct_string"
         ~typ:(non_null string)
         ~args:Arg.[]
-        ~resolve:(fun () () -> "foo")
+        ~resolve:(fun _ () -> "foo")
       ;
       io_field "io_int"
         ~typ:(non_null int)
         ~args:Arg.[]
-        ~resolve:(fun () () -> Deferred.return (Ok 42))
+        ~resolve:(fun _ () -> Deferred.return (Ok 42))
     ]
   ~subscriptions:[
     subscription_field "int_stream"
       ~typ:(non_null int)
       ~args:Arg.[]
-      ~resolve:(fun () ->
+      ~resolve:(fun _ ->
         Async_kernel.Deferred.Result.return (Async_kernel.Pipe.of_list [1; 2; 3]))
   ]
 )

@@ -18,6 +18,14 @@ end
 module type Schema = sig
   module Io : IO
 
+  module StringMap : sig
+    include Map.S with type key = string
+    (* Map.S with type key = String.t *)
+    exception Missing_key of key
+    val find_exn : key -> 'a t -> 'a
+    val find : key -> 'a t -> 'a option
+  end
+
   (** {3 Base types } *)
 
   type 'ctx schema
@@ -100,12 +108,21 @@ module type Schema = sig
     val non_null : 'a option arg_typ -> 'a arg_typ
   end
 
+  type variable_map = Graphql_parser.const_value StringMap.t
+  type fragment_map = Graphql_parser.fragment StringMap.t
+  type 'ctx resolve_info = {
+    ctx : 'ctx;
+    field : Graphql_parser.field;
+    fragments : fragment_map;
+    variables : variable_map;
+  }
+
   val field : ?doc:string ->
               ?deprecated:deprecated ->
               string ->
               typ:('ctx, 'a) typ ->
               args:('a, 'b) Arg.arg_list ->
-              resolve:('ctx -> 'src -> 'b) ->
+              resolve:('ctx resolve_info -> 'src -> 'b) ->
               ('ctx, 'src) field
 
   val io_field : ?doc:string ->
@@ -113,7 +130,7 @@ module type Schema = sig
                  string ->
                  typ:('ctx, 'a) typ ->
                  args:(('a, string) result Io.t, 'b) Arg.arg_list ->
-                 resolve:('ctx -> 'src -> 'b) ->
+                 resolve:('ctx resolve_info -> 'src -> 'b) ->
                  ('ctx, 'src) field
 
   val subscription_field : ?doc:string ->
@@ -121,7 +138,7 @@ module type Schema = sig
                            string ->
                            typ:('ctx, 'out) typ ->
                            args:(('out Io.Stream.t, string) result Io.t, 'args) Arg.arg_list ->
-                           resolve:('ctx -> 'args) ->
+                           resolve:('ctx resolve_info -> 'args) ->
                            'ctx subscription_field
 
   val enum : ?doc:string ->

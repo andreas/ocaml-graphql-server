@@ -31,18 +31,18 @@ let schema = Graphql_lwt.Schema.(schema [
       field "direct_string"
         ~typ:(non_null string)
         ~args:Arg.[]
-        ~resolve:(fun () () -> "foo")
+        ~resolve:(fun _ () -> "foo")
       ;
       io_field "io_int"
         ~typ:(non_null int)
         ~args:Arg.[]
-        ~resolve:(fun () () -> Lwt.return (Ok 42))
+        ~resolve:(fun _ () -> Lwt.return (Ok 42))
     ]
   ~subscriptions:[
     subscription_field "int_stream"
       ~typ:(non_null int)
       ~args:Arg.[]
-      ~resolve:(fun () ->
+      ~resolve:(fun _ ->
         let stream = Lwt_stream.of_list [1; 2; 3] in
         let destroy = (fun () -> ()) in
         Lwt_result.return (stream, destroy))
