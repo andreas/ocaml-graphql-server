@@ -53,7 +53,7 @@ let suite = [
     ])
   );
   ("select operation (one operation, no operation name)", `Quick, fun () ->
-    let query = "a { a: __typename }" in
+    let query = "query a { a: __typename }" in
     test_query query (`Assoc [
       "data", `Assoc [
         "a", `String "query"
@@ -61,7 +61,7 @@ let suite = [
     ])
   );
   ("select operation (one operation, matching operation name)", `Quick, fun () ->
-    let query = "a { a: __typename }" in
+    let query = "query a { a: __typename }" in
     test_query query ~operation_name:"a" (`Assoc [
       "data", `Assoc [
         "a", `String "query"
@@ -69,7 +69,7 @@ let suite = [
     ])
   );
   ("select operation (one operation, missing operation name)", `Quick, fun () ->
-    let query = "a { a: __typename }" in
+    let query = "query a { a: __typename }" in
     test_query query ~operation_name:"b" (`Assoc [
       "errors", `List [
         `Assoc [
@@ -79,7 +79,7 @@ let suite = [
     ])
   );
   ("select operation (multiple operations, no operation name)", `Quick, fun () ->
-    let query = "a { a: __typename } b { b: __typename }" in
+    let query = "query a { a: __typename } query b { b: __typename }" in
     test_query query (`Assoc [
       "errors", `List [
         `Assoc [
@@ -89,7 +89,7 @@ let suite = [
     ])
   );
   ("select operation (multiple operations, matching operation name)", `Quick, fun () ->
-    let query = "a { a: __typename } b { b: __typename }" in
+    let query = "query a { a: __typename } query b { b: __typename }" in
     test_query query ~operation_name:"b" (`Assoc [
       "data", `Assoc [
         "b", `String "query"
@@ -97,7 +97,7 @@ let suite = [
     ])
   );
   ("select operation (multiple operations, missing operation name)", `Quick, fun () ->
-    let query = "a { a: __typename } b { b: __typename }" in
+    let query = "query a { a: __typename } query b { b: __typename }" in
     test_query query ~operation_name:"c" (`Assoc [
       "errors", `List [
         `Assoc [
