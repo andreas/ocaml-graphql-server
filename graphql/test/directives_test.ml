@@ -84,10 +84,10 @@ let suite = [
   ("wrong type for argument", `Quick, fun () ->
     let query = "{ users { name role @skip(if: 42) } }" in
     test_query query (`Assoc [
-      "data", `Null;
       "errors", `List [
-        `Assoc [ "message", `String "Argument `if` of type `Boolean` expected on field `role`, found 42." ]
-      ]
+        `Assoc [ "message", `String "Argument `if` of type `Boolean` expected on directive `skip`, found 42." ]
+      ];
+      "data", `Null;
     ])
   );
   (* http://facebook.github.io/graphql/June2018/#example-77377 *)

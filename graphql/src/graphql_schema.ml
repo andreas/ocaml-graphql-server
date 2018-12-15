@@ -179,16 +179,18 @@ module Make (Io : IO) = struct
       | List a -> Printf.sprintf "[%s]" (string_of_arg_typ a)
       | NonNullable a -> Printf.sprintf "%s!" (string_of_arg_typ a)
 
-    let eval_arg_error ~field_name ~arg_name arg_typ value =
+    let eval_arg_error ?(field_type="field") ~field_name ~arg_name arg_typ value =
       let found_str =
         match value with
         | Some v -> Printf.sprintf "found %s" (string_of_const_value v)
         | None -> "but not provided"
       in
-      Printf.sprintf "Argument `%s` of type `%s` expected on field `%s`, %s."
+      Printf.sprintf "Argument `%s` of type `%s` expected on %s `%s`, %s."
         arg_name
         (string_of_arg_typ arg_typ)
-        field_name found_str
+        field_type
+        field_name
+        found_str
 
     (* Built-in argument types *)
     let int = Scalar {
@@ -249,13 +251,20 @@ module Make (Io : IO) = struct
         let props' = List.map (fun (name, value) -> name, value_to_const_value variable_map value) props in
         `Assoc props'
 
-    let rec eval_arglist : type a b. variable_map -> field_name:string -> (a, b) arg_list -> (string * Graphql_parser.value) list -> b -> (a, string) result =
-      fun variable_map ~field_name arglist key_values f ->
+    let rec eval_arglist
+      : type a b. variable_map
+      -> ?field_type:string
+      -> field_name:string
+      -> (a, b) arg_list
+      -> (string * Graphql_parser.value) list
+      -> b
+      -> (a, string) result =
+      fun variable_map ?field_type ~field_name arglist key_values f ->
         match arglist with
         | [] -> Ok f
         | (DefaultArg arg)::arglist' ->
             let arglist'' = (Arg { name = arg.name; doc = arg.doc; typ = arg.typ })::arglist' in
-            eval_arglist variable_map ~field_name arglist'' key_values (function
+            eval_arglist variable_map ?field_type ~field_name arglist'' key_values (function
               | None -> f arg.default
               | Some value -> f value
             )
@@ -263,58 +272,66 @@ module Make (Io : IO) = struct
             try
               let value = List.assoc arg.name key_values in
               let const_value = Option.map value ~f:(value_to_const_value variable_map) in
-              eval_arg variable_map ~field_name ~arg_name:arg.name arg.typ const_value >>= fun coerced ->
-              eval_arglist variable_map ~field_name arglist' key_values (f coerced)
+              eval_arg variable_map ?field_type ~field_name ~arg_name:arg.name arg.typ const_value >>= fun coerced ->
+              eval_arglist variable_map ?field_type ~field_name arglist' key_values (f coerced)
             with StringMap.Missing_key key -> Error (Format.sprintf "Missing variable `%s`" key)
 
-    and eval_arg : type a. variable_map -> field_name:string -> arg_name:string -> a arg_typ -> Graphql_parser.const_value option -> (a, string) result = fun variable_map ~field_name ~arg_name typ value ->
-      match (typ, value) with
-      | NonNullable _, None -> Error (eval_arg_error ~field_name ~arg_name typ value)
-      | NonNullable _, Some `Null -> Error (eval_arg_error ~field_name ~arg_name typ value)
-      | Scalar _, None -> Ok None
-      | Scalar _, Some `Null -> Ok None
-      | Object _, None -> Ok None
-      | Object _, Some `Null -> Ok None
-      | List _, None -> Ok None
-      | List _, Some `Null -> Ok None
-      | Enum _, None -> Ok None
-      | Enum _, Some `Null -> Ok None
-      | Scalar s, Some value ->
-         begin match (s.coerce value) with
-         | Ok coerced -> Ok (Some coerced)
-         | Error _ -> Error (eval_arg_error ~field_name ~arg_name typ (Some value))
-         end
-      | Object o, Some value ->
-          begin match value with
-          | `Assoc props ->
-              let props' = (props :> (string * Graphql_parser.value) list) in
-              eval_arglist variable_map ~field_name o.fields props' o.coerce >>| fun coerced ->
-              Some coerced
-          | _ -> Error (eval_arg_error ~field_name ~arg_name typ (Some value))
+    and eval_arg
+      : type a. variable_map
+      -> ?field_type:string
+      -> field_name:string
+      -> arg_name:string
+      -> a arg_typ
+      -> Graphql_parser.const_value option
+      -> (a, string) result =
+      fun variable_map ?field_type ~field_name ~arg_name typ value ->
+        match (typ, value) with
+        | NonNullable _, None -> Error (eval_arg_error ?field_type ~field_name ~arg_name typ value)
+        | NonNullable _, Some `Null -> Error (eval_arg_error ?field_type ~field_name ~arg_name typ value)
+        | Scalar _, None -> Ok None
+        | Scalar _, Some `Null -> Ok None
+        | Object _, None -> Ok None
+        | Object _, Some `Null -> Ok None
+        | List _, None -> Ok None
+        | List _, Some `Null -> Ok None
+        | Enum _, None -> Ok None
+        | Enum _, Some `Null -> Ok None
+        | Scalar s, Some value ->
+          begin match (s.coerce value) with
+          | Ok coerced -> Ok (Some coerced)
+          | Error _ -> Error (eval_arg_error ?field_type ~field_name ~arg_name typ (Some value))
           end
-     | List typ, Some value ->
-          begin match value with
-          | `List values ->
-              let option_values = List.map (fun x -> Some x) values in
-              List.Result.all (eval_arg variable_map ~field_name ~arg_name typ) option_values >>| fun coerced ->
-              Some coerced
-          | value -> eval_arg variable_map ~field_name ~arg_name typ (Some value) >>| fun coerced ->
-              (Some [coerced] : a)
-          end
-      | NonNullable typ, value ->
-          eval_arg variable_map ~field_name ~arg_name typ value >>= (function
-          | Some value -> Ok value
-          | None -> Error (eval_arg_error ~field_name ~arg_name typ None))
-      | Enum e, Some value ->
-          begin match value with
-          | `Enum v
-          | `String v ->
-              begin match List.find (fun enum_value -> enum_value.name = v) e.values with
-              | Some enum_value -> Ok (Some enum_value.value)
-              | None -> Error (Printf.sprintf "Invalid enum value for argument `%s` on field `%s`" arg_name field_name)
-              end
-          | _ -> Error (Printf.sprintf "Expected enum for argument `%s` on field `%s`" arg_name field_name)
-          end
+        | Object o, Some value ->
+            begin match value with
+            | `Assoc props ->
+                let props' = (props :> (string * Graphql_parser.value) list) in
+                eval_arglist variable_map ?field_type ~field_name o.fields props' o.coerce >>| fun coerced ->
+                Some coerced
+            | _ -> Error (eval_arg_error ?field_type ~field_name ~arg_name typ (Some value))
+            end
+      | List typ, Some value ->
+            begin match value with
+            | `List values ->
+                let option_values = List.map (fun x -> Some x) values in
+                List.Result.all (eval_arg variable_map ?field_type ~field_name ~arg_name typ) option_values >>| fun coerced ->
+                Some coerced
+            | value -> eval_arg variable_map ?field_type ~field_name ~arg_name typ (Some value) >>| fun coerced ->
+                (Some [coerced] : a)
+            end
+        | NonNullable typ, value ->
+            eval_arg variable_map ?field_type ~field_name ~arg_name typ value >>= (function
+            | Some value -> Ok value
+            | None -> Error (eval_arg_error ?field_type ~field_name ~arg_name typ None))
+        | Enum e, Some value ->
+            begin match value with
+            | `Enum v
+            | `String v ->
+                begin match List.find (fun enum_value -> enum_value.name = v) e.values with
+                | Some enum_value -> Ok (Some enum_value.value)
+                | None -> Error (Printf.sprintf "Invalid enum value for argument `%s` on field `%s`" arg_name field_name)
+                end
+            | _ -> Error (Printf.sprintf "Expected enum for argument `%s` on field `%s`" arg_name field_name)
+            end
   end
 
   (* Schema data types *)
@@ -409,7 +426,7 @@ module Make (Io : IO) = struct
       name       : string;
       doc        : string option;
       locations  : directive_location list;
-      args       : (bool, 'args) Arg.arg_list;
+      args       : ([ `Skip | `Include ], 'args) Arg.arg_list;
       resolve    : 'args;
     } -> directive
 
@@ -541,7 +558,9 @@ module Make (Io : IO) = struct
     args = Arg.[
       arg "if" ~doc:"Skipped when true." ~typ:(non_null bool)
     ];
-    resolve = fun if_ -> if_
+    resolve = function
+      | true -> `Skip
+      | false -> `Include
   }
 
   let include_directive = Directive {
@@ -551,7 +570,9 @@ module Make (Io : IO) = struct
     args = Arg.[
       arg "if" ~doc:"Included when true." ~typ:(non_null bool)
     ];
-    resolve = fun if_ -> if_
+    resolve = function
+      | true -> `Include
+      | false -> `Skip
   }
 
 module Introspection = struct
@@ -1229,59 +1250,52 @@ end
     obj.name = type_condition ||
       List.exists (fun (abstract : abstract) -> abstract.name = type_condition) !(obj.abstracts)
 
-  let rec should_include_field ctx ~field_name (directives : Graphql_parser.directive list) =
-    let open Rresult in
+  let rec should_include_field ctx (directives : Graphql_parser.directive list) =
     match directives with
     | [] -> Ok true
     | { name = "skip"; arguments }::rest ->
-          let Directive directive = skip_directive in
-          let resolver = directive.resolve in
-          Arg.eval_arglist ctx.variables ~field_name directive.args arguments resolver >>= fun skip ->
-            let include_field = not skip in
-            if include_field then
-              should_include_field ctx ~field_name rest
-            else Ok include_field
+      eval_directive ctx skip_directive arguments rest
     | { name = "include"; arguments }::rest ->
-          let Directive directive = include_directive in
-          let resolver = directive.resolve in
-          Arg.eval_arglist ctx.variables ~field_name directive.args arguments resolver >>= fun includ ->
-            if includ then
-              should_include_field ctx ~field_name rest
-            else Ok includ
+      eval_directive ctx include_directive arguments rest
     | { name; _ }::_ ->
         let err = Format.sprintf "Unknown directive: %s" name in
         Error err
+
+  and eval_directive ctx (Directive { name; args; resolve; _ }) arguments rest =
+    let open Rresult in
+    Arg.eval_arglist ctx.variables ~field_type:"directive" ~field_name:name args arguments resolve >>= function
+      | `Skip -> Ok false
+      | `Include -> should_include_field ctx rest
 
   let rec collect_fields : 'ctx execution_context -> ('ctx, 'src) obj -> Graphql_parser.selection list -> (Graphql_parser.field list, string) result =
     fun ctx obj fields ->
     let open Rresult in
     List.map (function
     | Graphql_parser.Field field ->
-        should_include_field ctx ~field_name:field.name field.directives >>| fun include_field ->
+        should_include_field ctx field.directives >>| fun include_field ->
           if include_field then [field] else []
     | Graphql_parser.FragmentSpread spread ->
         begin match StringMap.find spread.name ctx.fragments with
-        | Some { name; directives; type_condition; selection_set }
+        | Some { directives; type_condition; selection_set; _ }
           when matches_type_condition type_condition obj ->
-          should_include_field ctx ~field_name:name directives >>= fun include_field ->
+          should_include_field ctx directives >>= fun include_field ->
             if include_field then
               collect_fields ctx obj selection_set
             else Ok []
         | _ -> Ok []
         end
     | Graphql_parser.InlineFragment fragment ->
-        match fragment.type_condition with
-        | None ->
-          should_include_field ctx ~field_name:"inline fragment" fragment.directives >>= fun include_field ->
+        let matches_type_condition = match fragment.type_condition with
+          | None -> true
+          | Some condition -> matches_type_condition condition obj
+        in
+        if matches_type_condition then
+          should_include_field ctx fragment.directives >>= fun include_field ->
             if include_field then
               collect_fields ctx obj fragment.selection_set
             else Ok []
-        | Some condition when matches_type_condition condition obj ->
-          should_include_field ctx ~field_name:"inline fragment" fragment.directives >>= fun include_field ->
-            if include_field then
-              collect_fields ctx obj fragment.selection_set
-            else Ok []
-        | _ -> Ok []
+        else
+          Ok []
     ) fields
     |> List.Result.join
     |> Rresult.R.map List.concat
@@ -1327,7 +1341,6 @@ end
 
   let rec present : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) typ -> path -> (Yojson.Basic.json * error list, [> resolve_error]) result Io.t =
     fun ctx src query_field typ path ->
-      let open Io.Infix in
       match typ with
       | Scalar s -> coerce_or_null src (fun x -> Io.ok (s.coerce x, []))
       | List t ->
@@ -1340,9 +1353,9 @@ end
       | NonNullable t -> present ctx (Some src) query_field t path
       | Object o ->
           coerce_or_null src (fun src' ->
-            Io.return (collect_fields ctx o query_field.selection_set)
-            |> Io.Result.map_error ~f:(fun e -> `Argument_error e) >>=? fun fields ->
-              resolve_fields ctx src' o fields path)
+            match collect_fields ctx o query_field.selection_set with
+            | Ok fields -> resolve_fields ctx src' o fields path
+            | Error e -> Io.error (`Argument_error e))
       | Enum e ->
           coerce_or_null src (fun src' ->
             match List.find (fun enum_value -> src' == enum_value.value) e.values with
