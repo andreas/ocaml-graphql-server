@@ -6,7 +6,7 @@ all:
 check: tests
 
 test:
-	$(DUNE) runtest
+	$(DUNE) runtest --no-buffer
 
 clean:
 	dune clean

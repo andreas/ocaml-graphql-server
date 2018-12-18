@@ -6,4 +6,5 @@ let () =
     "introspection", Introspection_test.suite;
     "errors", Error_test.suite;
     "abstract", Abstract_test.suite;
+    "directives", Directives_test.suite;
   ]
