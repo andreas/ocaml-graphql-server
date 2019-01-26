@@ -277,7 +277,7 @@ let variable_definition = lift3' (fun name typ default_value -> {
   name;
   typ;
   default_value;
-}) (dollar *~> name <~* colon) typ (optional (equal *~> const_value))
+}) (dollar *~> name <~* colon) typ (optional (equal *~> const_value <* ignored))
 
 let variable_definitions = lparen *~> many variable_definition <~* rparen
 

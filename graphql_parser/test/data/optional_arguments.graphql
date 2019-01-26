@@ -1,0 +1,3 @@
+query foo($arg: String = "bar" $other_arg: String!) {
+  baz
+}
