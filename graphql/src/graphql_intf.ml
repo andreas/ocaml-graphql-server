@@ -94,7 +94,7 @@ module type Schema = sig
 
     val obj : ?doc:string ->
               string ->
-              fields:('a, 'b) arg_list ->
+              fields:(('a option arg_typ) -> ('a, 'b) arg_list) ->
               coerce:'b ->
               'a option arg_typ
 

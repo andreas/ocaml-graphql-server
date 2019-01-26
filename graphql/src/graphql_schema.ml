@@ -112,7 +112,7 @@ module Make (Io : IO) = struct
       | Object : {
           name   : string;
           doc    : string option;
-          fields : ('a, 'b) arg_list;
+          fields : ('a, 'b) arg_list Lazy.t;
           coerce : 'b;
         } -> 'a option arg_typ
       | Enum : {
@@ -151,7 +151,8 @@ module Make (Io : IO) = struct
       Enum { name; doc; values }
 
     let obj ?doc name ~fields ~coerce =
-      Object { name; doc; fields; coerce }
+      let rec o = Object { name; doc; fields = lazy (fields o); coerce } in
+      o
 
     let rec string_of_const_value : Graphql_parser.const_value -> string = function
       | `Null -> "null"
@@ -305,7 +306,7 @@ module Make (Io : IO) = struct
             begin match value with
             | `Assoc props ->
                 let props' = (props :> (string * Graphql_parser.value) list) in
-                eval_arglist variable_map ?field_type ~field_name o.fields props' o.coerce >>| fun coerced ->
+                eval_arglist variable_map ?field_type ~field_name Lazy.(force o.fields) props' o.coerce >>| fun coerced ->
                 Some coerced
             | _ -> Error (eval_arg_error ?field_type ~field_name ~arg_name typ (Some value))
             end
@@ -637,7 +638,7 @@ module Introspection = struct
     | Arg.Object o as obj ->
         unless_visited memo o.name (fun (result, visited) ->
           let memo' = (AnyArgTyp obj)::result, StringSet.add o.name visited in
-          arg_list_types memo' o.fields
+          arg_list_types memo' Lazy.(force o.fields)
         )
   and arg_list_types : type a b. (any_typ list * StringSet.t) -> (a, b) Arg.arg_list -> (any_typ list * StringSet.t) = fun memo arglist ->
     let open Arg in
@@ -885,7 +886,7 @@ module Introspection = struct
           | AnyTyp (Abstract { kind = `Interface fields; _ }) ->
               Some (List.map (fun (AbstractField f) -> AnyField f) (Lazy.force fields))
           | AnyArgTyp (Arg.Object o) ->
-              let arg_list = args_to_list o.fields in
+              let arg_list = args_to_list Lazy.(force o.fields) in
               Some (List.map (fun (AnyArg f) -> AnyArgField f) arg_list)
           | _ -> None
       };
@@ -937,7 +938,7 @@ module Introspection = struct
         lift = Io.ok;
         resolve = fun _ t -> match t with
           | AnyArgTyp (Arg.Object o) ->
-              Some (args_to_list o.fields)
+              Some (args_to_list Lazy.(force o.fields))
           | _ -> None
       };
       Field {

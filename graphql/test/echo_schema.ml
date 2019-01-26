@@ -20,11 +20,11 @@ let color_enum_values = Schema.([
 let color_enum     = Schema.enum "color" ~values:color_enum_values
 let color_enum_arg = Schema.Arg.enum "color" ~values:color_enum_values
 
-let person_arg = Schema.Arg.(obj "person" ~fields:[
+let person_arg = Schema.Arg.(obj "person" ~fields:(fun _ -> [
     arg "title" ~typ:string;
     arg "first_name" ~typ:(non_null string);
     arg "last_name" ~typ:(non_null string);
-  ]
+  ])
   ~coerce:(fun title first last -> (title, first, last))
 )
 
