@@ -169,31 +169,22 @@ arguments:
 argument:
   | name COLON value { $1, $3 }
 
-%public value_parser(X):
-  | x = X { x }
-  | LBRACK; xs = X*; RBRACK { `List xs }
-  | LBRACE; props = list(n = name; COLON; x = X { n, x }) RBRACE { `Assoc props }
+value_parser(X):
+  | NULL { `Null }
+  | INT { `Int $1 }
+  | FLOAT { `Float $1 }
+  | STRING { `String $1 }
+  | BOOL { `Bool $1 }
+  | enum_value { `Enum $1 }
+  | LBRACK X* RBRACK { `List $2 }
+  | LBRACE list(name COLON X { $1, $3 }) RBRACE { `Assoc $2 }
 
 value:
-  | NULL { `Null }
-  | INT { `Int $1 }
-  | FLOAT { `Float $1 }
-  | STRING { `String $1 }
-  | BOOL { `Bool $1 }
-  | enum_value { `Enum $1 }
   | variable { `Variable $1 }
-  | LBRACK value* RBRACK { `List $2 }
-  | LBRACE list(name COLON value { $1, $3 }) RBRACE { `Assoc $2 }
+  | value_parser(value) { $1 }
 
 const_value:
-  | NULL { `Null }
-  | INT { `Int $1 }
-  | FLOAT { `Float $1 }
-  | STRING { `String $1 }
-  | BOOL { `Bool $1 }
-  | enum_value { `Enum $1 }
-  | LBRACK const_value* RBRACK { `List $2 }
-  | LBRACE list(name COLON const_value { $1, $3 }) RBRACE { `Assoc $2 }
+  | value_parser(const_value) { $1 }
 
 variable:
   | DOLLAR name { $2 }
