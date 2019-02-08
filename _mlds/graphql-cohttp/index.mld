@@ -1,0 +1,3 @@
+{2 Library graphql-cohttp}
+This library exposes the following toplevel modules:
+{!modules:Assets Graphql_cohttp Websocket Websocket_handler}

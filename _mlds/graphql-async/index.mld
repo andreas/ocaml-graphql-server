@@ -1,0 +1,3 @@
+{2 Library graphql-async}
+The entry point of this library is the module:
+{!module-Graphql_async}.
