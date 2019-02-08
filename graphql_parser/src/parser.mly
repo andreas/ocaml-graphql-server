@@ -33,10 +33,6 @@ open Ast
 
 %%
 
-%public default_list(X):
-  | X { $1 }
-  | { [] }
-
 doc:
   | definition+ EOF { $1 }
 
@@ -66,7 +62,7 @@ operation:
           selection_set = $1;
         }
       }
-  | optype name? default_list(variable_definitions) directive* selection_set
+  | optype name? loption(variable_definitions) directive* selection_set
     {
       Operation {
         optype = $1;
@@ -91,7 +87,7 @@ selection:
   | inline_fragment { $1 }
 
 field:
-  | name COLON name default_list(arguments) directive* default_list(selection_set)
+  | name COLON name loption(arguments) directive* loption(selection_set)
     {
       Field {
         alias = Some $1;
@@ -101,7 +97,7 @@ field:
         selection_set = $6;
       }
     }
-  | name default_list(arguments) directive*; default_list(selection_set)
+  | name loption(arguments) directive*; loption(selection_set)
     {
       Field {
         alias = None;
@@ -155,7 +151,7 @@ typ:
   | typ BANG { NonNullType $1 }
 
 directive:
-  | AT name default_list(arguments)
+  | AT name loption(arguments)
     {
       {
         name = $2;
