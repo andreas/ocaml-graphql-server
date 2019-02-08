@@ -15,8 +15,12 @@ depends: [
   "ocaml" {>= "4.03.0"}
   "jbuilder" {build}
   "graphql" {>= "0.8.0"}
-  "cohttp" {>= "1.0.0"}
+  "cohttp" {>= "2.0.0"}
   "crunch"
+  "astring" {>= "0.8.3"}
+  "base64" {>= "3.0.0"}
+  "ocplib-endian" {>= "1.0"}
+  "digestif" {>= "0.7.0"}
 ]
 
 synopsis: "Run GraphQL servers with `cohttp`"

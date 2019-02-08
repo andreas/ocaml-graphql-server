@@ -34,6 +34,7 @@ module type IO = sig
     type 'a t
 
     val map : 'a t -> ('a -> 'b io) -> 'b t
+    val iter : 'a t -> ('a -> unit io) -> unit io
     val close : 'a t -> unit
   end with type 'a io := 'a t
 end

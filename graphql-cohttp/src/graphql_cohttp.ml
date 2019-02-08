@@ -6,22 +6,62 @@ module type HttpBody = sig
   val of_string : string -> t
 end
 
+module type S = sig
+  module IO : Cohttp.S.IO
+  type body
+  type 'ctx schema
+
+  type response_action =
+    [ `Expert of Cohttp.Response.t
+                 * (IO.ic
+                    -> IO.oc
+                    -> unit IO.t)
+    | `Response of Cohttp.Response.t * body ]
+
+  type 'conn callback =
+    'conn ->
+    Cohttp.Request.t ->
+    body ->
+    response_action IO.t
+
+  val execute_request :
+    'ctx schema ->
+    'ctx ->
+    Cohttp.Request.t ->
+    body ->
+    response_action IO.t
+
+  val make_callback :
+    (Cohttp.Request.t -> 'ctx) ->
+    'ctx schema ->
+    'conn callback
+end
+
 module Make
   (Schema : Graphql_intf.Schema)
+  (Io : Cohttp.S.IO with type 'a t = 'a Schema.Io.t)
   (Body : HttpBody with type +'a io := 'a Schema.Io.t) = struct
 
-  module Io = Schema.Io
+  module Ws = Websocket.Connection.Make (Io)
+  module Websocket_transport = Websocket_handler.Make (Schema.Io) (Ws)
 
-  let (>>=) = Io.bind
+  let (>>=) = Io.(>>=)
+
+  type response_action =
+    [ `Expert of Cohttp.Response.t
+                 * (Io.ic
+                    -> Io.oc
+                    -> unit Io.t)
+    | `Response of Cohttp.Response.t * Body.t ]
 
   type 'conn callback =
     'conn ->
     Cohttp.Request.t ->
     Body.t ->
-    (Cohttp.Response.t * Body.t) Schema.Io.t
+    response_action Io.t
 
   let respond_string ~status ~body () =
-    Io.return (Cohttp.Response.make ~status (), Body.of_string body)
+    Io.return (`Response (Cohttp.Response.make ~status (), Body.of_string body))
 
   let static_file_response path =
     match Assets.read path with
@@ -57,11 +97,16 @@ module Make
       let body = Yojson.Basic.to_string err in
       respond_string ~status:`Internal_server_error ~body ()
 
-  let make_callback make_context schema _conn (req : Cohttp.Request.t) body =
+  let make_callback : (Cohttp.Request.t -> 'ctx) -> 'ctx Schema.schema -> 'conn callback = fun make_context schema _conn (req : Cohttp.Request.t) body ->
     let req_path = Cohttp.Request.uri req |> Uri.path in
     let path_parts = Str.(split (regexp "/") req_path) in
     match req.meth, path_parts with
-    | `GET,  ["graphql"]       -> static_file_response "index.html"
+    | `GET,  ["graphql"] ->
+      if Cohttp.Header.get req.Cohttp.Request.headers "Connection" = Some "Upgrade" && Cohttp.Header.get req.headers "Upgrade" = Some "websocket" then
+        let handle_conn =  Websocket_transport.handle (execute_query (make_context req) schema) in
+        Io.return (Ws.upgrade_connection req handle_conn)
+      else
+        static_file_response "index.html"
     | `GET,  ["graphql"; path] -> static_file_response path
     | `POST, ["graphql"]       -> execute_request schema (make_context req) req body
     | _ -> respond_string ~status:`Not_found ~body:"" ()
