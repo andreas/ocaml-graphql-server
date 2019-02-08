@@ -14,7 +14,7 @@ build: [
 depends: [
   "ocaml" {>= "4.03.0"}
   "dune" {build}
-  "graphql_parser"
+  "graphql_parser" {>= "0.9.0"}
   "yojson"
   "rresult"
   "seq"

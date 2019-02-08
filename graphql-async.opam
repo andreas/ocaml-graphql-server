@@ -14,7 +14,7 @@ build: [
 depends: [
   "ocaml" {>= "4.03.0"}
   "dune" {build}
-  "graphql" {>= "0.8.0"}
+  "graphql" {>= "0.9.0"}
   "async_kernel" {>= "v0.9.0"}
   "alcotest" {with-test}
   "async_unix" {with-test & >= "v0.9.0"}
