@@ -87,7 +87,7 @@ selection:
   | inline_fragment { $1 }
 
 field:
-  | name COLON name loption(arguments) directive* loption(selection_set)
+  | name COLON name arguments directive* loption(selection_set)
     {
       Field {
         alias = Some $1;
@@ -97,7 +97,7 @@ field:
         selection_set = $6;
       }
     }
-  | name loption(arguments) directive*; loption(selection_set)
+  | name arguments directive*; loption(selection_set)
     {
       Field {
         alias = None;
@@ -131,7 +131,7 @@ inline_fragment:
     }
 
 variable_definitions:
-  | LPAREN variable_definition* RPAREN { $2  }
+  | parens(variable_definition*) { $1 }
 
 default_value:
   | EQUAL const_value { $2 }
@@ -151,7 +151,7 @@ typ:
   | typ BANG { NonNullType $1 }
 
 directive:
-  | AT name loption(arguments)
+  | AT name arguments
     {
       {
         name = $2;
@@ -160,10 +160,7 @@ directive:
     }
 
 arguments:
-  | LPAREN argument* RPAREN { $2 }
-
-argument:
-  | name COLON value { $1, $3 }
+  | loption(parens(separated_pair(name, COLON, value)*)) { $1 }
 
 value_parser(X):
   | NULL { `Null }
@@ -204,3 +201,6 @@ fragment_name:
 name:
   | fragment_name { $1 }
   | ON { "on" }
+
+parens(X):
+  | LPAREN X RPAREN { $2 }
