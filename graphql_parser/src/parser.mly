@@ -176,14 +176,11 @@ value_parser(X):
   | LBRACE list(name COLON X { $1, $3 }) RBRACE { `Assoc $2 }
 
 value:
-  | variable { `Variable $1 }
+  | DOLLAR name { `Variable $2 }
   | value_parser(value) { $1 }
 
 const_value:
   | value_parser(const_value) { $1 }
-
-variable:
-  | DOLLAR name { $2 }
 
 keyword_name:
   | QUERY { "query" }
