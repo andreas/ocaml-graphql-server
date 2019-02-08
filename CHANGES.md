@@ -1,3 +1,12 @@
+0.9.0 2019-02-08
+---------------------------------
+
+- Skip and include directives (#117)
+- Expose more data to resolvers (#127)
+- Add the `errors` key first in the response JSON (#131)
+- Rewrite parser to Menhir and replace sexp with fmt (#132)
+- Support for websockets as transport (#133)
+
 0.8.0 2018-12-06
 ---------------------------------
 
@@ -5,7 +14,6 @@
 - Add path to errors in response (#112)
 - Improved escaped character handling (#114)
 - Improve error messages for invalid arguments (#128)
-
 
 0.7.0 2018-08-10
 ---------------------------------
