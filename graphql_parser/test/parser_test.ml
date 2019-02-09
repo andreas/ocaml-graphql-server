@@ -1,4 +1,4 @@
-let graphql_query = Alcotest.testable Fmt.string (fun a b ->
+let graphql_query = Alcotest.testable Format.pp_print_string (fun a b ->
   let graphql_ignored = Str.regexp "[ ,\t\r\n]" in
   let strip = Str.global_replace graphql_ignored "" in
   (strip a) = (strip b)
@@ -7,7 +7,7 @@ let graphql_query = Alcotest.testable Fmt.string (fun a b ->
 let test_query query =
   match Graphql_parser.parse query with
   | Ok doc ->
-      let query' = Fmt.to_to_string Graphql_parser.pp_document doc in
+      let query' = Format.asprintf "%a" Graphql_parser.pp_document doc in
       Alcotest.check graphql_query "Parse result" query query'
   | Error err ->
       Alcotest.failf "Failed to parse %s: %s" query err
@@ -222,7 +222,7 @@ let test_keywords () =
 
 let test_escaped_string () =
   test_query {|
-    {	
+    {
       escaped_quote(x: "\"")
       backslash(x: "\\")
       slash(x: "/")

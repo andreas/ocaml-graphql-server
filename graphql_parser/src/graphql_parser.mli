@@ -61,13 +61,13 @@ type fragment =
     directives : directive list;
     selection_set : selection list;
   }
- 
+
 
 type typ =
   | NamedType of string
   | ListType of typ
   | NonNullType of typ
- 
+
 
 type variable_definition =
   {
@@ -99,4 +99,4 @@ type document =
 
 val parse : string -> (document, string) result
 
-val pp_document : document Fmt.t
+val pp_document : Format.formatter -> document -> unit
