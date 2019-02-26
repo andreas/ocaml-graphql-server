@@ -96,8 +96,10 @@ type document =
   definition list
 
 module Pp = struct
-  let comma = Fmt.(const string ",")
-  let colon = Fmt.(const string ":")
+  let fprintf = Format.fprintf
+  let list = Format.pp_print_list
+  let comma ppf () = fprintf ppf ","
+  let comma_separated ppf = list ppf ~pp_sep:comma
 
   let quote_string str =
     let open Str in
@@ -110,84 +112,99 @@ module Pp = struct
     |> global_replace (regexp "\r") "\\r"
     |> global_replace (regexp "\t") "\\t"
 
-  let rec pp_value fmt = function
-    | `Null -> Fmt.string fmt "null"
-    | `Int n -> Fmt.int fmt n
-    | `Float f -> Fmt.float fmt f
-    | `String s -> Fmt.(quote string) fmt (quote_string s)
-    | `Bool b -> Fmt.bool fmt b
-    | `Enum e -> Fmt.string fmt e
-    | `Variable s -> Fmt.fmt "$%s" fmt s
-    | `List l -> Fmt.(brackets (list ~sep:comma pp_value)) fmt l
-    | `Assoc props -> Fmt.(braces (list ~sep:comma (pair ~sep:colon string pp_value))) fmt props
+  let rec pp_value ppf = function
+    | `Null -> fprintf ppf "null"
+    | `Int n -> fprintf ppf "%d" n
+    | `Float f -> fprintf ppf "%f" f
+    | `String s -> fprintf ppf {|"%s"|} (quote_string s)
+    | `Bool b -> fprintf ppf "%b" b
+    | `Enum e -> fprintf ppf "%s" e
+    | `Variable s -> fprintf ppf "$%s" s
+    | `List l -> fprintf ppf "[%a]" (comma_separated pp_value) l
+    | `Assoc props -> fprintf ppf "{%a}" (comma_separated key_value) props
 
-  let omit_empty_list t fmt = function
+  and key_value ppf (key, value) =
+    fprintf ppf "%s: %a" key pp_value value
+
+  let omit_empty_list pp_list = function
     | [] -> ()
-    | xs -> t fmt xs
+    | xs -> pp_list xs
 
-  let arguments fmt args =
-    omit_empty_list Fmt.(parens (list ~sep:comma (pair ~sep:colon string pp_value))) fmt args
+  let pp_arguments ppf =
+    omit_empty_list (fprintf ppf "(%a)" (comma_separated key_value))
 
-  let pp_directive fmt (directive : directive) =
-    Fmt.fmt "@%s%a" fmt directive.name arguments directive.arguments
+  let pp_directive ppf ({name; arguments} : directive) =
+    fprintf ppf "%@%s%a" name pp_arguments arguments
 
-  let directives = Fmt.(list pp_directive)
+  let pp_directives = list pp_directive
 
-  let pp_fragment_spread fmt (fragment_spread : fragment_spread) =
-    Fmt.fmt "...%s%a" fmt fragment_spread.name directives fragment_spread.directives
+  let pp_fragment_spread ppf ({name; directives} : fragment_spread) =
+    fprintf ppf "...%s%a" name pp_directives directives
 
-  let rec pp_selection fmt = function
-    | Field f ->
-        begin match f.alias with
-        | Some alias ->
-            Fmt.fmt "%s: %s%a%a%a" fmt alias f.name arguments f.arguments directives f.directives selection_set f.selection_set
-        | None ->
-            Fmt.fmt "%s%a%a%a" fmt f.name arguments f.arguments directives f.directives selection_set f.selection_set
-        end
-    | FragmentSpread f ->
-        Fmt.fmt "... %s %a" fmt f.name directives f.directives
-    | InlineFragment f ->
-        match f.type_condition with
-        | Some condition ->
-            Fmt.fmt "... on %s %a %a" fmt condition directives f.directives selection_set f.selection_set
-        | None ->
-            Fmt.fmt "... %a %a" fmt directives f.directives selection_set f.selection_set
-  and selection_set fmt = omit_empty_list Fmt.(braces (hvbox ~indent:2 (prefix cut (list pp_selection)))) fmt
+  let pp_option pp_value _ = function
+    | None -> ()
+    | Some x -> pp_value x
 
-  let rec pp_typ fmt = function
-    | NamedType t -> Fmt.string fmt t
-    | ListType t -> Fmt.brackets pp_typ fmt t
-    | NonNullType t -> Fmt.fmt "%a!" fmt pp_typ t
+  let rec pp_selection ppf = function
+    | Field {name; arguments; directives; selection_set; alias} ->
+        fprintf ppf "%a%s%a%a%a"
+          (pp_option (fprintf ppf "%s: ")) alias
+          name
+          pp_arguments arguments
+          pp_directives directives
+          pp_selection_set selection_set
+    | FragmentSpread {name; directives} ->
+        fprintf ppf "... %s %a" name pp_directives directives
+    | InlineFragment {type_condition; directives; selection_set} ->
+        fprintf ppf "...%a %a %a"
+          (pp_option (fprintf ppf " on %s")) type_condition
+          pp_directives directives
+          pp_selection_set selection_set
 
-  let pp_variable_definition fmt var_def =
-    match var_def.default_value with
-    | None ->
-        Fmt.fmt "$%s : %a" fmt var_def.name pp_typ var_def.typ
-    | Some value ->
-        Fmt.fmt "$%s : %a = %a" fmt var_def.name pp_typ var_def.typ pp_value value
+  and pp_selection_set ppf =
+    omit_empty_list (fprintf ppf "{@[<hv 2>@,%a@]}" (list pp_selection))
 
-  let variables = omit_empty_list Fmt.(parens (list ~sep:comma pp_variable_definition))
+  let rec pp_typ ppf = function
+    | NamedType t -> fprintf ppf "%s" t
+    | ListType t -> fprintf ppf "[%a]" pp_typ t
+    | NonNullType t -> fprintf ppf "%a!" pp_typ t
 
-  let pp_optype fmt = function
-    | Query -> Fmt.string fmt "query"
-    | Mutation -> Fmt.string fmt "mutation"
-    | Subscription -> Fmt.string fmt "subscription"
+  let pp_variable_definition ppf {default_value; name; typ} =
+    fprintf ppf "$%s : %a%a"
+      name
+      pp_typ typ
+      (pp_option (fprintf ppf " = %a" pp_value)) default_value
 
-  let pp_operation fmt op =
+  let pp_variables ppf =
+   omit_empty_list (fprintf ppf "(%a)" (comma_separated pp_variable_definition))
+
+  let optype_to_string = function
+    | Query -> "query"
+    | Mutation -> "mutation"
+    | Subscription -> "subscription"
+
+  let pp_operation ppf op =
     match op.name with
     | None ->
-        selection_set fmt op.selection_set
+        pp_selection_set ppf op.selection_set
     | Some name ->
-        Fmt.fmt "%a %s%a%a %a" fmt pp_optype op.optype name variables op.variable_definitions directives op.directives selection_set op.selection_set
+        fprintf ppf "%s %s%a%a %a"
+          (optype_to_string op.optype)
+          name
+          pp_variables op.variable_definitions
+          pp_directives op.directives
+          pp_selection_set op.selection_set
 
-  let pp_fragment fmt (f : fragment) =
-    Fmt.fmt "fragment %s on %s %a %a" fmt f.name f.type_condition directives f.directives selection_set f.selection_set
+  let pp_fragment ppf {name; type_condition; directives; selection_set} =
+    fprintf ppf "fragment %s on %s %a %a" name type_condition
+      pp_directives directives
+      pp_selection_set selection_set
 
-  let pp_definition fmt = function
-    | Operation op -> pp_operation fmt op
-    | Fragment f -> pp_fragment fmt f
+  let pp_definition ppf = function
+    | Operation op -> pp_operation ppf op
+    | Fragment f -> pp_fragment ppf f
 
-  let pp_document = Fmt.(list pp_definition)
+  let pp_document = list pp_definition
 end
 
 let pp_document = Pp.pp_document
