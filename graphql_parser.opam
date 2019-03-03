@@ -16,7 +16,6 @@ depends: [
   "dune" {build}
   "menhir" {build}
   "alcotest" {with-test & >= "0.8.1"}
-  "result"
   "fmt"
   "re" {>= "1.5.0"}
 ]
