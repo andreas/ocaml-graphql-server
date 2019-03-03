@@ -99,16 +99,16 @@ module Pp = struct
   let comma = Fmt.(const string ",")
   let colon = Fmt.(const string ":")
 
-  let quote_string str =
-    let open Str in
-    str
-    |> global_replace (regexp "\\") "\\\\\\\\"
-    |> global_replace (regexp "\"") "\\\""
-    |> global_replace (regexp "\b") "\\b"
-    |> global_replace (regexp "\012") "\\f"
-    |> global_replace (regexp "\n") "\\n"
-    |> global_replace (regexp "\r") "\\r"
-    |> global_replace (regexp "\t") "\\t"
+  let quote_string s =
+    let open Re in
+    s
+    |> replace_string (compile (char '\\'))   ~by:"\\\\"
+    |> replace_string (compile (char '"'))    ~by:"\\\""
+    |> replace_string (compile (char '\b'))   ~by:"\\b"
+    |> replace_string (compile (char '\012')) ~by:"\\f"
+    |> replace_string (compile (char '\n'))   ~by:"\\n"
+    |> replace_string (compile (char '\r'))   ~by:"\\r"
+    |> replace_string (compile (char '\t'))   ~by:"\\t"
 
   let rec pp_value fmt = function
     | `Null -> Fmt.string fmt "null"
