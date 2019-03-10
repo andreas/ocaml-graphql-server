@@ -1,3 +1,0 @@
-{2 Library graphql}
-This library exposes the following toplevel modules:
-{!modules:Graphql Graphql_intf Graphql_schema}

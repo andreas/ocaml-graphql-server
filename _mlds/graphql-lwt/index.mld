@@ -1,3 +1,0 @@
-{2 Library graphql-lwt}
-The entry point of this library is the module:
-{!module-Graphql_lwt}.
