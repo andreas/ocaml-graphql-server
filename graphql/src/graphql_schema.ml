@@ -339,7 +339,7 @@ module Make (Io : IO) = struct
   type 'a scalar = {
     name   : string;
     doc    : string option;
-    coerce : 'a -> Yojson.Basic.json;
+    coerce : 'a -> Yojson.Basic.t;
   }
 
   type 'a enum = {
@@ -1245,7 +1245,7 @@ end
     | `Operation_not_found
   ]
 
-  type 'a response = ('a, Yojson.Basic.json) result
+  type 'a response = ('a, Yojson.Basic.t) result
 
   let matches_type_condition type_condition (obj : ('ctx, 'src) obj) =
     obj.name = type_condition ||
@@ -1312,7 +1312,7 @@ end
   let field_from_subscription_object = fun obj field_name ->
     List.find (fun (SubscriptionField field) -> field.name = field_name) obj.fields
 
-  let coerce_or_null : 'a option -> ('a -> (Yojson.Basic.json * error list, 'b) result Io.t) -> (Yojson.Basic.json * error list, 'b) result Io.t =
+  let coerce_or_null : 'a option -> ('a -> (Yojson.Basic.t * error list, 'b) result Io.t) -> (Yojson.Basic.t * error list, 'b) result Io.t =
     fun src f ->
       match src with
       | None -> Io.ok (`Null, [])
@@ -1324,10 +1324,10 @@ end
 
   let error_to_json ?path msg =
     let props = match path with
-    | Some path -> ["path", `List (List.rev path :> Yojson.Basic.json list)]
+    | Some path -> ["path", `List (List.rev path :> Yojson.Basic.t list)]
     | None -> []
     in
-    (`Assoc (("message", `String msg)::props) : Yojson.Basic.json)
+    (`Assoc (("message", `String msg)::props) : Yojson.Basic.t)
 
   let error_response ?data ?path msg =
     let errors = "errors", `List [
@@ -1340,7 +1340,7 @@ end
     in
     `Assoc (errors :: data)
 
-  let rec present : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) typ -> path -> (Yojson.Basic.json * error list, [> resolve_error]) result Io.t =
+  let rec present : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) typ -> path -> (Yojson.Basic.t * error list, [> resolve_error]) result Io.t =
     fun ctx src query_field typ path ->
       match typ with
       | Scalar s -> coerce_or_null src (fun x -> Io.ok (s.coerce x, []))
@@ -1368,7 +1368,7 @@ end
             present ctx (Some src') query_field typ' path
           )
 
-  and resolve_field : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) field -> path -> ((string * Yojson.Basic.json) * error list, [> resolve_error]) result Io.t =
+  and resolve_field : type ctx src. ctx execution_context -> src -> Graphql_parser.field -> (ctx, src) field -> path -> ((string * Yojson.Basic.t) * error list, [> resolve_error]) result Io.t =
     fun ctx src query_field (Field field) path ->
       let open Io.Infix in
       let name = alias_or_name query_field in
@@ -1403,7 +1403,7 @@ end
       | Error err ->
           Io.error (`Argument_error err)
 
-  and resolve_fields : type ctx src. ctx execution_context -> ?execution_order:execution_order -> src -> (ctx, src) obj -> Graphql_parser.field list -> path -> (Yojson.Basic.json * error list, [> resolve_error]) result Io.t =
+  and resolve_fields : type ctx src. ctx execution_context -> ?execution_order:execution_order -> src -> (ctx, src) obj -> Graphql_parser.field list -> path -> (Yojson.Basic.t * error list, [> resolve_error]) result Io.t =
     fun ctx ?execution_order:(execution_order=Parallel) src obj fields path ->
       map_fields_with_order execution_order (fun (query_field : Graphql_parser.field) ->
         let name = alias_or_name query_field in
@@ -1448,7 +1448,7 @@ end
     | Error (`Resolve_error (msg, path)) ->
         Error (error_response ~data:`Null ~path msg)
 
-  let subscribe : type ctx. ctx execution_context -> ctx subscription_field -> Graphql_parser.field -> (Yojson.Basic.json response Io.Stream.t, [> resolve_error]) result Io.t
+  let subscribe : type ctx. ctx execution_context -> ctx subscription_field -> Graphql_parser.field -> (Yojson.Basic.t response Io.Stream.t, [> resolve_error]) result Io.t
   =
     fun ctx (SubscriptionField subs_field) field ->
       let open Io.Infix in
@@ -1478,7 +1478,7 @@ end
           )
       | Error err -> Io.error (`Argument_error err)
 
-  let execute_operation : 'ctx schema -> 'ctx execution_context -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response Io.Stream.t], [> execute_error]) result Io.t =
+  let execute_operation : 'ctx schema -> 'ctx execution_context -> Graphql_parser.operation -> ([ `Response of Yojson.Basic.t | `Stream of Yojson.Basic.t response Io.Stream.t], [> execute_error]) result Io.t =
     fun schema ctx operation ->
       let open Io.Infix in
       match operation.optype with
@@ -1486,7 +1486,7 @@ end
           let query  = schema.query in
           Io.return (collect_fields ctx query operation.selection_set)
           |> Io.Result.map_error ~f:(fun e -> `Argument_error e) >>=? fun fields ->
-          (resolve_fields ctx () query fields [] : (Yojson.Basic.json * error list, resolve_error) result Io.t :> (Yojson.Basic.json * error list, [> execute_error]) result Io.t)
+          (resolve_fields ctx () query fields [] : (Yojson.Basic.t * error list, resolve_error) result Io.t :> (Yojson.Basic.t * error list, [> execute_error]) result Io.t)
           |> Io.Result.map ~f:(fun data_errs -> `Response (data_to_json data_errs))
       | Graphql_parser.Mutation ->
           begin match schema.mutation with
@@ -1494,7 +1494,7 @@ end
           | Some mut ->
               Io.return (collect_fields ctx mut operation.selection_set)
               |> Io.Result.map_error ~f:(fun e -> `Argument_error e) >>=? fun fields ->
-              (resolve_fields ~execution_order:Serial ctx () mut fields [] : (Yojson.Basic.json * error list, resolve_error) result Io.t :> (Yojson.Basic.json * error list, [> execute_error]) result Io.t)
+              (resolve_fields ~execution_order:Serial ctx () mut fields [] : (Yojson.Basic.t * error list, resolve_error) result Io.t :> (Yojson.Basic.t * error list, [> execute_error]) result Io.t)
               |> Io.Result.map ~f:(fun data_errs -> `Response (data_to_json data_errs))
           end
       | Graphql_parser.Subscription ->
@@ -1507,7 +1507,7 @@ end
               | [field] ->
                   (match field_from_subscription_object subs field.name with
                    | Some subscription_field ->
-                       (subscribe ctx subscription_field field : ((Yojson.Basic.json, Yojson.Basic.json) result Io.Stream.t, resolve_error) result Io.t :> ((Yojson.Basic.json, Yojson.Basic.json) result Io.Stream.t, [> execute_error]) result Io.t)
+                       (subscribe ctx subscription_field field : ((Yojson.Basic.t, Yojson.Basic.t) result Io.Stream.t, resolve_error) result Io.t :> ((Yojson.Basic.t, Yojson.Basic.t) result Io.Stream.t, [> execute_error]) result Io.t)
                        |> Io.Result.map ~f:(fun stream -> `Stream stream)
                    | None -> Io.ok (`Response (`Assoc [(alias_or_name field, `Null)])))
               (* see http://facebook.github.io/graphql/June2018/#sec-Response-root-field *)
