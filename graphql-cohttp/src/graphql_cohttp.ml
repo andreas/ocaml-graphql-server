@@ -101,13 +101,13 @@ module Make
     let req_path = Cohttp.Request.uri req |> Uri.path in
     let path_parts = Astring.String.cuts ~sep:"/" req_path in
     match req.meth, path_parts with
-    | `GET,  ["graphql"] ->
+    | `GET,  [""; "graphql"] ->
       if Cohttp.Header.get req.Cohttp.Request.headers "Connection" = Some "Upgrade" && Cohttp.Header.get req.headers "Upgrade" = Some "websocket" then
         let handle_conn =  Websocket_transport.handle (execute_query (make_context req) schema) in
         Io.return (Ws.upgrade_connection req handle_conn)
       else
         static_file_response "index.html"
-    | `GET,  ["graphql"; path] -> static_file_response path
-    | `POST, ["graphql"]       -> execute_request schema (make_context req) req body
+    | `GET,  [""; "graphql"; path] -> static_file_response path
+    | `POST, [""; "graphql"]       -> execute_request schema (make_context req) req body
     | _ -> respond_string ~status:`Not_found ~body:"" ()
 end
