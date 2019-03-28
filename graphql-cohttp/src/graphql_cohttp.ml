@@ -99,7 +99,7 @@ module Make
 
   let make_callback : (Cohttp.Request.t -> 'ctx) -> 'ctx Schema.schema -> 'conn callback = fun make_context schema _conn (req : Cohttp.Request.t) body ->
     let req_path = Cohttp.Request.uri req |> Uri.path in
-    let path_parts = Astring.String.cuts ~sep:"/" req_path in
+    let path_parts = Astring.String.cuts ~empty:false ~sep:"/" req_path in
     match req.meth, path_parts with
     | `GET,  ["graphql"] ->
       if Cohttp.Header.get req.Cohttp.Request.headers "Connection" = Some "Upgrade" && Cohttp.Header.get req.headers "Upgrade" = Some "websocket" then
