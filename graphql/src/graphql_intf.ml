@@ -151,6 +151,7 @@ module type Schema = sig
                string ->
                coerce:('a -> Yojson.Basic.json) ->
                ('ctx, 'a option) typ
+    [@warning "-3"]
 
   val list : ('ctx, 'src) typ -> ('ctx, 'src list option) typ
 
@@ -191,8 +192,10 @@ module type Schema = sig
   type variables = (string * Graphql_parser.const_value) list
 
   type 'a response = ('a, Yojson.Basic.json) result
+    [@warning "-3"]
 
   val execute : 'ctx schema -> 'ctx -> ?variables:variables -> ?operation_name:string -> Graphql_parser.document -> [ `Response of Yojson.Basic.json | `Stream of Yojson.Basic.json response Io.Stream.t] response Io.t
+    [@warning "-3"]
   (** [execute schema ctx variables doc] evaluates the [doc] against [schema]
       with the given context [ctx] and [variables]. *)
 end
