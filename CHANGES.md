@@ -1,4 +1,10 @@
-0.12.0 2019-22-03
+0.12.1 2019-29-03
+---------------------------------
+
+- Disable Yojson deprecation warnings (#148)
+- Fix routing in graphql-cohttp (#150)
+
+0.12.0 2019-03-22
 ---------------------------------
 
 - Remove Str from cohttp-graphql (#146)
