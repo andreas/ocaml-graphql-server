@@ -1,5 +1,3 @@
-open Result
-
 include Ast
 
 let string_of_pos (pos : Lexing.position) =
