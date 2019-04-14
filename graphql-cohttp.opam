@@ -21,6 +21,9 @@ depends: [
   "base64" {>= "3.0.0"}
   "ocplib-endian" {>= "1.0"}
   "digestif" {>= "0.7.0"}
+  "alcotest" {with-test}
+  "cohttp-lwt-unix" {with-test}
+  "graphql-lwt" {with-test}
 ]
 
 synopsis: "Run GraphQL servers with `cohttp`"
