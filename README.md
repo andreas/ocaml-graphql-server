@@ -43,7 +43,7 @@ API documentation:
 To run a sample GraphQL server also serving GraphiQL, do the following:
 
 ```bash
-opam install graphql-lwt dune
+opam install dune graphql-lwt graphql-cohttp cohttp-lwt-unix
 git clone git@github.com:andreas/ocaml-graphql-server.git
 dune exec examples/server.exe
 ```
