@@ -1579,10 +1579,15 @@ end
     let open Io.Infix in
     let execute' schema ctx doc =
       Io.return (collect_and_validate_fragments doc) >>=? fun fragments ->
-      let variables = List.fold_left (fun memo (name, value) -> StringMap.add name value memo) StringMap.empty variables in
-      let execution_ctx = { fragments; ctx; variables } in
       let schema' = Introspection.add_schema_field schema in
       Io.return (select_operation ?operation_name doc) >>=? fun op ->
+      let default_variables = List.fold_left (fun memo { Graphql_parser.name; default_value; _ } ->
+        match default_value with
+        | None -> memo
+        | Some value -> StringMap.add name value memo
+      ) StringMap.empty op.variable_definitions in
+      let variables = List.fold_left (fun memo (name, value) -> StringMap.add name value memo) default_variables variables in
+      let execution_ctx = { fragments; ctx; variables } in
       execute_operation schema' execution_ctx op
     in
     execute' schema ctx doc >>| to_response
