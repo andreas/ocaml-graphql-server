@@ -128,4 +128,21 @@ let suite : (string * [>`Quick] * (unit -> unit)) list = [
       ]
     ])
   );
+  ("default variable", `Quick, fun () ->
+    let query = "query has_defaults($x : Int! = 42) { int(x: $x) }" in
+    test_query [] query (`Assoc [
+      "data", `Assoc [
+        "int", `Int 42
+      ]
+    ])
+  );
+  ("variable overrides default variable", `Quick, fun () ->
+    let variables = ["x", `Int 43] in
+    let query = "query has_defaults($x : Int! = 42) { int(x: $x) }" in
+    test_query variables query (`Assoc [
+      "data", `Assoc [
+        "int", `Int 43
+      ]
+    ])
+  );
 ]
