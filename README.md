@@ -282,4 +282,4 @@ Only valid schemas should pass the type checker. If a schema compiles, the follo
 The following blog posts introduces the core design concepts:
 
 - https://andreas.github.io/2017/11/29/type-safe-graphql-with-ocaml-part-1/
-- https://andreas.github.io/2018/01/05/modeling-graphql-type-modifiers-with-gadts/
+- https://andreas.github.io/2018/01/05/modeling-graphql-type-modifiers-with-gadts-part-2/
