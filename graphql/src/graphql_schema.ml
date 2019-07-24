@@ -1193,15 +1193,6 @@ module Introspection = struct
         args = Arg.[];
         lift = Io.ok;
         resolve = fun _ _ -> []
-      };
-      Field {
-        name = "subscriptionType";
-        doc = None;
-        deprecated = NotDeprecated;
-        typ = __type;
-        args = Arg.[];
-        lift = Io.ok;
-        resolve = fun _ _ -> None
       }
     ]
   }
