@@ -11,4 +11,8 @@ module Schema = Graphql_schema.Make (struct
     let iter t f = Seq.iter f t
     let close _t = ()
   end
+end) (struct
+  type t = string
+  let message_of_error t = t
+  let extensions_of_error _t = []
 end)
