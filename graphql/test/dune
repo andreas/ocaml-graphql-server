@@ -10,6 +10,7 @@
   argument_test
   introspection_test
   error_test
+  custom_error_test
   abstract_test
   directives_test)
  (libraries graphql alcotest)
