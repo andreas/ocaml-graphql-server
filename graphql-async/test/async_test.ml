@@ -2,13 +2,13 @@ open Async_kernel
 open Async_unix
 
 let yojson = (module struct
-  type t = Yojson.Basic.json
+  type t = Yojson.Basic.json [@@warning "-3"]
 
   let pp formatter t =
     Format.pp_print_text formatter (Yojson.Basic.pretty_to_string t)
 
   let equal = (=)
-end : Alcotest.TESTABLE with type t = Yojson.Basic.json)
+end : Alcotest.TESTABLE with type t = Yojson.Basic.json) [@@warning "-3"]
 
 let test_query schema ctx query expected =
   Thread_safe.block_on_async_exn begin fun () ->

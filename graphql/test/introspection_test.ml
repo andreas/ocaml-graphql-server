@@ -3,7 +3,7 @@ open Graphql
 let test_query schema query = Test_common.test_query schema () query
 
 let suite = [
-  ("not deprecated", `Quick, fun () ->
+  ("__schema: not deprecated", `Quick, fun () ->
     let schema = Schema.(schema [
       field "not-deprecated"
         ~deprecated:NotDeprecated
@@ -27,7 +27,7 @@ let suite = [
       ]
     ])
   );
-  ("default deprecation", `Quick, fun () ->
+  ("__schema: default deprecation", `Quick, fun () ->
     let schema = Schema.(schema [
       field "default"
         ~typ:string
@@ -50,7 +50,7 @@ let suite = [
       ]
     ])
   );
-  ("deprecated-without-reason", `Quick, fun () ->
+  ("__schema: deprecated-without-reason", `Quick, fun () ->
     let schema = Schema.(schema [
       field "deprecated-without-reason"
         ~deprecated:(Deprecated None)
@@ -74,7 +74,7 @@ let suite = [
       ]
     ])
   );
-  ("deprecated with reason", `Quick, fun () ->
+  ("__schema: deprecated with reason", `Quick, fun () ->
     let schema = Schema.(schema [
       field "deprecated-with-reason"
         ~deprecated:(Deprecated (Some "deprecation reason"))
@@ -98,7 +98,7 @@ let suite = [
       ]
     ])
   );
-  ("deduplicates argument types", `Quick, fun () ->
+  ("__schema: deduplicates argument types", `Quick, fun () ->
     let schema = Schema.(schema [
       field "sum"
         ~typ:(non_null int)
@@ -121,6 +121,28 @@ let suite = [
             ]
           ]
         ]
+      ]
+    ])
+  );
+  ("__type", `Quick, fun () ->
+    let query = {|
+      {
+        role_type: __type(name: "role") {
+          name
+        }
+        user_type: __type(name: "user") {
+          name
+        }
+      }
+    |} in
+    test_query Test_schema.schema query (`Assoc [
+      "data", `Assoc [
+        "role_type", `Assoc [
+          "name", `String "role"
+        ];
+        "user_type", `Assoc [
+          "name", `String "user"
+        ];
       ]
     ])
   );

@@ -652,6 +652,18 @@ module Introspection = struct
         | DefaultArg a -> arg_types memo a.typ
         in arg_list_types memo' args
 
+  let types_of_schema s =
+    let types, _ =
+      List.fold_left
+      (fun memo op ->
+        match op with
+        | None -> memo
+        | Some op -> types ~memo (Object op))
+      ([], StringSet.empty)
+      [Some s.query; s.mutation; Option.map s.subscription ~f:obj_of_subscription_obj]
+    in
+    types
+
   let rec args_to_list : type a b. ?memo:any_arg list -> (a, b) Arg.arg_list -> any_arg list = fun ?memo:(memo=[]) arglist ->
     let open Arg in
     match arglist with
@@ -1134,7 +1146,7 @@ module Introspection = struct
     ]
   }
 
-  let __schema : 'ctx. ('ctx, 'ctx schema option) typ = Object {
+  let __schema : 'ctx. ('ctx, ('ctx schema * any_typ list) option) typ = Object {
     name = "__Schema";
     doc = None;
     abstracts = no_abstracts;
@@ -1146,16 +1158,7 @@ module Introspection = struct
         typ = NonNullable (List (NonNullable __type));
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ s ->
-          let types, _ = List.fold_left
-            (fun memo op ->
-              match op with
-              | None -> memo
-              | Some op -> types ~memo (Object op))
-            ([], StringSet.empty)
-            [Some s.query; s.mutation; Option.map s.subscription ~f:obj_of_subscription_obj]
-          in
-          types
+        resolve = fun _ (_schema, types) -> types
       };
       Field {
         name = "queryType";
@@ -1164,7 +1167,7 @@ module Introspection = struct
         typ = NonNullable __type;
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ s -> AnyTyp (Object s.query)
+        resolve = fun _ (schema, _types) -> AnyTyp (Object schema.query)
       };
       Field {
         name = "mutationType";
@@ -1173,7 +1176,7 @@ module Introspection = struct
         typ = __type;
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ s -> Option.map s.mutation ~f:(fun mut -> AnyTyp (Object mut))
+        resolve = fun _ (schema, _types) -> Option.map schema.mutation ~f:(fun mut -> AnyTyp (Object mut))
       };
       Field {
         name = "subscriptionType";
@@ -1182,8 +1185,8 @@ module Introspection = struct
         typ = __type;
         args = Arg.[];
         lift = Io.ok;
-        resolve = fun _ s ->
-          Option.map s.subscription ~f:(fun subs -> AnyTyp (Object (obj_of_subscription_obj subs)))
+        resolve = fun _ (schema, _types) ->
+          Option.map schema.subscription ~f:(fun subs -> AnyTyp (Object (obj_of_subscription_obj subs)))
       };
       Field {
         name = "directives";
@@ -1193,20 +1196,12 @@ module Introspection = struct
         args = Arg.[];
         lift = Io.ok;
         resolve = fun _ _ -> []
-      };
-      Field {
-        name = "subscriptionType";
-        doc = None;
-        deprecated = NotDeprecated;
-        typ = __type;
-        args = Arg.[];
-        lift = Io.ok;
-        resolve = fun _ _ -> None
       }
     ]
   }
 
-  let add_schema_field s =
+  let add_built_in_fields schema =
+    let types = types_of_schema schema in
     let schema_field = Field {
       name = "__schema";
       doc = None;
@@ -1214,10 +1209,33 @@ module Introspection = struct
       typ = NonNullable __schema;
       args = Arg.[];
       lift = Io.ok;
-      resolve = fun _ _ -> s
+      resolve = fun _ _ -> (schema, types)
     } in
-    let fields = lazy (schema_field::(Lazy.force s.query.fields)) in
-    { s with query = { s.query with fields } }
+    let type_field = Field {
+      name = "__type";
+      doc = None;
+      deprecated = NotDeprecated;
+      typ = __type;
+      args = Arg.[arg "name" ~typ:(non_null string)];
+      lift = Io.ok;
+      resolve = fun _ _ name ->
+        List.find (fun typ ->
+          match typ with
+          | AnyTyp (Object o) -> o.name = name
+          | AnyTyp (Scalar s) -> s.name = name
+          | AnyTyp (Enum e) -> e.name = name
+          | AnyTyp (Abstract a) -> a.name = name
+          | AnyTyp (List _) -> false
+          | AnyTyp (NonNullable _) -> false
+          | AnyArgTyp (Arg.Object o) -> o.name = name
+          | AnyArgTyp (Arg.Scalar s) -> s.name = name
+          | AnyArgTyp (Arg.Enum e) -> e.name = name
+          | AnyArgTyp (Arg.List _) -> false
+          | AnyArgTyp (Arg.NonNullable _) -> false
+        ) types
+    } in
+    let fields = lazy (schema_field::type_field::(Lazy.force schema.query.fields)) in
+    { schema with query = { schema.query with fields } }
 end
 
   (* Execution *)
@@ -1579,7 +1597,7 @@ end
     let open Io.Infix in
     let execute' schema ctx doc =
       Io.return (collect_and_validate_fragments doc) >>=? fun fragments ->
-      let schema' = Introspection.add_schema_field schema in
+      let schema' = Introspection.add_built_in_fields schema in
       Io.return (select_operation ?operation_name doc) >>=? fun op ->
       let default_variables = List.fold_left (fun memo { Graphql_parser.name; default_value; _ } ->
         match default_value with

@@ -5,7 +5,7 @@ let yojson = (module struct
     Format.pp_print_text formatter (Yojson.Basic.pretty_to_string t)
 
   let equal = (=)
-end : Alcotest.TESTABLE with type t = Yojson.Basic.json)
+end : Alcotest.TESTABLE with type t = Yojson.Basic.json) [@@warning "-3"]
 
 let list_of_seq seq =
   let rec loop seq =
