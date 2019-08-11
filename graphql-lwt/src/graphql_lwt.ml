@@ -10,6 +10,6 @@ module Schema = Graphql_schema.Make (struct
   end
 end) (struct
   type t = string
-  let message_of_error t = t
-  let extensions_of_error _t = []
+  let message_of_field_error t = t
+  let extensions_of_field_error _t = None
 end)

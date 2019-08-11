@@ -39,15 +39,15 @@ module type IO = sig
   end with type 'a io := 'a t
 end
 
-(* Err *)
-module type Err = sig
+(* Field_error *)
+module type Field_error = sig
   type t
-  val message_of_error : t -> string
-  val extensions_of_error : t -> (string * Yojson.Basic.json [@warning "-3"]) list
+  val message_of_field_error : t -> string
+  val extensions_of_field_error : t -> (string * Yojson.Basic.json [@warning "-3"]) list option
 end
 
 (* Schema *)
-module Make (Io : IO) (Err: Err) = struct
+module Make (Io : IO) (Field_error: Field_error) = struct
   module Io = struct
     include Io
 
@@ -90,7 +90,7 @@ module Make (Io : IO) (Err: Err) = struct
 
   module StringSet = Set.Make(String)
 
-  type err = Err.t
+  type field_error = Field_error.t
 
   type variable_map = Graphql_parser.const_value StringMap.t
 
@@ -381,7 +381,7 @@ module Make (Io : IO) (Err: Err) = struct
       typ        : ('ctx, 'out) typ;
       args       : ('a, 'args) Arg.arg_list;
       resolve    : 'ctx resolve_info -> 'src -> 'args;
-      lift       : 'a -> ('out, err) result Io.t;
+      lift       : 'a -> ('out, field_error) result Io.t;
     } -> ('ctx, 'src) field
   and (_, _) typ =
     | Object      : ('ctx, 'src) obj -> ('ctx, 'src option) typ
@@ -410,7 +410,7 @@ module Make (Io : IO) (Err: Err) = struct
       doc        : string option;
       deprecated : deprecated;
       typ        : ('ctx, 'out) typ;
-      args       : (('out Io.Stream.t, err) result Io.t, 'args) Arg.arg_list;
+      args       : (('out Io.Stream.t, field_error) result Io.t, 'args) Arg.arg_list;
       resolve    : 'ctx resolve_info -> 'args;
     } -> 'ctx subscription_field
 
@@ -1239,7 +1239,7 @@ end
   }
 
   type path = [`String of string | `Int of int] list
-  type error = err * path
+  type error = field_error * path
 
   type resolve_error = [
     | `Resolve_error of error
@@ -1439,10 +1439,12 @@ end
   let data_to_json = function
     | data, [] -> `Assoc ["data", data]
     | data, errors ->
-        let errors = List.map (fun ((err: err), path) ->
-          let extensions = Err.extensions_of_error err in
-          let msg = Err.message_of_error err in
-          error_to_json ~path ~extensions msg errors
+        let errors = List.map
+          (fun (field_error, path) ->
+            let extensions = Field_error.extensions_of_field_error field_error in
+            let msg = Field_error.message_of_field_error field_error in
+            error_to_json ~path ?extensions msg)
+          errors
         in
         `Assoc [
           "errors", `List errors;
@@ -1465,10 +1467,10 @@ end
         Error (error_response msg)
     | Error (`Argument_error msg) ->
         Error (error_response ~data:`Null msg)
-    | Error (`Resolve_error (err, path)) ->
-        let extensions = Err.extensions_of_error err in
-        let msg = Err.message_of_error err in
-        Error (error_response ~data:`Null ~path ~extensions msg)
+    | Error (`Resolve_error (field_error, path)) ->
+        let extensions = Field_error.extensions_of_field_error field_error in
+        let msg = Field_error.message_of_field_error field_error in
+        Error (error_response ~data:`Null ~path ?extensions msg)
 
   let subscribe : type ctx. ctx execution_context -> ctx subscription_field -> Graphql_parser.field -> (json response Io.Stream.t, [> resolve_error]) result Io.t
   =

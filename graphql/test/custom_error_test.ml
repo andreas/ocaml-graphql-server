@@ -1,13 +1,13 @@
 open Test_common
 
-module Err = struct
+module Field_error = struct
   type t = | String of string | Extension of string * string
-  let message_of_error t = match t with
+  let message_of_field_error t = match t with
     | String s -> s
     | Extension _ -> ""
-  let extensions_of_error t = match t with
-    | String _ -> []
-    | Extension (k, v) -> [(k, `String v)]
+  let extensions_of_field_error t = match t with
+    | String _ -> None
+    | Extension (k, v) -> Some [(k, `String v)]
 end
 
 module CustomErrorsSchema = Graphql_schema.Make (struct
@@ -23,7 +23,7 @@ module CustomErrorsSchema = Graphql_schema.Make (struct
     let iter t f = Seq.iter f t
     let close _t = ()
   end
-end) (Err)
+end) (Field_error)
 
 let test_query schema ctx ?variables ?operation_name query expected =
   match Graphql_parser.parse query with
@@ -45,11 +45,11 @@ let schema = CustomErrorsSchema.(schema [
   io_field "string_error"
     ~typ:int
     ~args:Arg.[]
-    ~resolve:(fun _ () -> Error (Err.String "error string"));
+    ~resolve:(fun _ () -> Error (Field_error.String "error string"));
   io_field "extensions_error"
     ~typ:int
     ~args:Arg.[]
-    ~resolve:(fun _ () -> Error (Err.Extension ("custom", "json")))
+    ~resolve:(fun _ () -> Error (Field_error.Extension ("custom", "json")))
 ])
 
 let suite = [
