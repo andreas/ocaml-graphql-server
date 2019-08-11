@@ -1343,7 +1343,7 @@ end
     | Some [] -> []
     | Some extensions -> ["extensions", `Assoc extensions]
     in
-    (`Assoc (("message", `String msg)::(List.concat [props; extension_props])) : json)
+    (`Assoc (("message", `String msg)::(List.append props extension_props)) : json)
 
   let error_response ?data ?path ?extensions msg =
     let errors = "errors", `List [
@@ -1400,7 +1400,7 @@ end
       | Ok unlifted_value ->
           let lifted_value =
             field.lift unlifted_value
-            |> Io.Result.map_error ~f:(fun (err: err) -> `Resolve_error (err, path')) >>=? fun resolved ->
+            |> Io.Result.map_error ~f:(fun err -> `Resolve_error (err, path')) >>=? fun resolved ->
             present ctx resolved query_field field.typ path'
           in
           lifted_value >>| (function
@@ -1439,7 +1439,11 @@ end
   let data_to_json = function
     | data, [] -> `Assoc ["data", data]
     | data, errors ->
-        let errors = List.map (fun ((err: err), path) -> error_to_json ~path ~extensions:(Err.extensions_of_error err) (Err.message_of_error err)) errors in
+        let errors = List.map (fun ((err: err), path) ->
+          let extensions = Err.extensions_of_error err in
+          let msg = Err.message_of_error err in
+          error_to_json ~path ~extensions msg errors
+        in
         `Assoc [
           "errors", `List errors;
           "data", data;
@@ -1462,7 +1466,9 @@ end
     | Error (`Argument_error msg) ->
         Error (error_response ~data:`Null msg)
     | Error (`Resolve_error (err, path)) ->
-        Error (error_response ~data:`Null ~path ~extensions:(Err.extensions_of_error err) (Err.message_of_error err))
+        let extensions = Err.extensions_of_error err in
+        let msg = Err.message_of_error err in
+        Error (error_response ~data:`Null ~path ~extensions msg)
 
   let subscribe : type ctx. ctx execution_context -> ctx subscription_field -> Graphql_parser.field -> (json response Io.Stream.t, [> resolve_error]) result Io.t
   =
@@ -1489,7 +1495,7 @@ end
               >>| to_response
             )
           )
-          |> Io.Result.map_error ~f:(fun (err: err) ->
+          |> Io.Result.map_error ~f:(fun err ->
             `Resolve_error (err, path)
           )
       | Error err -> Io.error (`Argument_error err)
