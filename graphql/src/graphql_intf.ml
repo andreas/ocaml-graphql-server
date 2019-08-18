@@ -15,6 +15,13 @@ module type IO = sig
   end with type 'a io := 'a t
 end
 
+(* Field_error signature *)
+module type Field_error = sig
+  type t
+  val message_of_field_error : t -> string
+  val extensions_of_field_error : t -> (string * Yojson.Basic.json [@warning "-3"]) list option
+end
+
 (** GraphQL schema signature *)
 module type Schema = sig
   module Io : IO
@@ -26,6 +33,8 @@ module type Schema = sig
     val find_exn : key -> 'a t -> 'a
     val find : key -> 'a t -> 'a option
   end
+
+  type field_error
 
   (** {3 Base types } *)
 
@@ -130,7 +139,7 @@ module type Schema = sig
                  ?deprecated:deprecated ->
                  string ->
                  typ:('ctx, 'a) typ ->
-                 args:(('a, string) result Io.t, 'b) Arg.arg_list ->
+                 args:(('a, field_error) result Io.t, 'b) Arg.arg_list ->
                  resolve:('ctx resolve_info -> 'src -> 'b) ->
                  ('ctx, 'src) field
 
@@ -138,7 +147,7 @@ module type Schema = sig
                            ?deprecated:deprecated ->
                            string ->
                            typ:('ctx, 'out) typ ->
-                           args:(('out Io.Stream.t, string) result Io.t, 'args) Arg.arg_list ->
+                           args:(('out Io.Stream.t, field_error) result Io.t, 'args) Arg.arg_list ->
                            resolve:('ctx resolve_info -> 'args) ->
                            'ctx subscription_field
 

@@ -39,8 +39,15 @@ module type IO = sig
   end with type 'a io := 'a t
 end
 
+(* Field_error *)
+module type Field_error = sig
+  type t
+  val message_of_field_error : t -> string
+  val extensions_of_field_error : t -> (string * Yojson.Basic.json [@warning "-3"]) list option
+end
+
 (* Schema *)
-module Make (Io : IO) = struct
+module Make (Io : IO) (Field_error: Field_error) = struct
   module Io = struct
     include Io
 
@@ -82,6 +89,8 @@ module Make (Io : IO) = struct
   end
 
   module StringSet = Set.Make(String)
+
+  type field_error = Field_error.t
 
   type variable_map = Graphql_parser.const_value StringMap.t
 
@@ -372,7 +381,7 @@ module Make (Io : IO) = struct
       typ        : ('ctx, 'out) typ;
       args       : ('a, 'args) Arg.arg_list;
       resolve    : 'ctx resolve_info -> 'src -> 'args;
-      lift       : 'a -> ('out, string) result Io.t;
+      lift       : 'a -> ('out, field_error) result Io.t;
     } -> ('ctx, 'src) field
   and (_, _) typ =
     | Object      : ('ctx, 'src) obj -> ('ctx, 'src option) typ
@@ -401,7 +410,7 @@ module Make (Io : IO) = struct
       doc        : string option;
       deprecated : deprecated;
       typ        : ('ctx, 'out) typ;
-      args       : (('out Io.Stream.t, string) result Io.t, 'args) Arg.arg_list;
+      args       : (('out Io.Stream.t, field_error) result Io.t, 'args) Arg.arg_list;
       resolve    : 'ctx resolve_info -> 'args;
     } -> 'ctx subscription_field
 
@@ -1248,7 +1257,7 @@ end
   }
 
   type path = [`String of string | `Int of int] list
-  type error = string * path
+  type error = field_error * path
 
   type resolve_error = [
     | `Resolve_error of error
@@ -1342,16 +1351,21 @@ end
     | Serial -> Io.map_s ~memo:[]
     | Parallel -> Io.map_p
 
-  let error_to_json ?path msg =
+  let error_to_json ?path ?extensions msg =
     let props = match path with
     | Some path -> ["path", `List (List.rev path :> json list)]
     | None -> []
     in
-    (`Assoc (("message", `String msg)::props) : json)
+    let extension_props = match extensions with
+    | None
+    | Some [] -> []
+    | Some extensions -> ["extensions", `Assoc extensions]
+    in
+    (`Assoc (("message", `String msg)::(List.append props extension_props)) : json)
 
-  let error_response ?data ?path msg =
+  let error_response ?data ?path ?extensions msg =
     let errors = "errors", `List [
-      error_to_json ?path msg
+      error_to_json ?path ?extensions msg
     ]
     in
     let data = match data with
@@ -1443,7 +1457,13 @@ end
   let data_to_json = function
     | data, [] -> `Assoc ["data", data]
     | data, errors ->
-        let errors = List.map (fun (msg, path) -> error_to_json ~path msg) errors in
+        let errors = List.map
+          (fun (field_error, path) ->
+            let extensions = Field_error.extensions_of_field_error field_error in
+            let msg = Field_error.message_of_field_error field_error in
+            error_to_json ~path ?extensions msg)
+          errors
+        in
         `Assoc [
           "errors", `List errors;
           "data", data;
@@ -1465,8 +1485,10 @@ end
         Error (error_response msg)
     | Error (`Argument_error msg) ->
         Error (error_response ~data:`Null msg)
-    | Error (`Resolve_error (msg, path)) ->
-        Error (error_response ~data:`Null ~path msg)
+    | Error (`Resolve_error (field_error, path)) ->
+        let extensions = Field_error.extensions_of_field_error field_error in
+        let msg = Field_error.message_of_field_error field_error in
+        Error (error_response ~data:`Null ~path ?extensions msg)
 
   let subscribe : type ctx. ctx execution_context -> ctx subscription_field -> Graphql_parser.field -> (json response Io.Stream.t, [> resolve_error]) result Io.t
   =

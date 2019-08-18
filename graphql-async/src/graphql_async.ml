@@ -13,4 +13,8 @@ module Schema = Graphql_schema.Make (struct
 
     let close = Async_kernel.Pipe.close_read
   end
+end) (struct
+  type t = string
+  let message_of_field_error t = t
+  let extensions_of_field_error _t = None
 end)
