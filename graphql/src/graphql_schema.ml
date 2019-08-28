@@ -1297,6 +1297,35 @@ end
       | `Skip -> Ok false
       | `Include -> should_include_field ctx rest
 
+  let alias_or_name : Graphql_parser.field -> string = fun field ->
+    match field.alias with
+    | Some alias -> alias
+    | None -> field.name
+
+  let merge_selections (fields: Graphql_parser.field list) =
+    let m = List.fold_left (fun m (field : Graphql_parser.field) ->
+      StringMap.update
+        (alias_or_name field)
+        (function
+          | None -> Some field.selection_set
+          | Some x -> (Some (List.append x field.selection_set))
+        )
+        m
+      )
+      StringMap.empty
+      fields
+    in
+    let (_, res) = List.fold_right (fun (field : Graphql_parser.field) (m, res) ->
+      let name = (alias_or_name field) in
+      match (StringMap.find name m) with
+      | None -> (m, res)
+      | Some selection_set -> ((StringMap.remove name m), { field with selection_set = selection_set }::res)
+      )
+      fields
+      (m, [])
+    in
+    res
+
   let rec collect_fields : 'ctx execution_context -> ('ctx, 'src) obj -> Graphql_parser.selection list -> (Graphql_parser.field list, string) result =
     fun ctx obj fields ->
     let open Rresult in
@@ -1329,11 +1358,7 @@ end
     ) fields
     |> List.Result.join
     |> Rresult.R.map List.concat
-
-  let alias_or_name : Graphql_parser.field -> string = fun field ->
-    match field.alias with
-    | Some alias -> alias
-    | None -> field.name
+    |> Rresult.R.map merge_selections
 
   let field_from_object : ('ctx, 'src) obj -> string -> ('ctx, 'src) field option = fun obj field_name ->
     List.find (fun (Field field) -> field.name = field_name) (Lazy.force obj.fields)
