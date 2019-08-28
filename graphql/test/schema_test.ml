@@ -160,7 +160,7 @@ let suite = [
         }
         ...F1
       }
-      fragment F1 on Query {
+      fragment F1 on query {
         users {
           name
         }
