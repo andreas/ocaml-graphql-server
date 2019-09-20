@@ -119,6 +119,8 @@ let () =
   in
   let callback = Graphql_cohttp_lwt.make_callback (fun _req -> ()) schema in
   let server = Cohttp_lwt_unix.Server.make_response_action ~callback () in
-  let mode = `TCP (`Port 8080) in
+  let port = 8080 in
+  let mode = `TCP (`Port port) in
+  Printf.printf "listening on http://localhost:%d/graphql\n%!" port ;
   Cohttp_lwt_unix.Server.create ~on_exn ~mode server
   |> Lwt_main.run
