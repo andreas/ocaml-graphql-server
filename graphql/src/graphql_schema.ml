@@ -1302,29 +1302,14 @@ end
     | Some alias -> alias
     | None -> field.name
 
-  let merge_selections (fields: Graphql_parser.field list) =
-    let m = List.fold_left (fun m (field : Graphql_parser.field) ->
-      StringMap.update
-        (alias_or_name field)
-        (function
-          | None -> Some field.selection_set
-          | Some x -> (Some (List.append x field.selection_set))
-        )
-        m
-      )
-      StringMap.empty
-      fields
-    in
-    let (_, res) = List.fold_right (fun (field : Graphql_parser.field) (m, res) ->
-      let name = (alias_or_name field) in
-      match (StringMap.find name m) with
-      | None -> (m, res)
-      | Some selection_set -> ((StringMap.remove name m), { field with selection_set = selection_set }::res)
-      )
-      fields
-      (m, [])
-    in
-    res
+  let rec merge_selections ?(memo=[]) = function
+    | [] -> List.rev memo
+    | field::fields ->
+        let id = alias_or_name field in
+        let matching, rest = List.partition (fun field' -> id = (alias_or_name field')) fields in
+        let selection_sets = List.map (fun (field : Graphql_parser.field) -> field.selection_set) (field::matching) in
+        let selection_set  = List.concat selection_sets in
+        merge_selections ~memo:({field with selection_set}::memo) rest
 
   let rec collect_fields : 'ctx execution_context -> ('ctx, 'src) obj -> Graphql_parser.selection list -> (Graphql_parser.field list, string) result =
     fun ctx obj fields ->
