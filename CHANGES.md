@@ -1,3 +1,12 @@
+0.13.0 2019-09.21
+---------------------------------
+
+- Support for custom errors (#166)
+- Add `__type` introspection field (#163)
+- Better parameter handling for `graphql-cohttp` (#156)
+- Fix use of default variables (#158)
+- Fix merging of field selections (#174)
+
 0.12.2 2019-04-02
 ---------------------------------
 
