@@ -1297,6 +1297,20 @@ end
       | `Skip -> Ok false
       | `Include -> should_include_field ctx rest
 
+  let alias_or_name : Graphql_parser.field -> string = fun field ->
+    match field.alias with
+    | Some alias -> alias
+    | None -> field.name
+
+  let rec merge_selections ?(memo=[]) = function
+    | [] -> List.rev memo
+    | field::fields ->
+        let id = alias_or_name field in
+        let matching, rest = List.partition (fun field' -> id = (alias_or_name field')) fields in
+        let selection_sets = List.map (fun (field : Graphql_parser.field) -> field.selection_set) (field::matching) in
+        let selection_set  = List.concat selection_sets in
+        merge_selections ~memo:({field with selection_set}::memo) rest
+
   let rec collect_fields : 'ctx execution_context -> ('ctx, 'src) obj -> Graphql_parser.selection list -> (Graphql_parser.field list, string) result =
     fun ctx obj fields ->
     let open Rresult in
@@ -1329,11 +1343,7 @@ end
     ) fields
     |> List.Result.join
     |> Rresult.R.map List.concat
-
-  let alias_or_name : Graphql_parser.field -> string = fun field ->
-    match field.alias with
-    | Some alias -> alias
-    | None -> field.name
+    |> Rresult.R.map merge_selections
 
   let field_from_object : ('ctx, 'src) obj -> string -> ('ctx, 'src) field option = fun obj field_name ->
     List.find (fun (Field field) -> field.name = field_name) (Lazy.force obj.fields)
