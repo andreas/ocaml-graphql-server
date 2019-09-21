@@ -283,3 +283,4 @@ The following blog posts introduces the core design concepts:
 
 - https://andreas.github.io/2017/11/29/type-safe-graphql-with-ocaml-part-1/
 - https://andreas.github.io/2018/01/05/modeling-graphql-type-modifiers-with-gadts-part-2/
+- https://andreas.github.io/2019/05/20/graphql-resolver-arguments-as-diff-lists-part-3/
