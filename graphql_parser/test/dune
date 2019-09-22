@@ -6,5 +6,7 @@
 (alias
  (name runtest)
  (package graphql_parser)
- (deps (:test test.exe))
- (action (run %{test} -v)))
+ (deps
+  (:test test.exe))
+ (action
+  (run %{test} -v)))
