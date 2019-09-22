@@ -2,5 +2,6 @@
  (name graphql_async)
  (public_name graphql-async)
  (wrapped false)
- (preprocess (pps ppx_sexp_conv))
+ (preprocess
+  (pps ppx_sexp_conv))
  (libraries graphql async_kernel))
