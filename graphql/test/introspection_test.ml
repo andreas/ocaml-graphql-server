@@ -146,4 +146,46 @@ let suite = [
       ]
     ])
   );
+  ("__typename", `Quick, fun () ->
+    let schema = Graphql.Schema.(schema
+      ~query_name:"MyQuery" []
+      ~mutations:[]
+      ~mutation_name:"MyMutation"
+      ~subscriptions:[]
+      ~subscription_name:"MySubscription"
+    ) in
+    test_query schema
+      {|
+        query {
+          __typename
+        }
+      |}
+      (`Assoc [
+        "data", `Assoc [
+          "__typename", `String "MyQuery"
+        ]
+      ]);
+    test_query schema
+      {|
+        mutation {
+          __typename
+        }
+      |}
+      (`Assoc [
+        "data", `Assoc [
+          "__typename", `String "MyMutation"
+        ]
+      ]);
+    test_query schema
+      {|
+        subscription {
+          __typename
+        }
+      |}
+      (`Assoc [
+        "data", `Assoc [
+          "__typename", `String "MySubscription"
+        ]
+      ])
+  )
 ]
