@@ -30,14 +30,15 @@ module Frame : sig
       | Nonctrl of int
 
     val to_string : t -> string
+
     val pp : Format.formatter -> t -> unit
   end
 
   type t = {
-    opcode: Opcode.t ;
-    extension: int ;
-    final: bool ;
-    content: string ;
+    opcode : Opcode.t;
+    extension : int;
+    final : bool;
+    content : string;
   }
 
   val create :
@@ -45,16 +46,16 @@ module Frame : sig
     ?extension:int ->
     ?final:bool ->
     ?content:string ->
-    unit -> t
+    unit ->
+    t
 
   val close : int -> t
+
   val show : t -> string
 end
 
 module Connection : sig
-  type mode =
-    | Client of (int -> string)
-    | Server
+  type mode = Client of (int -> string) | Server
 
   module type S = sig
     module IO : Cohttp.S.IO
@@ -62,17 +63,25 @@ module Connection : sig
     type t
 
     val create :
-      ?read_buf:Buffer.t -> ?write_buf:Buffer.t ->
-      mode:mode -> Cohttp.Request.t -> IO.ic -> IO.oc -> t
+      ?read_buf:Buffer.t ->
+      ?write_buf:Buffer.t ->
+      mode:mode ->
+      Cohttp.Request.t ->
+      IO.ic ->
+      IO.oc ->
+      t
 
     val send : t -> Frame.t -> unit IO.t
+
     val send_multiple : t -> Frame.t list -> unit IO.t
+
     val recv : t -> Frame.t IO.t
+
     val req : t -> Cohttp.Request.t
 
     val upgrade_connection :
-      ?read_buf : Buffer.t ->
-      ?write_buf : Buffer.t ->
+      ?read_buf:Buffer.t ->
+      ?write_buf:Buffer.t ->
       Cohttp.Request.t ->
       (t -> unit IO.t) ->
       [> `Expert of Cohttp.Response.t * (IO.ic -> IO.oc -> unit IO.t) ]

@@ -1,19 +1,19 @@
-let graphql_query = Alcotest.testable Fmt.string (fun a b ->
-  let graphql_ignored = Str.regexp "[ ,\t\r\n]" in
-  let strip = Str.global_replace graphql_ignored "" in
-  (strip a) = (strip b)
-)
+let graphql_query =
+  Alcotest.testable Fmt.string (fun a b ->
+      let graphql_ignored = Str.regexp "[ ,\t\r\n]" in
+      let strip = Str.global_replace graphql_ignored "" in
+      strip a = strip b)
 
 let test_query query =
   match Graphql_parser.parse query with
   | Ok doc ->
       let query' = Fmt.to_to_string Graphql_parser.pp_document doc in
       Alcotest.check graphql_query "Parse result" query query'
-  | Error err ->
-      Alcotest.failf "Failed to parse %s: %s" query err
+  | Error err -> Alcotest.failf "Failed to parse %s: %s" query err
 
 let test_introspection_query () =
-  test_query {|
+  test_query
+    {|
     query IntrospectionQuery {
       __schema {
         queryType { name }
@@ -94,7 +94,8 @@ let test_introspection_query () =
   |}
 
 let test_kitchen_sink () =
-  test_query {|
+  test_query
+    {|
     query queryName($foo: ComplexType, $site: Site = MOBILE) {
       whoever123is: node(id: [123, 456]) {
         id ,
@@ -148,7 +149,8 @@ let test_kitchen_sink () =
   |}
 
 let test_variables () =
-  test_query {|
+  test_query
+    {|
     query Named($a: String, $b: Float) {
       x
     }
@@ -163,7 +165,8 @@ let test_variables () =
   |}
 
 let test_default_values () =
-  test_query {|
+  test_query
+    {|
     query DefaultValues(
         $a: Int = 1,
         $b: [String] = ["a"],
@@ -175,7 +178,8 @@ let test_default_values () =
   |}
 
 let test_keywords () =
-  test_query {|
+  test_query
+    {|
     query Keywords(
       $fragment: Int,
       $false: Int,
@@ -226,7 +230,8 @@ let test_keywords () =
   |}
 
 let test_escaped_string () =
-  test_query {|
+  test_query
+    {|
     {
       escaped_quote(x: "\"")
       backslash(x: "\\")
@@ -240,11 +245,12 @@ let test_escaped_string () =
     }
   |}
 
-let suite = [
-  "introspection", `Quick, test_introspection_query;
-  "kitchen sink", `Quick, test_kitchen_sink;
-  "default values", `Quick, test_default_values;
-  "keywords", `Quick, test_keywords;
-  "variables", `Quick, test_variables;
-  "escaped string", `Quick, test_escaped_string;
-]
+let suite =
+  [
+    ("introspection", `Quick, test_introspection_query);
+    ("kitchen sink", `Quick, test_kitchen_sink);
+    ("default values", `Quick, test_default_values);
+    ("keywords", `Quick, test_keywords);
+    ("variables", `Quick, test_variables);
+    ("escaped string", `Quick, test_escaped_string);
+  ]

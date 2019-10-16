@@ -7,8 +7,8 @@ let parse s =
   let lexbuf = Lexing.from_string s in
   try Ok (Parser.doc Lexer.token lexbuf) with
   | Parser.Error ->
-    let pos = lexbuf.lex_start_p in
-    Error (Format.sprintf "%s: Syntax error" (string_of_pos pos))
+      let pos = lexbuf.lex_start_p in
+      Error (Format.sprintf "%s: Syntax error" (string_of_pos pos))
   | Lexer.Error msg ->
-    let pos = lexbuf.lex_curr_p in
-    Error (Format.sprintf "%s: %s" (string_of_pos pos) msg)
+      let pos = lexbuf.lex_curr_p in
+      Error (Format.sprintf "%s: %s" (string_of_pos pos) msg)
