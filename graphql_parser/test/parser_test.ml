@@ -13,8 +13,8 @@ let test_query query =
       Alcotest.failf "Failed to parse %s: %s" query err
 
 let test_introspection_query () =
-  test_query
-    "query IntrospectionQuery {
+  test_query {|
+    query IntrospectionQuery {
       __schema {
         queryType { name }
         mutationType { name }
@@ -90,11 +90,12 @@ let test_introspection_query () =
           }
         }
       }
-    }"
+    }
+  |}
 
 let test_kitchen_sink () =
-  test_query
-    "query queryName($foo: ComplexType, $site: Site = MOBILE) {
+  test_query {|
+    query queryName($foo: ComplexType, $site: Site = MOBILE) {
       whoever123is: node(id: [123, 456]) {
         id ,
         ... on User @defer {
@@ -137,17 +138,18 @@ let test_kitchen_sink () =
     }
 
     fragment frag on Friend {
-      foo(size: $size, bar: $b, obj: {key: \"value\"})
+      foo(size: $size, bar: $b, obj: {key: "value"})
     }
 
     {
       unnamed(truthy: true, falsey: false, nullish: null),
       query
-    }"
+    }
+  |}
 
 let test_variables () =
-  test_query
-    "query Named($a: String, $b: Float) {
+  test_query {|
+    query Named($a: String, $b: Float) {
       x
     }
 
@@ -157,22 +159,24 @@ let test_variables () =
 
     query NonNull($a: ID!, $b: [Foo]!, $c: [Foo!], $d: [Foo!]!) {
       x
-    }"
+    }
+  |}
 
 let test_default_values () =
-  test_query
-    "query DefaultValues(
+  test_query {|
+    query DefaultValues(
         $a: Int = 1,
-        $b: [String] = [\"a\"],
+        $b: [String] = ["a"],
         $c: Obj = {x: {y: true}, z: RED},
         $d: [Obj]! = [{x: {y: null}, z: BLUE}]
       ) {
       x
-    }"
+    }
+  |}
 
 let test_keywords () =
-  test_query
-    "query Keywords(
+  test_query {|
+    query Keywords(
       $fragment: Int,
       $false: Int,
       $mutation: Int,
@@ -218,11 +222,12 @@ let test_keywords () =
 
     fragment true on Foo {
       a
-    }"
+    }
+  |}
 
 let test_escaped_string () =
   test_query {|
-    {	
+    {
       escaped_quote(x: "\"")
       backslash(x: "\\")
       slash(x: "/")

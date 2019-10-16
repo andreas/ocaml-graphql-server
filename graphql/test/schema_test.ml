@@ -127,7 +127,7 @@ let suite = [
     ])
   );
   ("fragments cannot form cycles", `Quick, fun () ->
-    let query = "
+    let query = {|
       fragment F1 on Foo {
         ... on Bar {
           baz {
@@ -143,7 +143,7 @@ let suite = [
       {
         ... F1
       }
-    " in
+    |} in
     test_query query (`Assoc [
       "errors", `List [
         `Assoc [
@@ -153,7 +153,7 @@ let suite = [
     ])
   );
   ("fragments combine nested fields", `Quick, fun () ->
-    let query = "
+    let query = {|
       query Q {
         users {
           role
@@ -165,7 +165,7 @@ let suite = [
           name
         }
       }
-    " in
+    |} in
     test_query query (`Assoc [
       "data", `Assoc [
         "users", `List [
@@ -186,7 +186,7 @@ let suite = [
     ])
   );
   ("introspection query should be accepted", `Quick, fun () ->
-    let query = "
+    let query = {|
       query IntrospectionQuery {
         __schema {
           queryType { name }
@@ -278,7 +278,7 @@ let suite = [
           }
         }
       }
-    " in
+    |} in
     match Graphql_parser.parse query with
     | Error err -> failwith err
     | Ok doc ->
