@@ -336,5 +336,15 @@ let suite = [
         ]
       ]
     ])
+  );
+  ("subscription field that doesn't exist", `Quick, fun () ->
+    let query = "subscription { dont_exist { id name } }" in
+    test_query query (`Assoc [
+      "errors", `List [
+        `Assoc [
+          "message", `String "Field 'dont_exist' is not defined on type 'subscription'"
+        ]
+      ]
+    ])
   )
 ]

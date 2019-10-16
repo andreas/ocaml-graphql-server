@@ -1557,11 +1557,16 @@ end
               |> Io.Result.map_error ~f:(fun e -> `Argument_error e) >>=? fun fields ->
               begin match fields with
               | [field] ->
+                if field.name = "__typename" then
+                  (Io.ok (`Response (data_to_json (`Assoc [ (field.name, `String subs.name) ], []))))
+                else
                   (match field_from_subscription_object subs field.name with
                    | Some subscription_field ->
                        (subscribe ctx subscription_field field : ((json, json) result Io.Stream.t, resolve_error) result Io.t :> ((json, json) result Io.Stream.t, [> execute_error]) result Io.t)
                        |> Io.Result.map ~f:(fun stream -> `Stream stream)
-                   | None -> Io.ok (`Response (`Assoc [(alias_or_name field, `Null)])))
+                   | None ->
+                     let err = Printf.sprintf "Field '%s' is not defined on type '%s'" field.name subs.name in
+                     Io.error (`Validation_error err))
               (* see http://facebook.github.io/graphql/June2018/#sec-Response-root-field *)
               | _ -> Io.error (`Validation_error "Subscriptions only allow exactly one selection for the operation.")
               end
