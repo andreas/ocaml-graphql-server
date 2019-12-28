@@ -97,6 +97,35 @@ let suite : (string * [> `Quick ] * (unit -> unit)) list =
                   ] );
               ("data", `Null);
             ]) );
+    ( "missing required variable",
+      `Quick,
+      fun () ->
+        let variables = [] in
+        let query = "{ input_obj(x: $x) }" in
+        test_query variables query
+          (`Assoc
+            [
+              ( "errors",
+                `List
+                  [
+                    `Assoc
+                      [
+                        ( "message",
+                          `String
+                            "Argument `x` of type `person!` expected on field \
+                             `input_obj`, found null." );
+                      ];
+                  ] );
+              ("data", `Null);
+            ]) );
+    ( "missing nullable variable",
+      `Quick,
+      fun () ->
+        let variables = [] in
+        let query = "{ string(x: $x) }" in
+        test_query variables query
+        (`Assoc ["data", `Assoc ["string", `Null]])
+    );
     ( "variable coercion: single value to list",
       `Quick,
       fun () ->
