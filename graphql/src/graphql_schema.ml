@@ -21,7 +21,8 @@ module List = struct
 end
 
 module Option = struct
-  let map x ~f = match x with None -> None | Some y -> Some (f y)
+  let value t ~default = match t with None -> default | Some x -> x
+  let map t ~f = match t with None -> None | Some y -> Some (f y)
 end
 
 (* IO *)
@@ -282,7 +283,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | `String _ as s -> s
       | `Bool _ as b -> b
       | `Enum _ as e -> e
-      | `Variable v -> StringMap.find_exn v variable_map
+      | `Variable v -> Option.value ~default:`Null (StringMap.find v variable_map)
       | `List xs -> `List (List.map (value_to_const_value variable_map) xs)
       | `Assoc props ->
           let props' =
@@ -313,19 +314,16 @@ module Make (Io : IO) (Field_error : Field_error) = struct
             key_values (function
             | None -> f arg.default
             | Some value -> f value)
-      | Arg arg :: arglist' -> (
-          try
-            let value = List.assoc arg.name key_values in
-            let const_value =
-              Option.map value ~f:(value_to_const_value variable_map)
-            in
-            eval_arg variable_map ?field_type ~field_name ~arg_name:arg.name
-              arg.typ const_value
-            >>= fun coerced ->
-            eval_arglist variable_map ?field_type ~field_name arglist'
-              key_values (f coerced)
-          with StringMap.Missing_key key ->
-            Error (Format.sprintf "Missing variable `%s`" key) )
+      | Arg arg :: arglist' ->
+          let value = List.assoc arg.name key_values in
+          let const_value =
+            Option.map value ~f:(value_to_const_value variable_map)
+          in
+          eval_arg variable_map ?field_type ~field_name ~arg_name:arg.name
+            arg.typ const_value
+          >>= fun coerced ->
+          eval_arglist variable_map ?field_type ~field_name arglist'
+            key_values (f coerced)
 
     and eval_arg :
         type a.
