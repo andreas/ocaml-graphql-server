@@ -32,20 +32,14 @@ let dog =
             ~resolve:(fun _ (dog : dog) -> dog.puppies);
         ]))
 
-let pet : (unit, [ `pet ]) Schema.abstract_typ = Schema.union "Pet"
+let pet = Schema.(union "Pet" Type.[dog; cat])
 
-let cat_as_pet = Schema.add_type pet cat
-
-let dog_as_pet = Schema.add_type pet dog
-
-let named : (unit, [ `named ]) Schema.abstract_typ =
+let named =
   Schema.(
-    interface "Named" ~fields:(fun _ ->
+    interface "Named"
+      Type.[dog; cat]
+      ~fields:(fun _ ->
         [ abstract_field "name" ~typ:(non_null string) ~args:Arg.[] ]))
-
-let cat_as_named = Schema.add_type named cat
-
-let dog_as_named = Schema.add_type named dog
 
 let pet_type =
   Schema.(
@@ -60,16 +54,16 @@ let schema =
           ~args:Arg.[ arg "type" ~typ:(non_null pet_type) ]
           ~resolve:(fun _ () pet_type ->
             match pet_type with
-            | `Cat -> cat_as_pet meow
-            | `Dog -> dog_as_pet fido);
+            | `Cat -> abstract_value cat meow
+            | `Dog -> abstract_value dog fido);
         field "pets"
           ~typ:(non_null (list (non_null pet)))
           ~args:Arg.[]
-          ~resolve:(fun _ () -> [ cat_as_pet meow; dog_as_pet fido ]);
+          ~resolve:(fun _ () -> [ abstract_value cat meow; abstract_value dog fido ]);
         field "named_objects"
           ~typ:(non_null (list (non_null named)))
           ~args:Arg.[]
-          ~resolve:(fun _ () -> [ cat_as_named meow; dog_as_named fido ]);
+          ~resolve:(fun _ () -> [ abstract_value cat meow; abstract_value dog fido ]);
       ])
 
 let test_query = Test_common.test_query schema ()

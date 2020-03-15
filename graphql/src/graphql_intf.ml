@@ -59,6 +59,10 @@ module type Schema = sig
 
   type 'a enum_value
 
+  type 'ctx abstract_value
+
+  type 'ctx abstract_typ = ('ctx, 'ctx abstract_value option) typ
+
   (** {3 Constructors } *)
 
   val schema :
@@ -182,11 +186,18 @@ module type Schema = sig
 
   val non_null : ('ctx, 'src option) typ -> ('ctx, 'src) typ
 
-  type ('ctx, 'a) abstract_value
+  val abstract_value :
+    ('ctx, 'src option) typ ->
+    'src ->
+    'ctx abstract_value
 
-  type ('ctx, 'a) abstract_typ = ('ctx, ('ctx, 'a) abstract_value option) typ
+  module Type : sig
+    type _ list =
+      | [] : 'ctx list
+      | ( :: ) : ('ctx, _) typ * 'ctx list -> 'ctx list
+  end
 
-  val union : ?doc:string -> string -> ('ctx, 'a) abstract_typ
+  val union : ?doc:string -> string -> 'ctx Type.list -> 'ctx abstract_typ
 
   type abstract_field
 
@@ -201,14 +212,9 @@ module type Schema = sig
   val interface :
     ?doc:string ->
     string ->
-    fields:(('ctx, 'a) abstract_typ -> abstract_field list) ->
-    ('ctx, 'a) abstract_typ
-
-  val add_type :
-    ('ctx, 'a) abstract_typ ->
-    ('ctx, 'src option) typ ->
-    'src ->
-    ('ctx, 'a) abstract_value
+    'ctx Type.list ->
+    fields:('ctx abstract_typ -> abstract_field list) ->
+    'ctx abstract_typ
 
   (** {3 Built-in scalars} *)
 

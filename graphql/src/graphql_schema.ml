@@ -446,7 +446,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     | NonNullable : ('ctx, 'src option) typ -> ('ctx, 'src) typ
     | Scalar : 'src scalar -> ('ctx, 'src option) typ
     | Enum : 'src enum -> ('ctx, 'src option) typ
-    | Abstract : abstract -> ('ctx, ('ctx, 'a) abstract_value option) typ
+    | Abstract : abstract -> ('ctx, 'ctx abstract_value option) typ
 
   and any_typ =
     | AnyTyp : (_, _) typ -> any_typ
@@ -461,10 +461,29 @@ module Make (Io : IO) (Field_error : Field_error) = struct
 
   and abstract_field = AbstractField : (_, _) field -> abstract_field
 
-  and ('ctx, 'a) abstract_value =
+  and 'ctx abstract_value =
     | AbstractValue :
         ('ctx, 'src option) typ * 'src
-        -> ('ctx, 'a) abstract_value
+        -> 'ctx abstract_value
+
+  module Type = struct
+    type _ list =
+      | [] : 'ctx list
+      | ( :: ) : ('ctx, _) typ * 'ctx list -> 'ctx list
+
+    let rec to_any_typ_list : type ctx. ctx list -> any_typ List.t =
+      function
+      | [] -> []
+      | typ::rest -> (AnyTyp typ)::(to_any_typ_list rest)
+
+    let rec iter : type ctx. ctx list -> f:(any_typ -> unit) -> unit =
+      fun types ~f ->
+        match types with
+        | [] -> ()
+        | typ::rest ->
+            f (AnyTyp typ);
+            iter rest ~f
+  end
 
   type 'ctx subscription_field =
     | SubscriptionField : {
@@ -484,7 +503,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     fields : 'ctx subscription_field list;
   }
 
-  type ('ctx, 'a) abstract_typ = ('ctx, ('ctx, 'a) abstract_value option) typ
+  type 'ctx abstract_typ = ('ctx, 'ctx abstract_value option) typ
 
   type directive_location =
     [ `Query
@@ -574,22 +593,30 @@ module Make (Io : IO) (Field_error : Field_error) = struct
 
   let non_null typ = NonNullable typ
 
-  let union ?doc name = Abstract { name; doc; types = []; kind = `Union }
+  let union ?doc name types =
+    let a = { name; doc; types = Type.to_any_typ_list types; kind = `Union } in
+    Type.iter types ~f:(function
+      | AnyTyp (Object o) -> o.abstracts := a :: !(o.abstracts)
+      | _ -> failwith "invalid union type"
+    );
+    Abstract a
 
-  let interface ?doc name ~fields =
-    let rec i =
-      Abstract { name; doc; types = []; kind = `Interface (lazy (fields i)) }
+  let interface ?doc name types ~fields =
+    let rec a =
+      { name; doc; types = Type.to_any_typ_list types; kind = `Interface (lazy (fields i)) }
+    and i =
+      Abstract a
     in
+    Type.iter types ~f:(function
+      | AnyTyp (Object o) ->
+          (* TODO add subtype check here *)
+          o.abstracts := a :: !(o.abstracts)
+      | _ -> failwith "invalid interface type"
+    );
     i
 
-  let add_type abstract_typ typ =
-    match (abstract_typ, typ) with
-    | Abstract a, Object o ->
-        (* TODO add subtype check here *)
-        a.types <- AnyTyp typ :: a.types;
-        o.abstracts := a :: !(o.abstracts);
-        fun src -> AbstractValue (typ, src)
-    | _ -> invalid_arg "Arguments must be Interface/Union and Object"
+  let abstract_value typ src =
+    AbstractValue (typ, src)
 
   let obj_of_subscription_obj { name; doc; fields } =
     let fields =
