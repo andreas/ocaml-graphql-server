@@ -18,6 +18,7 @@ depends: [
   "yojson"
   "rresult"
   "seq"
+  "uri"
   "alcotest" {with-test}
 ]
 
