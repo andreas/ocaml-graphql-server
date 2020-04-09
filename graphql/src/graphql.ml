@@ -24,3 +24,5 @@ module Schema =
 
       let extensions_of_field_error _t = None
     end)
+
+module Server = Graphql_server

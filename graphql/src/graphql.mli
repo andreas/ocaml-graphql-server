@@ -6,3 +6,5 @@ module Schema : sig
        and type 'a Io.Stream.t = 'a Seq.t
        and type field_error = string
 end
+
+module Server = Graphql_server
