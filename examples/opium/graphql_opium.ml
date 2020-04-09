@@ -4,10 +4,6 @@ module Io = struct
   let ( >>= ) = Lwt.bind
 
   let return = Lwt.return
-
-  type ic = Lwt_io.input_channel
-
-  type oc = Lwt_io.output_channel
 end
 
 module Body = Opium_kernel.Body

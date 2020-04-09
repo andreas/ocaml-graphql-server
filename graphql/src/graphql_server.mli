@@ -4,10 +4,6 @@ module type Io = sig
   val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
 
   val return : 'a -> 'a t
-
-  type ic
-
-  type oc
 end
 
 module type HttpBody = sig
