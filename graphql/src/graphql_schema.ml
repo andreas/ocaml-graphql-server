@@ -512,30 +512,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     subscription : 'ctx subscription_obj option;
   }
 
-  let schema ?(mutation_name = "mutation") ?mutations
-      ?(subscription_name = "subscription") ?subscriptions
-      ?(query_name = "query") fields =
-    {
-      query =
-        {
-          name = query_name;
-          doc = None;
-          abstracts = ref [];
-          fields = lazy fields;
-        };
-      mutation =
-        Option.map mutations ~f:(fun fields ->
-            {
-              name = mutation_name;
-              doc = None;
-              abstracts = ref [];
-              fields = lazy fields;
-            });
-      subscription =
-        Option.map subscriptions ~f:(fun fields ->
-            { name = subscription_name; doc = None; fields });
-    }
-
   (* Constructor functions *)
   let obj ?doc name ~fields =
     let rec o =
@@ -1474,6 +1450,33 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       { schema with query = { schema.query with fields } }
   end
 
+  let schema ?(mutation_name = "mutation") ?mutations
+      ?(subscription_name = "subscription") ?subscriptions
+      ?(query_name = "query") fields =
+    let schema =
+      {
+        query =
+          {
+            name = query_name;
+            doc = None;
+            abstracts = ref [];
+            fields = lazy fields;
+          };
+        mutation =
+          Option.map mutations ~f:(fun fields ->
+              {
+                name = mutation_name;
+                doc = None;
+                abstracts = ref [];
+                fields = lazy fields;
+              });
+        subscription =
+          Option.map subscriptions ~f:(fun fields ->
+              { name = subscription_name; doc = None; fields });
+      }
+    in
+    Introspection.add_built_in_fields schema
+
   (* Execution *)
   type variables = (string * Graphql_parser.const_value) list
 
@@ -1948,7 +1951,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     let open Io.Infix in
     let execute' schema ctx doc =
       Io.return (collect_and_validate_fragments doc) >>=? fun fragments ->
-      let schema' = Introspection.add_built_in_fields schema in
       Io.return (select_operation ?operation_name doc) >>=? fun op ->
       let default_variables =
         List.fold_left
@@ -1964,7 +1966,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
           default_variables variables
       in
       let execution_ctx = { fragments; ctx; variables } in
-      execute_operation schema' execution_ctx op
+      execute_operation schema execution_ctx op
     in
     execute' schema ctx doc >>| to_response
 end
