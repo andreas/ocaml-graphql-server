@@ -140,6 +140,7 @@ module type Schema = sig
     field : Graphql_parser.field;
     fragments : fragment_map;
     variables : variable_map;
+    path : [ `String of string | `Int of int ] list;
   }
 
   val field :

@@ -419,6 +419,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     field : Graphql_parser.field;
     fragments : fragment_map;
     variables : variable_map;
+    path : [ `String of string | `Int of int ] list;
   }
 
   type ('ctx, 'src) obj = {
@@ -1688,6 +1689,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
         field = query_field;
         fragments = ctx.fragments;
         variables = ctx.variables;
+        path = List.rev path;
       }
     in
     let resolver = field.resolve resolve_info src in
@@ -1789,6 +1791,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
         field;
         fragments = ctx.fragments;
         variables = ctx.variables;
+        path;
       }
     in
     let resolver = subs_field.resolve resolve_info in
