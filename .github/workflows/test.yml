@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ocamlVersion: [4_07, 4_08, 4_09, 4_10]
+        ocamlVersion: [4_07, 4_08, 4_09, 4_10, 4_11]
     steps:
     - uses: actions/checkout@v2
     - uses: cachix/install-nix-action@v9
