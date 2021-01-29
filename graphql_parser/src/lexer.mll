@@ -25,6 +25,7 @@ rule token = parse
   | int   { INT (int_of_string (lexeme lexbuf)) }
   | float { FLOAT (float_of_string (lexeme lexbuf)) }
   | '"'   { read_string (Buffer.create 17) lexbuf }
+  | "\"\"\""   { read_block_string (Buffer.create 17) lexbuf }
 
   | "false"        { BOOL false }
   | "fragment"     { FRAGMENT }
@@ -65,4 +66,12 @@ and read_string buf = parse
     {
       Buffer.add_string buf (lexeme lexbuf);
       read_string buf lexbuf
+    }
+
+and read_block_string buf = parse
+  | "\"\"\"" { STRING (Block_string.dedent_block_string_value (Buffer.contents buf)) }
+  | _
+    {
+      Buffer.add_string buf (lexeme lexbuf);
+      read_block_string buf lexbuf
     }
