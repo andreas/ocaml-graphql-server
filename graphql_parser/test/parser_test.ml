@@ -4,11 +4,13 @@ let graphql_query =
       let strip = Str.global_replace graphql_ignored "" in
       strip a = strip b)
 
-let test_query query =
+let test_query ?expect query =
   match Graphql_parser.parse query with
   | Ok doc ->
       let query' = Fmt.to_to_string Graphql_parser.pp_document doc in
-      Alcotest.check graphql_query "Parse result" query query'
+      Alcotest.check graphql_query "Parse result"
+        (Option.value ~default:query expect)
+        query'
   | Error err -> Alcotest.failf "Failed to parse %s: %s" query err
 
 let test_introspection_query () =
@@ -245,6 +247,82 @@ let test_escaped_string () =
     }
   |}
 
+let test_block_string () =
+  let join_lines lines = String.concat "\n" lines in
+  let make_field field_name lines =
+    Format.sprintf {|%s(arg: """%s""")|} field_name (join_lines lines)
+  in
+
+  let query =
+    Format.sprintf "{\n  %s\n}"
+      (String.concat "\n  "
+         [
+           make_field "uniform_indentation"
+             [
+               "";
+               "    Hello,";
+               "      World!";
+               "";
+               "    Yours,";
+               "      GraphQL.";
+             ];
+           make_field "removes_empty_leading_and_trailing_lines"
+             [
+               "";
+               "";
+               "    Hello,";
+               "      World!";
+               "";
+               "    Yours,";
+               "      GraphQL.";
+               "";
+               "";
+             ];
+           make_field "removes_blank_leading_and_trailing_lines"
+             [
+               "  ";
+               "        ";
+               "    Hello,";
+               "      World!";
+               "";
+               "    Yours,";
+               "      GraphQL.";
+               "        ";
+               "  ";
+             ];
+           make_field "retains_indentation_of_first_line"
+             [
+               "    Hello,"; "      World!"; ""; "    Yours,"; "      GraphQL.";
+             ];
+           make_field "does_not_alter_trailing_spaces"
+             [
+               "               ";
+               "    Hello,     ";
+               "      World!   ";
+               "               ";
+               "    Yours,     ";
+               "      GraphQL. ";
+               "               ";
+             ];
+           make_field "empty_string" [ "" ];
+           make_field "do_not_escape_characters" [ {|" \\ / \b \f \n \r \t|} ];
+         ])
+  in
+  test_query
+    ~expect:
+      {|
+        {
+          uniform_indentation(arg: "Hello,\n  World!\n\nYours,\n  GraphQL.")
+          removes_empty_leading_and_trailing_lines(arg: "Hello,\n  World!\n\nYours,\n  GraphQL.")
+          removes_blank_leading_and_trailing_lines(arg: "Hello,\n  World!\n\nYours,\n  GraphQL.")
+          retains_indentation_of_first_line(arg: "    Hello,\n  World!\n\nYours,\n  GraphQL.")
+          does_not_alter_trailing_spaces(arg: "Hello,     \n  World!   \n           \nYours,     \n  GraphQL. ")
+          empty_string(arg: "")
+          do_not_escape_characters(arg: "\" \\\\ / \\b \\f \\n \\r \\t")
+        }
+      |}
+    query
+
 let suite =
   [
     ("introspection", `Quick, test_introspection_query);
@@ -253,4 +331,5 @@ let suite =
     ("keywords", `Quick, test_keywords);
     ("variables", `Quick, test_variables);
     ("escaped string", `Quick, test_escaped_string);
+    ("block string", `Quick, test_block_string);
   ]
