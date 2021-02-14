@@ -9,15 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ocamlVersion: [4_07, 4_08, 4_09, 4_10, 4_11]
+        ocamlVersion: [4_08, 4_09, 4_10, 4_11, 4_12]
     steps:
-    - uses: actions/checkout@v2
-    - uses: cachix/install-nix-action@v9
-      with:
-        skip_adding_nixpkgs_channel: true
-    - uses: cachix/cachix-action@v6
-      with:
-        name: anmonteiro
-        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
-    - name: "Run nix-build"
-      run: nix-build ./nix/ci/test.nix --argstr ocamlVersion ${{ matrix.ocamlVersion }}
+      - uses: actions/checkout@v2
+      - uses: cachix/install-nix-action@v12
+      - uses: cachix/cachix-action@v8
+        with:
+          name: anmonteiro
+          signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+      - name: "Run nix-build"
+        run: nix-build ./nix/ci/test.nix --argstr ocamlVersion ${{ matrix.ocamlVersion }}
