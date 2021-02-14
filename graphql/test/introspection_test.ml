@@ -208,6 +208,59 @@ let suite =
                         ] );
                   ] );
             ]) );
+    ( "__schema: defaultValue for args",
+      `Quick,
+      fun () ->
+        let schema =
+          Schema.(
+            schema
+              [
+                field "field" ~typ:(non_null string)
+                  ~args:
+                    Arg.
+                      [
+                        arg' "x" ~typ:string ~default:(`String "s");
+                        arg "y" ~typ:(non_null string);
+                      ]
+                  ~resolve:(fun _ _ x y -> x ^ y);
+              ])
+        in
+        let query =
+          {|{ __type(name: "query") { fields { args { name defaultValue } } } }|}
+        in
+        test_query schema query
+          (`Assoc
+            [
+              ( "data",
+                `Assoc
+                  [
+                    ( "__type",
+                      `Assoc
+                        [
+                          ( "fields",
+                            `List
+                              [
+                                `Assoc
+                                  [
+                                    ( "args",
+                                      `List
+                                        [
+                                          `Assoc
+                                            [
+                                              ("name", `String "y");
+                                              ("defaultValue", `Null);
+                                            ];
+                                          `Assoc
+                                            [
+                                              ("name", `String "x");
+                                              ("defaultValue", `String "\"s\"");
+                                            ];
+                                        ] );
+                                  ];
+                              ] );
+                        ] );
+                  ] );
+            ]) );
     ( "__type",
       `Quick,
       fun () ->

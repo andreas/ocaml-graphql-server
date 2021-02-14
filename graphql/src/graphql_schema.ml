@@ -167,6 +167,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
           doc : string option;
           typ : 'a option arg_typ;
           default : 'a;
+          default_value : Graphql_parser.const_value;
         }
           -> 'a arg
 
@@ -174,23 +175,13 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | [] : ('a, 'a) arg_list
       | ( :: ) : 'a arg * ('b, 'c) arg_list -> ('b, 'a -> 'c) arg_list
 
-    let arg ?doc name ~typ = Arg { name; doc; typ }
-
-    let arg' ?doc name ~typ ~default = DefaultArg { name; doc; typ; default }
-
-    let scalar ?doc name ~coerce = Scalar { name; doc; coerce }
-
-    let enum ?doc name ~values = Enum { name; doc; values }
-
-    let obj ?doc name ~fields ~coerce = Object { name; doc; fields; coerce }
-
     let rec string_of_const_value : Graphql_parser.const_value -> string =
       function
-      | `Null -> "null"
-      | `Int i -> string_of_int i
-      | `Float f -> string_of_float f
-      | `String s -> Printf.sprintf "\"%s\"" s
-      | `Bool b -> string_of_bool b
+      | `Null -> Yojson.Basic.to_string `Null
+      | `Int i -> Yojson.Basic.to_string (`Int i)
+      | `Float f -> Yojson.Basic.to_string (`Float f)
+      | `String s -> Yojson.Basic.to_string (`String s)
+      | `Bool b -> Yojson.Basic.to_string (`Bool b)
       | `Enum e -> e
       | `List l ->
           let values = List.map (fun i -> string_of_const_value i) l in
@@ -401,6 +392,37 @@ module Make (Io : IO) (Field_error : Field_error) = struct
               Error
                 (Printf.sprintf "Expected enum for argument `%s` on field `%s`"
                    arg_name field_name) )
+
+    let arg ?doc name ~typ = Arg { name; doc; typ }
+
+    let arg' ?doc name ~typ ~default =
+      DefaultArg
+        {
+          name;
+          doc;
+          typ;
+          default_value = default;
+          default =
+            ( match
+                eval_arg StringMap.empty ~field_name:"" ~arg_name:name typ
+                  (Some default)
+              with
+            | Ok (Some v) -> v
+            | Ok None | Error _ ->
+                raise
+                  (Failure
+                     (Printf.sprintf
+                        "Invalid default provided for arg name=%s, default=%s"
+                        name
+                        (string_of_const_value default))) );
+        }
+
+    let scalar ?doc name ~coerce = Scalar { name; doc; coerce }
+
+    let enum ?doc name ~values = Enum { name; doc; values }
+
+    let obj ?doc name ~fields ~coerce = Object { name; doc; fields; coerce }
+
   end
 
   (* Schema data types *)
@@ -922,7 +944,10 @@ module Make (Io : IO) (Field_error : Field_error) = struct
                     typ = string;
                     args = Arg.[];
                     lift = Io.ok;
-                    resolve = (fun _ (AnyArg _) -> None);
+                    resolve = (fun _ (AnyArg arg) ->
+                        match arg with
+                        | Arg.DefaultArg a -> Some (Arg.string_of_const_value a.default_value)
+                        | Arg.Arg _ -> None);
                   };
               ];
         }
