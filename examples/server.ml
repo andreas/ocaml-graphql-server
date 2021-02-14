@@ -86,7 +86,7 @@ let schema =
                           ~coerce:(fun greeting name -> (greeting, name))
                           ~fields:
                             [
-                              arg' "greeting" ~typ:string ~default:"hello";
+                              arg' "greeting" ~typ:string ~default:(`String "hello");
                               arg "name" ~typ:(non_null string);
                             ]));
               ]
@@ -96,7 +96,7 @@ let schema =
       ~subscriptions:
         [
           subscription_field "subscribe_to_user" ~typ:(non_null user)
-            ~args:Arg.[ arg' "intarg" ~typ:int ~default:42 ]
+            ~args:Arg.[ arg' "intarg" ~typ:int ~default:(`Int 42) ]
             ~resolve:(fun _info _intarg ->
               let user_stream, push_to_user_stream = Lwt_stream.create () in
               let destroy_stream () = push_to_user_stream None in

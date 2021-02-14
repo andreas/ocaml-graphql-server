@@ -133,4 +133,25 @@ let suite : (string * [> `Quick ] * (unit -> unit)) list =
         let query = "{ sum_defaults }" in
         test_query query
           (`Assoc [ ("data", `Assoc [ ("sum_defaults", `Int 45) ]) ]) );
+    ( "run-time error for invalid default arguments",
+      `Quick,
+      fun () ->
+        let res =
+          try
+            let _schema =
+              Graphql.Schema.(
+                schema [
+                  field
+                    "field"
+                    ~typ:(non_null int)
+                    ~args:Arg.[arg' "arg" ~typ:int ~default:(`String "1")]
+                    ~resolve:(fun _ () i -> i);
+                  ]
+              ) in
+            Error ()
+          with
+            Failure _ ->
+            Ok () in
+          Alcotest.(check (result unit unit)) "did not catch invalid default arg" (Ok ()) res;
+    )
   ]

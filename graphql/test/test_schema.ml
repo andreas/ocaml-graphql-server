@@ -72,9 +72,9 @@ let schema =
             ~args:
               Arg.
                 [
-                  arg' "error" ~typ:bool ~default:false;
-                  arg' "raise" ~typ:bool ~default:false;
-                  arg' "first" ~typ:int ~default:1;
+                  arg' "error" ~typ:bool ~default:(`Bool false);
+                  arg' "raise" ~typ:bool ~default:(`Bool false);
+                  arg' "first" ~typ:int ~default:(`Int 1);
                 ]
             ~resolve:(fun _ return_error raise_in_stream first ->
               if return_error then Error "stream error"
