@@ -329,6 +329,18 @@ let suite =
             match Graphql.Schema.execute Test_schema.schema () doc with
             | Ok _ -> ()
             | Error err -> failwith (Yojson.Basic.pretty_to_string err) ) );
+
+    ( "recursive schema",
+      `Quick,
+      fun () ->
+        let query = "query a { tree { children { element } } }" in
+        test_query query
+          (`Assoc
+            [
+              ( "data",
+                  `Assoc [ ("tree", `Assoc [ "children", `List [
+                    `Assoc ["element", `Int 1] ] ]) ]); ]));
+
     ( "subscription",
       `Quick,
       fun () ->

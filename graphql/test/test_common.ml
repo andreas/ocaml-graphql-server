@@ -2,8 +2,7 @@ let yojson =
   ( module struct
     type t = Yojson.Basic.json
 
-    let pp formatter t =
-      Format.pp_print_text formatter (Yojson.Basic.pretty_to_string t)
+    let pp = Yojson.Basic.pretty_print ?std:None
 
     let equal = ( = )
   end : Alcotest.TESTABLE

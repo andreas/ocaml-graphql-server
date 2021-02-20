@@ -70,6 +70,14 @@ module type Schema = sig
     ('ctx, unit) field list ->
     'ctx schema
 
+  type ('ctx, 'src,'a) recursive = {
+    obj: ?doc:string -> string ->
+      fields:('a -> ('ctx, 'src) field list) ->
+    ('ctx, 'src option) typ
+  }
+
+  val fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a
+
   type deprecated = NotDeprecated | Deprecated of string option
 
   val enum_value :
@@ -82,7 +90,7 @@ module type Schema = sig
   val obj :
     ?doc:string ->
     string ->
-    fields:(('ctx, 'src option) typ -> ('ctx, 'src) field list) ->
+    fields:('ctx, 'src) field list ->
     ('ctx, 'src option) typ
 
   module Arg : sig
@@ -102,6 +110,17 @@ module type Schema = sig
       typ:'a option arg_typ ->
       default:Graphql_parser.const_value ->
       'a arg
+
+    type ('t, 'args,'a) recursive = {
+      obj
+        : ?doc:string
+        -> string
+        -> fields:('a -> ('t, 'args) arg_list)
+        -> coerce:'args
+        -> 't option arg_typ
+    }
+
+    val fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a
 
     val scalar :
       ?doc:string ->

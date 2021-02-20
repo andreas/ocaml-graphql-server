@@ -175,6 +175,26 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | [] : ('a, 'a) arg_list
       | ( :: ) : 'a arg * ('b, 'c) arg_list -> ('b, 'a -> 'c) arg_list
 
+    type ('t, 'args,'a) recursive = {
+      obj
+        : ?doc:string
+        -> string
+        -> fields:('a -> ('t, 'args) arg_list)
+        -> coerce:'args
+        -> 't option arg_typ
+    }
+
+    let obj ?doc name ~fields ~coerce =
+      Object { name; doc; fields; coerce }
+
+    let fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a = fun f ->
+      let rec recursive = {
+        obj = fun ?doc name ~fields ->
+          obj ?doc name ~fields:(lazy (fields (Lazy.force r)))
+      }
+      and r = lazy (f recursive)
+      in Lazy.force r
+
     let rec string_of_const_value : Graphql_parser.const_value -> string =
       function
       | `Null -> Yojson.Basic.to_string `Null
@@ -421,8 +441,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
 
     let enum ?doc name ~values = Enum { name; doc; values }
 
-    let obj ?doc name ~fields ~coerce = Object { name; doc; fields; coerce }
-
+    let obj ?doc name ~fields ~coerce =
+      obj ?doc name ~fields:(lazy fields) ~coerce
   end
 
   (* Schema data types *)
@@ -528,6 +548,23 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       }
         -> directive
 
+  type ('ctx, 'src,'a) recursive = {
+    obj: ?doc:string -> string ->
+      fields:('a -> ('ctx, 'src) field list) ->
+    ('ctx, 'src option) typ
+  }
+
+  let obj ?doc name ~fields =
+    Object { name; doc; fields; abstracts = ref [] }
+
+  let fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a = fun f ->
+    let rec recursive = {
+      obj = fun ?doc name ~fields ->
+        obj ?doc name ~fields:( lazy (fields (Lazy.force r)))
+    }
+    and r = lazy (f recursive)
+    in Lazy.force r
+
   type 'ctx schema = {
     query : ('ctx, unit) obj;
     mutation : ('ctx, unit) obj option;
@@ -559,11 +596,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     }
 
   (* Constructor functions *)
-  let obj ?doc name ~fields =
-    let rec o =
-      Object { name; doc; fields = lazy (fields o); abstracts = ref [] }
-    in
-    o
+  let obj ?doc name ~fields = obj ?doc name ~fields:(lazy fields)
 
   let field ?doc ?(deprecated = NotDeprecated) name ~typ ~args ~resolve =
     Field { name; doc; deprecated; typ; args; resolve; lift = Io.ok }
