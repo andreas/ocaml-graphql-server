@@ -175,19 +175,19 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | [] : ('a, 'a) arg_list
       | ( :: ) : 'a arg * ('b, 'c) arg_list -> ('b, 'a -> 'c) arg_list
 
-    type ('t, 'args,'a) recursive = {
-      obj
-        : ?doc:string
-        -> string
-        -> fields:('a -> ('t, 'args) arg_list)
-        -> coerce:'args
-        -> 't option arg_typ
+    type 'a fixpoint = {
+      obj: 'src 't 'args.
+          ?doc:string
+          -> string
+          -> fields:('a -> ('t, 'args) arg_list)
+          -> coerce:'args
+          -> 't option arg_typ
     }
 
     let obj ?doc name ~fields ~coerce =
       Object { name; doc; fields; coerce }
 
-    let fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a = fun f ->
+    let fix : ('a fixpoint -> 'a) -> 'a = fun f ->
       let rec recursive = {
         obj = fun ?doc name ~fields ->
           obj ?doc name ~fields:(lazy (fields (Lazy.force r)))
@@ -549,19 +549,38 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       }
         -> directive
 
-  type ('ctx, 'src,'a) recursive = {
-    obj: ?doc:string -> string ->
+  type 'a fixpoint = {
+    obj: 'ctx 'src 'typ 'b. ?doc:string -> string ->
       fields:('a -> ('ctx, 'src) field list) ->
-    ('ctx, 'src option) typ
+      ('ctx, 'src option) typ;
+
+    union : 'ctx. ?doc:string -> string -> ('ctx, 'a) abstract_typ;
+
+    interface : 'ctx 'src. ?doc:string -> string ->
+      fields:('a -> abstract_field list) ->
+      ('ctx, 'src) abstract_typ
   }
 
   let obj ?doc name ~fields =
     Object { name; doc; fields; abstracts = ref [] }
 
-  let fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a = fun f ->
+  let union ?doc name = Abstract { name; doc; types = []; kind = `Union }
+
+  let interface ?doc name ~fields =
+    let rec i =
+      Abstract { name; doc; types = []; kind = `Interface (lazy (fields i)) }
+    in
+    i
+
+  let fix f =
     let rec recursive = {
-      obj = fun ?doc name ~fields ->
-        obj ?doc name ~fields:( lazy (fields (Lazy.force r)))
+      obj = (fun ?doc name ~fields ->
+        obj ?doc name ~fields:( lazy (fields (Lazy.force r))));
+
+      union;
+
+      interface = fun ?doc name ~fields ->
+        Abstract { name; doc; types = []; kind = `Interface (lazy (fields (Lazy.force r))) }
     }
     and r = lazy (f recursive)
     in Lazy.force r
@@ -605,14 +624,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
   let list typ = List typ
 
   let non_null typ = NonNullable typ
-
-  let union ?doc name = Abstract { name; doc; types = []; kind = `Union }
-
-  let interface ?doc name ~fields =
-    let rec i =
-      Abstract { name; doc; types = []; kind = `Interface (lazy (fields i)) }
-    in
-    i
 
   let add_type abstract_typ typ =
     match (abstract_typ, typ) with
