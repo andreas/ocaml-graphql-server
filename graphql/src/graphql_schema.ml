@@ -175,19 +175,19 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | [] : ('a, 'a) arg_list
       | ( :: ) : 'a arg * ('b, 'c) arg_list -> ('b, 'a -> 'c) arg_list
 
-    type ('t, 'args,'a) recursive = {
-      obj
-        : ?doc:string
-        -> string
-        -> fields:('a -> ('t, 'args) arg_list)
-        -> coerce:'args
-        -> 't option arg_typ
+    type 'a fixpoint = {
+      obj: 'src 't 'args.
+          ?doc:string
+          -> string
+          -> fields:('a -> ('t, 'args) arg_list)
+          -> coerce:'args
+          -> 't option arg_typ
     }
 
     let obj ?doc name ~fields ~coerce =
       Object { name; doc; fields; coerce }
 
-    let fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a = fun f ->
+    let fix : ('a fixpoint -> 'a) -> 'a = fun f ->
       let rec recursive = {
         obj = fun ?doc name ~fields ->
           obj ?doc name ~fields:(lazy (fields (Lazy.force r)))
@@ -548,16 +548,16 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       }
         -> directive
 
-  type ('ctx, 'src,'a) recursive = {
-    obj: ?doc:string -> string ->
+  type 'a fixpoint = {
+    obj: 'ctx 'src 'typ 'b. ?doc:string -> string ->
       fields:('a -> ('ctx, 'src) field list) ->
-    ('ctx, 'src option) typ
+     ('ctx, 'src option) typ
   }
 
   let obj ?doc name ~fields =
     Object { name; doc; fields; abstracts = ref [] }
 
-  let fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a = fun f ->
+  let fix f =
     let rec recursive = {
       obj = fun ?doc name ~fields ->
         obj ?doc name ~fields:( lazy (fields (Lazy.force r)))

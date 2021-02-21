@@ -70,13 +70,13 @@ module type Schema = sig
     ('ctx, unit) field list ->
     'ctx schema
 
-  type ('ctx, 'src,'a) recursive = {
-    obj: ?doc:string -> string ->
+  type 'a fixpoint = {
+    obj: 'ctx 'src 'typ 'b. ?doc:string -> string ->
       fields:('a -> ('ctx, 'src) field list) ->
-    ('ctx, 'src option) typ
+     ('ctx, 'src option) typ
   }
 
-  val fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a
+  val fix : ('a fixpoint -> 'a) -> 'a
 
   type deprecated = NotDeprecated | Deprecated of string option
 
@@ -111,16 +111,16 @@ module type Schema = sig
       default:Graphql_parser.const_value ->
       'a arg
 
-    type ('t, 'args,'a) recursive = {
-      obj
-        : ?doc:string
-        -> string
-        -> fields:('a -> ('t, 'args) arg_list)
-        -> coerce:'args
-        -> 't option arg_typ
+    type 'a fixpoint = {
+      obj: 'src 't 'args.
+          ?doc:string
+          -> string
+          -> fields:('a -> ('t, 'args) arg_list)
+          -> coerce:'args
+          -> 't option arg_typ
     }
 
-    val fix : (('ctx, 'src, 'a) recursive -> 'a) -> 'a
+    val fix : ('a fixpoint -> 'a) -> 'a
 
     val scalar :
       ?doc:string ->

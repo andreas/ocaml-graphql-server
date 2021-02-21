@@ -51,7 +51,7 @@ let node, leaf = Schema.(fix (fun (recursive) ->
       field "element"
         ~typ:(non_null int)
         ~args:[]
-        ~resolve:(fun { ctx = () } t -> match t with Node (el, _) | Leaf el -> el)
+        ~resolve:(fun { ctx = () } (t:int) -> t)
     ])
   ))
 
