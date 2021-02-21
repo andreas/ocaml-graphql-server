@@ -70,14 +70,6 @@ module type Schema = sig
     ('ctx, unit) field list ->
     'ctx schema
 
-  type 'a fixpoint = {
-    obj: 'ctx 'src 'typ 'b. ?doc:string -> string ->
-      fields:('a -> ('ctx, 'src) field list) ->
-     ('ctx, 'src option) typ
-  }
-
-  val fix : ('a fixpoint -> 'a) -> 'a
-
   type deprecated = NotDeprecated | Deprecated of string option
 
   val enum_value :
@@ -232,6 +224,20 @@ module type Schema = sig
     ('ctx, 'src option) typ ->
     'src ->
     ('ctx, 'a) abstract_value
+
+  type 'a fixpoint = {
+    obj: 'ctx 'src 'typ 'b. ?doc:string -> string ->
+      fields:('a -> ('ctx, 'src) field list) ->
+      ('ctx, 'src option) typ;
+
+    union : 'ctx. ?doc:string -> string -> ('ctx, 'a) abstract_typ;
+
+    interface : 'ctx 'src. ?doc:string -> string ->
+      fields:('a -> abstract_field list) ->
+      ('ctx, 'src) abstract_typ
+  }
+
+  val fix : ('a fixpoint -> 'a) -> 'a
 
   (** {3 Built-in scalars} *)
 

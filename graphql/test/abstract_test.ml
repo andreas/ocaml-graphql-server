@@ -9,15 +9,15 @@ let meow : cat = { name = "Meow"; kittens = 1 }
 let fido : dog = { name = "Fido"; puppies = 2 }
 
 let cat =
-  Schema.(
-    obj "Cat" ~fields:[
-        field "name" ~typ:(non_null string)
-          ~args:Arg.[]
-          ~resolve:(fun _ (cat : cat) -> cat.name);
+  Schema.(fix (fun fixpoint ->
+    fixpoint.obj "Cat" ~fields:(fun _self -> [
+      field "name" ~typ:(non_null string)
+      ~args:Arg.[]
+      ~resolve:(fun _ (cat : cat) -> cat.name);
         field "kittens" ~typ:(non_null int)
-          ~args:Arg.[]
-          ~resolve:(fun _ (cat : cat) -> cat.kittens);
-      ])
+        ~args:Arg.[]
+        ~resolve:(fun _ (cat : cat) -> cat.kittens);
+        ])))
 
 let dog =
   Schema.(
