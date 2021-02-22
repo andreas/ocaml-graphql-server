@@ -38,8 +38,7 @@ let dog_as_pet = Schema.add_type pet dog
 
 let named : (unit, [ `named ]) Schema.abstract_typ =
   Schema.(
-    interface "Named" ~fields:(fun _ ->
-        [ abstract_field "name" ~typ:(non_null string) ~args:Arg.[] ]))
+    interface "Named" ~fields:[ abstract_field "name" ~typ:(non_null string) ~args:Arg.[] ])
 
 let cat_as_named = Schema.add_type named cat
 

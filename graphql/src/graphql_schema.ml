@@ -443,6 +443,11 @@ module Make (Io : IO) (Field_error : Field_error) = struct
 
     let obj ?doc name ~fields ~coerce =
       obj ?doc name ~fields:(lazy fields) ~coerce
+
+    let force = function
+      | (Object { fields;_ }) ->
+        let _ = Lazy.force fields in ()
+      | _ -> ()
   end
 
   (* Schema data types *)
@@ -567,29 +572,34 @@ module Make (Io : IO) (Field_error : Field_error) = struct
   let union ?doc name = Abstract { name; doc; types = []; kind = `Union }
 
   let interface ?doc name ~fields =
-    let rec i =
-      Abstract { name; doc; types = []; kind = `Interface (lazy (fields i)) }
-    in
-    i
+    Abstract { name; doc; types = []; kind = `Interface fields }
 
   let fix f =
     let rec recursive = {
       obj = (fun ?doc name ~fields ->
-        obj ?doc name ~fields:( lazy (fields (Lazy.force r))));
+        obj ?doc name ~fields:(lazy (fields (Lazy.force r))));
 
       union;
 
       interface = fun ?doc name ~fields ->
-        Abstract { name; doc; types = []; kind = `Interface (lazy (fields (Lazy.force r))) }
+        interface ?doc name ~fields:(lazy (fields (Lazy.force r)))
     }
     and r = lazy (f recursive)
     in Lazy.force r
+
+  let force = function
+    | (Object { fields;_ }) ->
+      let _ = Lazy.force fields in ()
+    | _ -> ()
 
   type 'ctx schema = {
     query : ('ctx, unit) obj;
     mutation : ('ctx, unit) obj option;
     subscription : 'ctx subscription_obj option;
   }
+
+  let interface ?doc name ~fields =
+    interface ?doc name ~fields:(lazy fields)
 
   (* Constructor functions *)
   let obj ?doc name ~fields = obj ?doc name ~fields:(lazy fields)

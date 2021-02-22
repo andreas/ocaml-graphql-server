@@ -144,6 +144,8 @@ module type Schema = sig
     val list : 'a arg_typ -> 'a list option arg_typ
 
     val non_null : 'a option arg_typ -> 'a arg_typ
+
+    val force: 'a option arg_typ -> unit
   end
 
   type variable_map = Graphql_parser.const_value StringMap.t
@@ -217,8 +219,10 @@ module type Schema = sig
   val interface :
     ?doc:string ->
     string ->
-    fields:(('ctx, 'a) abstract_typ -> abstract_field list) ->
+    fields:abstract_field list ->
     ('ctx, 'a) abstract_typ
+
+  val force : ('a, 'b option) typ -> unit
 
   val add_type :
     ('ctx, 'a) abstract_typ ->
