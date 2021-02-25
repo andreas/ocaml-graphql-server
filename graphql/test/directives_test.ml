@@ -139,4 +139,24 @@ let suite =
                           ] );
                     ] );
               ]) );
+
+      ( "directives + fragment spread",
+        `Quick,
+        fun () ->
+          let query = "query Q { users { name ...F @include(if: false) } } fragment F on user { id } " in
+          test_query query
+            (`Assoc
+              [
+                ( "data",
+                  `Assoc
+                    [
+                      ( "users",
+                        `List
+                          [
+                            `Assoc [ ("name", `String "Alice") ];
+                            `Assoc [ ("name", `String "Bob") ];
+                            `Assoc [ ("name", `String "Charlie") ];
+                          ] );
+                    ] );
+              ]) );
   ]

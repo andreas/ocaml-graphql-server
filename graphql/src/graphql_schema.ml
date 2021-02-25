@@ -1647,9 +1647,9 @@ module Make (Io : IO) (Field_error : Field_error) = struct
             if include_field then [ field ] else []
         | Graphql_parser.FragmentSpread spread -> (
             match StringMap.find spread.name ctx.fragments with
-            | Some { directives; type_condition; selection_set; _ }
+            | Some { type_condition; selection_set; _ }
               when matches_type_condition type_condition obj ->
-                should_include_field ctx directives >>= fun include_field ->
+                should_include_field ctx spread.directives >>= fun include_field ->
                 if include_field then collect_fields ctx obj selection_set
                 else Ok []
             | _ -> Ok [] )
