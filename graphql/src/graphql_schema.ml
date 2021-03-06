@@ -553,8 +553,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       fields:('a -> ('ctx, 'src) field list) ->
       ('ctx, 'src option) typ;
 
-    union : 'ctx. ?doc:string -> string -> ('ctx, 'a) abstract_typ;
-
     interface : 'ctx 'src. ?doc:string -> string ->
       fields:('a -> abstract_field list) ->
       ('ctx, 'src) abstract_typ
@@ -575,8 +573,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     let rec recursive = {
       obj = (fun ?doc name ~fields ->
         obj ?doc name ~fields:( lazy (fields (Lazy.force r))));
-
-      union;
 
       interface = fun ?doc name ~fields ->
         Abstract { name; doc; types = []; kind = `Interface (lazy (fields (Lazy.force r))) }

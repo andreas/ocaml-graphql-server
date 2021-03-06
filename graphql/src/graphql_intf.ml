@@ -230,8 +230,6 @@ module type Schema = sig
       fields:('a -> ('ctx, 'src) field list) ->
       ('ctx, 'src option) typ;
 
-    union : 'ctx. ?doc:string -> string -> ('ctx, 'a) abstract_typ;
-
     interface : 'ctx 'src. ?doc:string -> string ->
       fields:('a -> abstract_field list) ->
       ('ctx, 'src) abstract_typ
