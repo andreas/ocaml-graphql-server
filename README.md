@@ -77,7 +77,7 @@ let role = Schema.(enum "role"
 
 let user = Schema.(obj "user"
   ~doc:"A user in the system"
-  ~fields:(fun _ -> [
+  ~fields:[
     field "id"
       ~doc:"Unique user identifier"
       ~typ:(non_null int)
@@ -93,7 +93,7 @@ let user = Schema.(obj "user"
       ~typ:(non_null role)
       ~args:Arg.[]
       ~resolve:(fun info p -> p.role)
-  ])
+  ]
 )
 
 let schema = Schema.(schema [
@@ -126,11 +126,12 @@ match Graphql_parser.parse "{ users(limit: $x) { name } }" with
     failwith err
 ```
 
-### Self-Recursive Objects
+### Recursive Objects
 
-To allow defining an object that refers to itself, the type itself is provided as argument to the `~fields` function. Example:
+The function `Schema.fix` can be used to define both self-recursive and mutually recursive objects:
 
 ```ocaml
+(* self-recursive *)
 type tweet = {
   id : int;
   replies : tweet list;
@@ -151,11 +152,8 @@ let tweet = Schema.(fix (fun recursive ->
     ])))
 ```
 
-### Mutually Recursive Objects
-
-Mutually recursive objects can be defined using `let rec` and `lazy`:
-
 ```ocaml
+(* mutually recursive *)
 let foo, bar = Schema.(fix (fun recursive ->
   let foo = recursive.obj "foo" ~fields:(fun (_, bar) -> [
       field "bar"
