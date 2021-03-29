@@ -62,12 +62,11 @@ let suite =
       fun () ->
         let obj_with_non_nullable_field =
           Schema.(
-            obj "obj" ~fields:(fun _ ->
-                [
-                  io_field "non_nullable" ~typ:(non_null int)
-                    ~args:Arg.[]
-                    ~resolve:(fun _ () -> Error "boom");
-                ]))
+            obj "obj" ~fields: [
+                io_field "non_nullable" ~typ:(non_null int)
+                  ~args:Arg.[]
+                  ~resolve:(fun _ () -> Error "boom");
+              ])
         in
         let schema =
           Schema.(
@@ -100,13 +99,12 @@ let suite =
       fun () ->
         let foo =
           Schema.(
-            obj "Foo" ~fields:(fun _ ->
-                [
-                  io_field "id" ~typ:int
-                    ~args:Arg.[]
-                    ~resolve:(fun _ (id, should_fail) ->
-                      if should_fail then Error "boom" else Ok (Some id));
-                ]))
+            obj "Foo" ~fields:[
+                io_field "id" ~typ:int
+                  ~args:Arg.[]
+                  ~resolve:(fun _ (id, should_fail) ->
+                    if should_fail then Error "boom" else Ok (Some id));
+              ])
         in
         let schema =
           Schema.(

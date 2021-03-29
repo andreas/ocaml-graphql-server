@@ -142,7 +142,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | Object : {
           name : string;
           doc : string option;
-          fields : ('a, 'b) arg_list;
+          fields : ('a, 'b) arg_list Lazy.t;
           coerce : 'b;
         }
           -> 'a option arg_typ
@@ -174,6 +174,26 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     and (_, _) arg_list =
       | [] : ('a, 'a) arg_list
       | ( :: ) : 'a arg * ('b, 'c) arg_list -> ('b, 'a -> 'c) arg_list
+
+    type 'a fixpoint = {
+      obj: 'src 't 'args.
+          ?doc:string
+          -> string
+          -> fields:('a -> ('t, 'args) arg_list)
+          -> coerce:'args
+          -> 't option arg_typ
+    }
+
+    let obj ?doc name ~fields ~coerce =
+      Object { name; doc; fields; coerce }
+
+    let fix : ('a fixpoint -> 'a) -> 'a = fun f ->
+      let rec recursive = {
+        obj = fun ?doc name ~fields ->
+          obj ?doc name ~fields:(lazy (fields (Lazy.force r)))
+      }
+      and r = lazy (f recursive)
+      in Lazy.force r
 
     let rec string_of_const_value : Graphql_parser.const_value -> string =
       function
@@ -350,7 +370,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
           match value with
           | `Assoc props ->
               let props' = (props :> (string * Graphql_parser.value) list) in
-              eval_arglist variable_map ?field_type ~field_name o.fields props'
+              eval_arglist variable_map ?field_type ~field_name (Lazy.force o.fields) props'
                 o.coerce
               >>| fun coerced -> Some coerced
           | _ ->
@@ -421,8 +441,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
 
     let enum ?doc name ~values = Enum { name; doc; values }
 
-    let obj ?doc name ~fields ~coerce = Object { name; doc; fields; coerce }
-
+    let obj ?doc name ~fields ~coerce =
+      obj ?doc name ~fields:(lazy fields) ~coerce
   end
 
   (* Schema data types *)
@@ -528,6 +548,38 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       }
         -> directive
 
+  type 'a fixpoint = {
+    obj: 'ctx 'src 'typ 'b. ?doc:string -> string ->
+      fields:('a -> ('ctx, 'src) field list) ->
+      ('ctx, 'src option) typ;
+
+    interface : 'ctx 'src. ?doc:string -> string ->
+      fields:('a -> abstract_field list) ->
+      ('ctx, 'src) abstract_typ
+  }
+
+  let obj ?doc name ~fields =
+    Object { name; doc; fields; abstracts = ref [] }
+
+  let union ?doc name = Abstract { name; doc; types = []; kind = `Union }
+
+  let interface ?doc name ~fields =
+    let rec i =
+      Abstract { name; doc; types = []; kind = `Interface (lazy (fields i)) }
+    in
+    i
+
+  let fix f =
+    let rec recursive = {
+      obj = (fun ?doc name ~fields ->
+        obj ?doc name ~fields:( lazy (fields (Lazy.force r))));
+
+      interface = fun ?doc name ~fields ->
+        Abstract { name; doc; types = []; kind = `Interface (lazy (fields (Lazy.force r))) }
+    }
+    and r = lazy (f recursive)
+    in Lazy.force r
+
   type 'ctx schema = {
     query : ('ctx, unit) obj;
     mutation : ('ctx, unit) obj option;
@@ -559,11 +611,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     }
 
   (* Constructor functions *)
-  let obj ?doc name ~fields =
-    let rec o =
-      Object { name; doc; fields = lazy (fields o); abstracts = ref [] }
-    in
-    o
+  let obj ?doc name ~fields = obj ?doc name ~fields:(lazy fields)
 
   let field ?doc ?(deprecated = NotDeprecated) name ~typ ~args ~resolve =
     Field { name; doc; deprecated; typ; args; resolve; lift = Io.ok }
@@ -595,14 +643,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
   let list typ = List typ
 
   let non_null typ = NonNullable typ
-
-  let union ?doc name = Abstract { name; doc; types = []; kind = `Union }
-
-  let interface ?doc name ~fields =
-    let rec i =
-      Abstract { name; doc; types = []; kind = `Interface (lazy (fields i)) }
-    in
-    i
 
   let add_type abstract_typ typ =
     match (abstract_typ, typ) with
@@ -745,7 +785,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
               let memo' =
                 (AnyArgTyp obj :: result, StringSet.add o.name visited)
               in
-              arg_list_types memo' o.fields)
+              arg_list_types memo' (Lazy.force o.fields))
 
     and arg_list_types :
         type a b.
@@ -1071,7 +1111,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
                                  (fun (AbstractField f) -> AnyField f)
                                  (Lazy.force fields))
                         | AnyArgTyp (Arg.Object o) ->
-                            let arg_list = args_to_list o.fields in
+                            let arg_list = args_to_list (Lazy.force o.fields) in
                             Some
                               (List.map
                                  (fun (AnyArg f) -> AnyArgField f)
@@ -1147,7 +1187,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
                       (fun _ t ->
                         match t with
                         | AnyArgTyp (Arg.Object o) ->
-                            Some (args_to_list o.fields)
+                            Some (args_to_list (Lazy.force o.fields))
                         | _ -> None);
                   };
                 Field
