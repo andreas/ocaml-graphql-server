@@ -1,0 +1,31 @@
+name: CI
+on: [push]
+jobs:
+  run:
+    name: Tests
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      matrix:
+        operating-system: [ubuntu-latest]
+        ocaml-version: [ '4.04.2', '4.05.0', '4.06.1', '4.07.1'
+                       , '4.08.1', '4.09.1', '4.10.1', '4.11.2', '4.12.0']
+    steps:
+    - uses: actions/checkout@master
+    - uses: ocaml/setup-ocaml@v1.1.11
+      with:
+        ocaml-version: ${{ matrix.ocaml-version }}
+    - run: |
+        opam pin add graphql_parser.dev -n .
+        opam pin add graphql.dev -n .
+        opam pin add graphql-async.dev -n .
+        opam pin add graphql-lwt.dev -n .
+        opam pin add graphql-cohttp.dev -n .
+    - name: Packages
+      run: |
+        opam depext -yt graphql_parser graphql graphql-lwt \
+                        graphql-async graphql-cohttp
+
+    - name: Dependencies
+      run: opam install -t . --deps-only
+    - name: Build
+      run: opam exec -- dune build @all
