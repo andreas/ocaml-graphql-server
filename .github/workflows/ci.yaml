@@ -6,7 +6,7 @@ jobs:
     runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:
-        operating-system: [ubuntu-latest]
+        operating-system: [ubuntu-18.04]
         ocaml-version: [ '4.04.2', '4.05.0', '4.06.1', '4.07.1'
                        , '4.08.1', '4.09.1', '4.10.1', '4.11.2', '4.12.0']
     steps:
@@ -22,7 +22,7 @@ jobs:
         opam pin add graphql-cohttp.dev -n .
     - name: Packages
       run: |
-        opam depext -yt graphql_parser graphql graphql-lwt \
+        OPAMSOLVERTIMEOUT=120 opam depext -yt graphql_parser graphql graphql-lwt \
                         graphql-async graphql-cohttp
 
     - name: Dependencies
