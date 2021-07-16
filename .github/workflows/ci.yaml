@@ -22,10 +22,10 @@ jobs:
         opam pin add graphql-cohttp.dev -n .
     - name: Packages
       run: |
-        OPAMSOLVERTIMEOUT=120 opam depext -yt graphql_parser graphql graphql-lwt \
+        OPAMSOLVERTIMEOUT=720 opam depext -yt graphql_parser graphql graphql-lwt \
                         graphql-async graphql-cohttp
 
     - name: Dependencies
-      run: opam install -t . --deps-only
+      run: OPAMSOLVERTIMEOUT=720  opam install --deps-only . -td
     - name: Build
-      run: opam exec -- dune build @all
+      run: opam exec -- dune build
