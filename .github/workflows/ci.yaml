@@ -22,7 +22,7 @@ jobs:
         opam pin add graphql-cohttp.dev -n .
     - name: Packages
       run: |
-        OPAMSOLVERTIMEOUT=720 opam depext -yt graphql_parser graphql graphql-lwt \
+        OPAMSOLVERTIMEOUT=1440 opam depext -yt graphql_parser graphql graphql-lwt \
                         graphql-async graphql-cohttp
 
     - name: Dependencies
