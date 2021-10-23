@@ -77,7 +77,7 @@ let role = Schema.(enum "role"
 
 let user = Schema.(obj "user"
   ~doc:"A user in the system"
-  ~fields:(fun _ -> [
+  ~fields:[
     field "id"
       ~doc:"Unique user identifier"
       ~typ:(non_null int)
@@ -93,7 +93,7 @@ let user = Schema.(obj "user"
       ~typ:(non_null role)
       ~args:Arg.[]
       ~resolve:(fun info p -> p.role)
-  ])
+  ]
 )
 
 let schema = Schema.(schema [
@@ -126,50 +126,50 @@ match Graphql_parser.parse "{ users(limit: $x) { name } }" with
     failwith err
 ```
 
-### Self-Recursive Objects
+### Recursive Objects
 
-To allow defining an object that refers to itself, the type itself is provided as argument to the `~fields` function. Example:
+The function `Schema.fix` can be used to define both self-recursive and mutually recursive objects:
 
 ```ocaml
+(* self-recursive *)
 type tweet = {
   id : int;
   replies : tweet list;
 }
 
-let tweet = Schema.(obj "tweet"
-  ~fields:(fun tweet -> [
-    field "id"
-      ~typ:(non_null int)
-      ~args:Arg.[]
-      ~resolve:(fun info t -> t.id)
-    ;
-    field "replies"
-      ~typ:(non_null (list tweet))
-      ~args:Arg.[]
-      ~resolve:(fun info t -> t.replies)
-  ])
-)
+let tweet = Schema.(fix (fun recursive ->
+  recursive.obj "tweet"
+    ~fields:(fun tweet -> [
+      field "id"
+        ~typ:(non_null int)
+        ~args:Arg.[]
+        ~resolve:(fun info t -> t.id)
+        ;
+      field "replies"
+        ~typ:(non_null (list (non_null tweet)))
+        ~args:Arg.[]
+        ~resolve:(fun info t -> t.replies)
+    ])))
 ```
 
-### Mutually Recursive Objects
-
-Mutually recursive objects can be defined using `let rec` and `lazy`:
-
 ```ocaml
-let rec foo = lazy Schema.(obj "foo"
-  ~fields:(fun _ -> [
-    field "bar"
-      ~typ:Lazy.(force bar)
-      ~args.Arg.[]
-      ~resolve:(fun info foo -> foo.bar)
-  ])
-and bar = lazy Schema.(obj "bar"
-  ~fields:(fun _ -> [
+(* mutually recursive *)
+let foo, bar = Schema.(fix (fun recursive ->
+  let foo = recursive.obj "foo" ~fields:(fun (_, bar) -> [
+      field "bar"
+        ~typ:bar
+        ~args:Arg.[]
+        ~resolve:(fun info foo -> foo.bar)
+    ])
+  in
+  let bar = recursive.obj "bar" ~fields:(fun (foo, _) -> [
     field "foo"
-      ~typ:Lazy.(force foo)
-      ~args.Arg.[]
+      ~typ:foo
+      ~args:Arg.[]
       ~resolve:(fun info bar -> bar.foo)
-  ])
+      ])
+  in
+  foo, bar))
 ```
 
 ### Lwt Support
