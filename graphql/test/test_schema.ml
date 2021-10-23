@@ -34,7 +34,7 @@ let user =
 
 type tree = | Node of (int * tree list) | Leaf of int
 
-let node, leaf = Schema.(fix (fun (recursive) ->
+let node, leaf = Schema.(fix (fun recursive ->
   recursive.obj "Node"
     ~fields:(fun (node, _leaf) -> [
       field "children"
