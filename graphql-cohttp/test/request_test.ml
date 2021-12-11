@@ -33,6 +33,9 @@ let json_content_type =
 let graphql_content_type =
   Cohttp.Header.init_with "Content-Type" "application/graphql"
 
+let json_with_charset_content_type =
+  Cohttp.Header.init_with "Content-Type" "application/json ; charset=utf-8"
+
 let default_response_body =
   Yojson.Basic.to_string
     (`Assoc [ ("data", `Assoc [ ("hello", `String "world") ]) ])
@@ -183,6 +186,20 @@ let suite =
         let uri = Uri.with_uri ~query default_uri in
         test_case
           ~req:(Cohttp.Request.make ~meth:`POST ~headers:json_content_type uri)
+          ~req_body
+          ~rsp:(Cohttp.Response.make ~status:`OK ())
+          ~rsp_body:default_response_body );
+    ( "POST with json body including charset in content-type header",
+      `Quick,
+      fun () ->
+        let req_body =
+          Cohttp_lwt.Body.of_string
+            (Yojson.Basic.to_string (`Assoc [ ("query", `String "{ hello }") ]))
+        in
+        test_case
+          ~req:
+            (Cohttp.Request.make ~meth:`POST ~headers:json_with_charset_content_type
+               default_uri)
           ~req_body
           ~rsp:(Cohttp.Response.make ~status:`OK ())
           ~rsp_body:default_response_body );

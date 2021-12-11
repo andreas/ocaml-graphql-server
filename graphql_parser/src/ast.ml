@@ -138,7 +138,7 @@ module Pp = struct
 
   and selection_set fmt =
     omit_empty_list
-      Fmt.(braces (hvbox ~indent:2 (prefix cut (list pp_selection))))
+      Fmt.(braces (hvbox ~indent:2 (cut ++ (list pp_selection))))
       fmt
 
   let rec pp_typ fmt = function
