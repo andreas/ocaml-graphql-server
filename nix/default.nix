@@ -1,8 +1,4 @@
-{ pkgs ? import ./sources.nix { }, doCheck ? true, ocamlVersion ? "4_10" }:
-
-let
-  inherit (pkgs) lib stdenv ocamlPackages;
-in
+{ lib, stdenv, ocamlPackages, doCheck ? true }:
 
 with ocamlPackages;
 
