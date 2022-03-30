@@ -23,7 +23,7 @@ let test_query schema ctx query expected =
            | Ok (`Stream stream) ->
                Async_kernel.Pipe.to_list stream >>| fun lst ->
                `List
-                 Core_kernel.(
+                 Core.(
                    List.map lst ~f:(fun x -> Option.value_exn (Result.ok x)))
            | Error err -> Async_kernel.return err)
           >>| fun result ->
