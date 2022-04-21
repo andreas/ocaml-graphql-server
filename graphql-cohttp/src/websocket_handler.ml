@@ -1,6 +1,6 @@
 module Make
     (IO : Graphql_intf.IO)
-    (Ws : Websocket.Connection.S with type 'a IO.t = 'a IO.t) =
+    (Ws : Graphql_websocket.Connection.S with type 'a IO.t = 'a IO.t) =
 struct
   module Json = Yojson.Basic.Util
 
@@ -61,7 +61,7 @@ struct
 
   (* | Gql_connection_keep_alive -> "ka" *)
 
-  let create_message ?(opcode = Websocket.Frame.Opcode.Text) ?id
+  let create_message ?(opcode = Graphql_websocket.Frame.Opcode.Text) ?id
       ?(payload = `Null) typ =
     let frame_payload =
       `Assoc
@@ -72,13 +72,13 @@ struct
         ]
     in
     let content = Yojson.Basic.to_string frame_payload in
-    Websocket.Frame.create ~opcode ~content ()
+    Graphql_websocket.Frame.create ~opcode ~content ()
 
   let handle_frame t ~execute_query frame =
-    match frame.Websocket.Frame.opcode with
+    match frame.Graphql_websocket.Frame.opcode with
     | Ping | Pong | Close | Ctrl _ | Nonctrl _ -> IO.return ()
     | Continuation | Text | Binary -> (
-        let json = Yojson.Basic.from_string frame.Websocket.Frame.content in
+        let json = Yojson.Basic.from_string frame.Graphql_websocket.Frame.content in
         match client_message_of_payload json with
         | Ok Gql_connection_init ->
             Ws.send t.conn (create_message Gql_connection_ack)
@@ -106,7 +106,7 @@ struct
         | Ok Gql_connection_terminate ->
             Hashtbl.iter (fun _id close -> close ()) t.subscriptions;
             Ws.send t.conn
-              (create_message ~opcode:Websocket.Frame.Opcode.Close
+              (create_message ~opcode:Graphql_websocket.Frame.Opcode.Close
                  Gql_connection_error)
         | Error msg ->
             let id = Json.(json |> member "id" |> to_string) in
