@@ -1,20 +1,19 @@
 open Lwt
 
 let yojson =
-  ( module struct
-    type t = Yojson.Basic.json [@@warning "-3"]
+  (module struct
+    type t = Yojson.Basic.t
 
     let pp formatter t =
       Format.pp_print_text formatter (Yojson.Basic.pretty_to_string t)
 
     let equal = ( = )
   end : Alcotest.TESTABLE
-    with type t = Yojson.Basic.json )
-  [@@warning "-3"]
+    with type t = Yojson.Basic.t)
 
 let test_query schema ctx query expected =
   Lwt_main.run
-    ( match Graphql_parser.parse query with
+    (match Graphql_parser.parse query with
     | Error err -> Lwt.fail_with err
     | Ok doc ->
         (Graphql_lwt.Schema.execute schema ctx doc >>= function
@@ -28,7 +27,7 @@ let test_query schema ctx query expected =
                   lst [])
          | Error err -> Lwt.return err)
         >|= fun result ->
-        Alcotest.check yojson "invalid execution result" expected result )
+        Alcotest.check yojson "invalid execution result" expected result)
 
 let schema =
   Graphql_lwt.Schema.(
@@ -60,8 +59,8 @@ let suite =
           (`Assoc
             [
               ( "data",
-                `Assoc
-                  [ ("direct_string", `String "foo"); ("io_int", `Int 42) ] );
+                `Assoc [ ("direct_string", `String "foo"); ("io_int", `Int 42) ]
+              );
             ]) );
     ( "subscription",
       `Quick,

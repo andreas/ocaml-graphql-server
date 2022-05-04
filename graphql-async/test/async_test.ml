@@ -2,16 +2,15 @@ open Async_kernel
 open Async_unix
 
 let yojson =
-  ( module struct
-    type t = Yojson.Basic.json [@@warning "-3"]
+  (module struct
+    type t = Yojson.Basic.t
 
     let pp formatter t =
       Format.pp_print_text formatter (Yojson.Basic.pretty_to_string t)
 
     let equal = ( = )
   end : Alcotest.TESTABLE
-    with type t = Yojson.Basic.json )
-  [@@warning "-3"]
+    with type t = Yojson.Basic.t)
 
 let test_query schema ctx query expected =
   Thread_safe.block_on_async_exn (fun () ->
@@ -23,7 +22,7 @@ let test_query schema ctx query expected =
            | Ok (`Stream stream) ->
                Async_kernel.Pipe.to_list stream >>| fun lst ->
                `List
-                 Core_kernel.(
+                 Core.(
                    List.map lst ~f:(fun x -> Option.value_exn (Result.ok x)))
            | Error err -> Async_kernel.return err)
           >>| fun result ->
@@ -58,8 +57,8 @@ let suite =
           (`Assoc
             [
               ( "data",
-                `Assoc
-                  [ ("direct_string", `String "foo"); ("io_int", `Int 42) ] );
+                `Assoc [ ("direct_string", `String "foo"); ("io_int", `Int 42) ]
+              );
             ]) );
     ( "subscription",
       `Quick,
