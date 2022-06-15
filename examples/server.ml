@@ -21,8 +21,8 @@ let role =
         ])
 
 let user =
-  Schema.(
-    obj "user" ~fields:(fun user ->
+  Schema.(fix (fun recursive ->
+    recursive.obj "user" ~fields:(fun user ->
         [
           field "id"
             ~args:Arg.[]
@@ -40,7 +40,7 @@ let user =
             ~args:Arg.[]
             ~typ:(list (non_null user))
             ~resolve:(fun _ p -> Some p.friends);
-        ]))
+        ])))
 
 let rec consume_stream stream =
   Lwt.catch
