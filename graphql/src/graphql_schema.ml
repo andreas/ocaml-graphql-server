@@ -54,7 +54,7 @@ module type Field_error = sig
   val message_of_field_error : t -> string
 
   val extensions_of_field_error :
-    t -> ((string * Yojson.Basic.json)[@warning "-3"]) list option
+    t -> (string * Yojson.Basic.t) list option
 end
 
 (* Schema *)
@@ -122,7 +122,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     value : 'a;
   }
 
-  type json = (Yojson.Basic.json[@warning "-3"])
+  type json = Yojson.Basic.t
 
   let enum_value ?doc ?(deprecated = NotDeprecated) name ~value =
     { name; doc; deprecated; value }
