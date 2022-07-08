@@ -1,6 +1,6 @@
 (lang dune 1.11)
 
-(name ocaml-graphql-server)
+(name graphql)
 
 (using menhir 2.0)
 
