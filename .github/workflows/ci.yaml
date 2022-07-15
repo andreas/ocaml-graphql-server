@@ -13,7 +13,7 @@ jobs:
           - ubuntu-latest
           - macos-latest
 
-        ocaml-version:
+        ocaml-compiler:
           - 4.04.x
           - 4.05.x
           - 4.06.x
