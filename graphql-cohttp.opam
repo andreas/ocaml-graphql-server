@@ -17,7 +17,7 @@ depends: [
   "dune" {>= "1.11"}
   "graphql" {>= "0.13.0"}
   "cohttp" {>= "2.0.0"}
-  "crunch"
+  "crunch" {>= "2.0.0"}
   "astring" {>= "0.8.3"}
   "base64" {>= "3.0.0"}
   "ocplib-endian" {>= "1.0"}
