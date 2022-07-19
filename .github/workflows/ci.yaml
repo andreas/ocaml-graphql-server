@@ -14,7 +14,6 @@ jobs:
           - macos-latest
 
         ocaml-compiler:
-          - 4.04.x
           - 4.05.x
           - 4.06.x
           - 4.07.x
