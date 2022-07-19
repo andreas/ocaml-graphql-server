@@ -25,6 +25,7 @@ depends: [
   "alcotest" {with-test}
   "cohttp-lwt-unix" {with-test}
   "graphql-lwt" {with-test}
+  "yojson" {with-test & >= "1.6.0"}
 ]
 
 synopsis: "Run GraphQL servers with `cohttp`"
