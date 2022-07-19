@@ -18,7 +18,7 @@ depends: [
   "menhir" {build & >= "20180523"}
   "alcotest" {with-test & >= "0.8.1"}
   "fmt" {>= "0.8.7"}
-  "re" {>= "1.5.0"}
+  "re" {>= "1.6.0"}
 ]
 
 synopsis: "Library for parsing GraphQL queries"
