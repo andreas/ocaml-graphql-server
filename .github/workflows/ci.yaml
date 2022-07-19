@@ -24,7 +24,7 @@ jobs:
           - 4.12.x
           - 4.13.x
           - 4.14.x
-          - 5.0.x
+          - ocaml-variants.5.00.0+trunk
 
     runs-on: ${{ matrix.os }}
 
