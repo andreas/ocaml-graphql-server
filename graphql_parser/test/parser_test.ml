@@ -8,8 +8,9 @@ let test_query ?expect query =
   match Graphql_parser.parse query with
   | Ok doc ->
       let query' = Fmt.to_to_string Graphql_parser.pp_document doc in
+      let expected_query = match expect with Some query'' -> query'' | None -> query in
       Alcotest.check graphql_query "Parse result"
-        (Option.value ~default:query expect)
+        expected_query
         query'
   | Error err -> Alcotest.failf "Failed to parse %s: %s" query err
 
