@@ -15,7 +15,7 @@ build: [
 depends: [
   "ocaml" {>= "4.03.0"}
   "dune" {>= "1.11"}
-  "menhir" {build}
+  "menhir" {build & >= "20180523"}
   "alcotest" {with-test & >= "0.8.1"}
   "fmt"
   "re" {>= "1.5.0"}
