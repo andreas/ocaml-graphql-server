@@ -3,11 +3,8 @@ module List = struct
   include List
 
   let assoc_exn = assoc
-
   let assoc x ys = try Some (assoc_exn x ys) with Not_found -> None
-
   let find_exn = find
-
   let find cond xs = try Some (find_exn cond xs) with Not_found -> None
 
   module Result = struct
@@ -30,18 +27,14 @@ module type IO = sig
   type +'a t
 
   val return : 'a -> 'a t
-
   val bind : 'a t -> ('a -> 'b t) -> 'b t
 
   module Stream : sig
     type +'a io
-
     type 'a t
 
     val map : 'a t -> ('a -> 'b io) -> 'b t
-
     val iter : 'a t -> ('a -> unit io) -> unit io
-
     val close : 'a t -> unit
   end
   with type 'a io := 'a t
@@ -52,9 +45,7 @@ module type Field_error = sig
   type t
 
   val message_of_field_error : t -> string
-
-  val extensions_of_field_error :
-    t -> ((string * Yojson.Basic.t)) list option
+  val extensions_of_field_error : t -> (string * Yojson.Basic.t) list option
 end
 
 (* Schema *)
@@ -63,9 +54,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     include Io
 
     let map x ~f = bind x (fun x' -> return (f x'))
-
     let ok x = Io.return (Ok x)
-
     let error x = Io.return (Error x)
 
     let rec all = function
@@ -91,7 +80,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
 
     module Infix = struct
       let ( >>| ) x f = map x ~f
-
       let ( >>=? ) = Result.bind
     end
   end
@@ -110,9 +98,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
   module StringSet = Set.Make (String)
 
   type field_error = Field_error.t
-
   type variable_map = Graphql_parser.const_value StringMap.t
-
   type deprecated = NotDeprecated | Deprecated of string option
 
   type 'a enum_value = {
@@ -122,7 +108,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     value : 'a;
   }
 
-  type json = (Yojson.Basic.t)
+  type json = Yojson.Basic.t
 
   let enum_value ?doc ?(deprecated = NotDeprecated) name ~value =
     { name; doc; deprecated; value }
@@ -156,12 +142,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | NonNullable : 'a option arg_typ -> 'a arg_typ
 
     and _ arg =
-      | Arg : {
-          name : string;
-          doc : string option;
-          typ : 'a arg_typ;
-        }
-          -> 'a arg
+      | Arg : { name : string; doc : string option; typ : 'a arg_typ } -> 'a arg
       | DefaultArg : {
           name : string;
           doc : string option;
@@ -176,24 +157,27 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | ( :: ) : 'a arg * ('b, 'c) arg_list -> ('b, 'a -> 'c) arg_list
 
     type 'a fixpoint = {
-      obj: 'src 't 'args.
-          ?doc:string
-          -> string
-          -> fields:('a -> ('t, 'args) arg_list)
-          -> coerce:'args
-          -> 't option arg_typ
+      obj :
+        'src 't 'args.
+        ?doc:string ->
+        string ->
+        fields:('a -> ('t, 'args) arg_list) ->
+        coerce:'args ->
+        't option arg_typ;
     }
 
-    let obj ?doc name ~fields ~coerce =
-      Object { name; doc; fields; coerce }
+    let obj ?doc name ~fields ~coerce = Object { name; doc; fields; coerce }
 
-    let fix : ('a fixpoint -> 'a) -> 'a = fun f ->
-      let rec recursive = {
-        obj = fun ?doc name ~fields ->
-          obj ?doc name ~fields:(lazy (fields (Lazy.force r)))
-      }
-      and r = lazy (f recursive)
-      in Lazy.force r
+    let fix : ('a fixpoint -> 'a) -> 'a =
+     fun f ->
+      let rec recursive =
+        {
+          obj =
+            (fun ?doc name ~fields ->
+              obj ?doc name ~fields:(lazy (fields (Lazy.force r))));
+        }
+      and r = lazy (f recursive) in
+      Lazy.force r
 
     let rec string_of_const_value : Graphql_parser.const_value -> string =
       function
@@ -284,7 +268,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
         }
 
     let non_null typ = NonNullable typ
-
     let list typ = List typ
 
     let rec value_to_const_value variable_map = function
@@ -294,7 +277,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | `String _ as s -> s
       | `Bool _ as b -> b
       | `Enum _ as e -> e
-      | `Variable v -> Option.value ~default:`Null (StringMap.find v variable_map)
+      | `Variable v ->
+          Option.value ~default:`Null (StringMap.find v variable_map)
       | `List xs -> `List (List.map (value_to_const_value variable_map) xs)
       | `Assoc props ->
           let props' =
@@ -321,8 +305,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
           let arglist'' =
             Arg { name = arg.name; doc = arg.doc; typ = arg.typ } :: arglist'
           in
-          eval_arglist variable_map ?field_type ~field_name arglist''
-            key_values (function
+          eval_arglist variable_map ?field_type ~field_name arglist'' key_values
+            (function
             | None -> f arg.default
             | Some value -> f value)
       | Arg arg :: arglist' ->
@@ -333,8 +317,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
           eval_arg variable_map ?field_type ~field_name ~arg_name:arg.name
             arg.typ const_value
           >>= fun coerced ->
-          eval_arglist variable_map ?field_type ~field_name arglist'
-            key_values (f coerced)
+          eval_arglist variable_map ?field_type ~field_name arglist' key_values
+            (f coerced)
 
     and eval_arg :
         type a.
@@ -365,18 +349,18 @@ module Make (Io : IO) (Field_error : Field_error) = struct
           | Error _ ->
               Error
                 (eval_arg_error ?field_type ~field_name ~arg_name typ
-                   (Some value)) )
+                   (Some value)))
       | Object o, Some value -> (
           match value with
           | `Assoc props ->
               let props' = (props :> (string * Graphql_parser.value) list) in
-              eval_arglist variable_map ?field_type ~field_name (Lazy.force o.fields) props'
-                o.coerce
+              eval_arglist variable_map ?field_type ~field_name
+                (Lazy.force o.fields) props' o.coerce
               >>| fun coerced -> Some coerced
           | _ ->
               Error
                 (eval_arg_error ?field_type ~field_name ~arg_name typ
-                   (Some value)) )
+                   (Some value)))
       | List typ, Some value -> (
           match value with
           | `List values ->
@@ -388,14 +372,13 @@ module Make (Io : IO) (Field_error : Field_error) = struct
           | value ->
               eval_arg variable_map ?field_type ~field_name ~arg_name typ
                 (Some value)
-              >>| fun coerced -> (Some [ coerced ] : a) )
+              >>| fun coerced : a -> Some [ coerced ])
       | NonNullable typ, value -> (
           eval_arg variable_map ?field_type ~field_name ~arg_name typ value
           >>= function
           | Some value -> Ok value
           | None ->
-              Error (eval_arg_error ?field_type ~field_name ~arg_name typ None)
-          )
+              Error (eval_arg_error ?field_type ~field_name ~arg_name typ None))
       | Enum e, Some value -> (
           match value with
           | `Enum v | `String v -> (
@@ -407,11 +390,11 @@ module Make (Io : IO) (Field_error : Field_error) = struct
                   Error
                     (Printf.sprintf
                        "Invalid enum value for argument `%s` on field `%s`"
-                       arg_name field_name) )
+                       arg_name field_name))
           | _ ->
               Error
                 (Printf.sprintf "Expected enum for argument `%s` on field `%s`"
-                   arg_name field_name) )
+                   arg_name field_name))
 
     let arg ?doc name ~typ = Arg { name; doc; typ }
 
@@ -423,10 +406,10 @@ module Make (Io : IO) (Field_error : Field_error) = struct
           typ;
           default_value = default;
           default =
-            ( match
-                eval_arg StringMap.empty ~field_name:"" ~arg_name:name typ
-                  (Some default)
-              with
+            (match
+               eval_arg StringMap.empty ~field_name:"" ~arg_name:name typ
+                 (Some default)
+             with
             | Ok (Some v) -> v
             | Ok None | Error _ ->
                 raise
@@ -434,19 +417,19 @@ module Make (Io : IO) (Field_error : Field_error) = struct
                      (Printf.sprintf
                         "Invalid default provided for arg name=%s, default=%s"
                         name
-                        (string_of_const_value default))) );
+                        (string_of_const_value default))));
         }
 
     let scalar ?doc name ~coerce = Scalar { name; doc; coerce }
-
     let enum ?doc name ~values = Enum { name; doc; values }
 
     let obj ?doc name ~fields ~coerce =
       obj ?doc name ~fields:(lazy fields) ~coerce
 
     let force = function
-      | (Object { fields;_ }) ->
-        let _ = Lazy.force fields in ()
+      | Object { fields; _ } ->
+          let _ = Lazy.force fields in
+          ()
       | _ -> ()
   end
 
@@ -555,41 +538,45 @@ module Make (Io : IO) (Field_error : Field_error) = struct
         -> directive
 
   type 'a fixpoint = {
-    obj: 'ctx 'src 'typ 'b. ?doc:string -> string ->
+    obj :
+      'ctx 'src 'typ 'b.
+      ?doc:string ->
+      string ->
       fields:('a -> ('ctx, 'src) field list) ->
       ('ctx, 'src option) typ;
-
     union : 'ctx. ?doc:string -> string -> ('ctx, 'a) abstract_typ;
-
-    interface : 'ctx 'src. ?doc:string -> string ->
+    interface :
+      'ctx 'src.
+      ?doc:string ->
+      string ->
       fields:('a -> abstract_field list) ->
-      ('ctx, 'src) abstract_typ
+      ('ctx, 'src) abstract_typ;
   }
 
-  let obj ?doc name ~fields =
-    Object { name; doc; fields; abstracts = ref [] }
-
+  let obj ?doc name ~fields = Object { name; doc; fields; abstracts = ref [] }
   let union ?doc name = Abstract { name; doc; types = []; kind = `Union }
 
   let interface ?doc name ~fields =
     Abstract { name; doc; types = []; kind = `Interface fields }
 
   let fix f =
-    let rec recursive = {
-      obj = (fun ?doc name ~fields ->
-        obj ?doc name ~fields:(lazy (fields (Lazy.force r))));
-
-      union;
-
-      interface = fun ?doc name ~fields ->
-        interface ?doc name ~fields:(lazy (fields (Lazy.force r)))
-    }
-    and r = lazy (f recursive)
-    in Lazy.force r
+    let rec recursive =
+      {
+        obj =
+          (fun ?doc name ~fields ->
+            obj ?doc name ~fields:(lazy (fields (Lazy.force r))));
+        union;
+        interface =
+          (fun ?doc name ~fields ->
+            interface ?doc name ~fields:(lazy (fields (Lazy.force r))));
+      }
+    and r = lazy (f recursive) in
+    Lazy.force r
 
   let force = function
-    | (Object { fields;_ }) ->
-      let _ = Lazy.force fields in ()
+    | Object { fields; _ } ->
+        let _ = Lazy.force fields in
+        ()
     | _ -> ()
 
   type 'ctx schema = {
@@ -598,8 +585,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     subscription : 'ctx subscription_obj option;
   }
 
-  let interface ?doc name ~fields =
-    interface ?doc name ~fields:(lazy fields)
+  let interface ?doc name ~fields = interface ?doc name ~fields:(lazy fields)
 
   (* Constructor functions *)
   let obj ?doc name ~fields = obj ?doc name ~fields:(lazy fields)
@@ -628,11 +614,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     SubscriptionField { name; doc; deprecated; typ; args; resolve }
 
   let enum ?doc name ~values = Enum { name; doc; values }
-
   let scalar ?doc name ~coerce = Scalar { name; doc; coerce }
-
   let list typ = List typ
-
   let non_null typ = NonNullable typ
 
   let add_type abstract_typ typ =
@@ -685,8 +668,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
         name = "skip";
         doc =
           Some
-            "Directs the executor to skip this field or fragment when the \
-             `if` argument is true.";
+            "Directs the executor to skip this field or fragment when the `if` \
+             argument is true.";
         locations = [ `Field; `Fragment_spread; `Inline_fragment ];
         args = Arg.[ arg "if" ~doc:"Skipped when true." ~typ:(non_null bool) ];
         resolve = (function true -> `Skip | false -> `Include);
@@ -712,7 +695,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | AnyArgField : _ Arg.arg -> any_field
 
     type any_arg = AnyArg : _ Arg.arg -> any_arg
-
     type any_enum_value = AnyEnumValue : _ enum_value -> any_enum_value
 
     let unless_visited (result, visited) name f =
@@ -998,9 +980,11 @@ module Make (Io : IO) (Field_error : Field_error) = struct
                     typ = string;
                     args = Arg.[];
                     lift = Io.ok;
-                    resolve = (fun _ (AnyArg arg) ->
+                    resolve =
+                      (fun _ (AnyArg arg) ->
                         match arg with
-                        | Arg.DefaultArg a -> Some (Arg.string_of_const_value a.default_value)
+                        | Arg.DefaultArg a ->
+                            Some (Arg.string_of_const_value a.default_value)
                         | Arg.Arg _ -> None);
                   };
               ];
@@ -1295,8 +1279,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
                     resolve =
                       (fun _ f ->
                         match f with
-                        | AnyField
-                            (Field { deprecated = Deprecated reason; _ }) ->
+                        | AnyField (Field { deprecated = Deprecated reason; _ })
+                          ->
                             reason
                         | _ -> None);
                   };
@@ -1559,7 +1543,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
 
   (* Execution *)
   type variables = (string * Graphql_parser.const_value) list
-
   type execution_order = Serial | Parallel
 
   type 'ctx execution_context = {
@@ -1569,7 +1552,6 @@ module Make (Io : IO) (Field_error : Field_error) = struct
   }
 
   type path = [ `String of string | `Int of int ] list
-
   type error = field_error * path
 
   type resolve_error =
@@ -1605,11 +1587,10 @@ module Make (Io : IO) (Field_error : Field_error) = struct
         let err = Format.sprintf "Unknown directive: %s" name in
         Error err
 
-  and eval_directive ctx (Directive { name; args; resolve; _ }) arguments rest
-      =
+  and eval_directive ctx (Directive { name; args; resolve; _ }) arguments rest =
     let open Rresult in
-    Arg.eval_arglist ctx.variables ~field_type:"directive" ~field_name:name
-      args arguments resolve
+    Arg.eval_arglist ctx.variables ~field_type:"directive" ~field_name:name args
+      arguments resolve
     >>= function
     | `Skip -> Ok false
     | `Include -> should_include_field ctx rest
@@ -1649,10 +1630,11 @@ module Make (Io : IO) (Field_error : Field_error) = struct
             match StringMap.find spread.name ctx.fragments with
             | Some { type_condition; selection_set; _ }
               when matches_type_condition type_condition obj ->
-                should_include_field ctx spread.directives >>= fun include_field ->
+                should_include_field ctx spread.directives
+                >>= fun include_field ->
                 if include_field then collect_fields ctx obj selection_set
                 else Ok []
-            | _ -> Ok [] )
+            | _ -> Ok [])
         | Graphql_parser.InlineFragment fragment ->
             let matches_type_condition =
               match fragment.type_condition with
@@ -1686,8 +1668,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       'a option ->
       ('a -> (json * error list, 'b) result Io.t) ->
       (json * error list, 'b) result Io.t =
-   fun src f ->
-    match src with None -> Io.ok (`Null, []) | Some src' -> f src'
+   fun src f -> match src with None -> Io.ok (`Null, []) | Some src' -> f src'
 
   let map_fields_with_order = function
     | Serial -> Io.map_s ~memo:[]
@@ -1704,14 +1685,12 @@ module Make (Io : IO) (Field_error : Field_error) = struct
       | None | Some [] -> []
       | Some extensions -> [ ("extensions", `Assoc extensions) ]
     in
-    ( `Assoc (("message", `String msg) :: List.append props extension_props)
-      : json )
+    (`Assoc (("message", `String msg) :: List.append props extension_props)
+      : json)
 
   let error_response ?data ?path ?extensions msg =
     let errors = ("errors", `List [ error_to_json ?path ?extensions msg ]) in
-    let data =
-      match data with None -> [] | Some data -> [ ("data", data) ]
-    in
+    let data = match data with None -> [] | Some data -> [ ("data", data) ] in
     `Assoc (errors :: data)
 
   let rec present :
@@ -1789,7 +1768,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
         | Error (`Resolve_error err) as error -> (
             match field.typ with
             | NonNullable _ -> error
-            | _ -> Ok ((name, `Null), [ err ]) ) )
+            | _ -> Ok ((name, `Null), [ err ])))
     | Error err -> Io.error (`Argument_error err)
 
   and resolve_fields :
@@ -1839,8 +1818,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
   let to_response = function
     | Ok _ as res -> res
     | Error `No_operation_found -> Error (error_response "No operation found")
-    | Error `Operation_not_found ->
-        Error (error_response "Operation not found")
+    | Error `Operation_not_found -> Error (error_response "Operation not found")
     | Error `Operation_name_required ->
         Error (error_response "Operation name required")
     | Error `Subscriptions_not_configured ->
@@ -1875,8 +1853,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     in
     let resolver = subs_field.resolve resolve_info in
     match
-      Arg.eval_arglist ctx.variables ~field_name:subs_field.name
-        subs_field.args field.arguments resolver
+      Arg.eval_arglist ctx.variables ~field_name:subs_field.name subs_field.args
+        field.arguments resolver
     with
     | Ok result ->
         result
@@ -1905,9 +1883,9 @@ module Make (Io : IO) (Field_error : Field_error) = struct
         Io.return (collect_fields ctx query operation.selection_set)
         |> Io.Result.map_error ~f:(fun e -> `Argument_error e)
         >>=? fun fields ->
-        ( resolve_fields ctx () query fields []
+        (resolve_fields ctx () query fields []
           : (json * error list, resolve_error) result Io.t
-          :> (json * error list, [> execute_error ]) result Io.t )
+          :> (json * error list, [> execute_error ]) result Io.t)
         |> Io.Result.map ~f:(fun data_errs ->
                `Response (data_to_json data_errs))
     | Graphql_parser.Mutation -> (
@@ -1917,11 +1895,11 @@ module Make (Io : IO) (Field_error : Field_error) = struct
             Io.return (collect_fields ctx mut operation.selection_set)
             |> Io.Result.map_error ~f:(fun e -> `Argument_error e)
             >>=? fun fields ->
-            ( resolve_fields ~execution_order:Serial ctx () mut fields []
+            (resolve_fields ~execution_order:Serial ctx () mut fields []
               : (json * error list, resolve_error) result Io.t
-              :> (json * error list, [> execute_error ]) result Io.t )
+              :> (json * error list, [> execute_error ]) result Io.t)
             |> Io.Result.map ~f:(fun data_errs ->
-                   `Response (data_to_json data_errs)) )
+                   `Response (data_to_json data_errs)))
     | Graphql_parser.Subscription -> (
         match schema.subscription with
         | None -> Io.error `Subscriptions_not_configured
@@ -1942,7 +1920,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
                 else
                   match field_from_subscription_object subs field.name with
                   | Some subscription_field ->
-                      ( subscribe ctx subscription_field field
+                      (subscribe ctx subscription_field field
                         : ( (json, json) result Io.Stream.t,
                             resolve_error )
                           result
@@ -1950,24 +1928,25 @@ module Make (Io : IO) (Field_error : Field_error) = struct
                         :> ( (json, json) result Io.Stream.t,
                              [> execute_error ] )
                            result
-                           Io.t )
+                           Io.t)
                       |> Io.Result.map ~f:(fun stream -> `Stream stream)
                   | None ->
                       let err =
                         Printf.sprintf "Field '%s' is not defined on type '%s'"
                           field.name subs.name
                       in
-                      Io.error (`Validation_error err) )
+                      Io.error (`Validation_error err))
             (* see http://facebook.github.io/graphql/June2018/#sec-Response-root-field *)
             | _ ->
                 Io.error
                   (`Validation_error
                     "Subscriptions only allow exactly one selection for the \
-                     operation.") ) )
+                     operation.")))
 
   let collect_fragments doc =
     List.fold_left
-      (fun memo -> function Graphql_parser.Operation _ -> memo
+      (fun memo -> function
+        | Graphql_parser.Operation _ -> memo
         | Graphql_parser.Fragment f -> StringMap.add f.name f memo)
       StringMap.empty doc
 
@@ -2014,7 +1993,8 @@ module Make (Io : IO) (Field_error : Field_error) = struct
 
   let collect_operations doc =
     List.fold_left
-      (fun memo -> function Graphql_parser.Operation op -> op :: memo
+      (fun memo -> function
+        | Graphql_parser.Operation op -> op :: memo
         | Graphql_parser.Fragment _ -> memo)
       [] doc
 
@@ -2027,7 +2007,7 @@ module Make (Io : IO) (Field_error : Field_error) = struct
     | Some name, ops -> (
         try
           Ok (List.find_exn (fun op -> op.Graphql_parser.name = Some name) ops)
-        with Not_found -> Error `Operation_not_found )
+        with Not_found -> Error `Operation_not_found)
 
   let execute schema ctx ?(variables = []) ?operation_name doc =
     let open Io.Infix in

@@ -3,18 +3,14 @@ module type IO = sig
   type +'a t
 
   val return : 'a -> 'a t
-
   val bind : 'a t -> ('a -> 'b t) -> 'b t
 
   module Stream : sig
     type 'a t
-
     type +'a io
 
     val map : 'a t -> ('a -> 'b io) -> 'b t
-
     val iter : 'a t -> ('a -> unit io) -> unit io
-
     val close : 'a t -> unit
   end
   with type 'a io := 'a t
@@ -25,9 +21,7 @@ module type Field_error = sig
   type t
 
   val message_of_field_error : t -> string
-
-  val extensions_of_field_error :
-    t -> ((string * Yojson.Basic.t)) list option
+  val extensions_of_field_error : t -> (string * Yojson.Basic.t) list option
 end
 
 (** GraphQL schema signature *)
@@ -41,7 +35,6 @@ module type Schema = sig
     exception Missing_key of key
 
     val find_exn : key -> 'a t -> 'a
-
     val find : key -> 'a t -> 'a option
   end
 
@@ -50,13 +43,9 @@ module type Schema = sig
   (** {3 Base types } *)
 
   type 'ctx schema
-
   type ('ctx, 'src) field
-
   type 'ctx subscription_field
-
   type ('ctx, 'src) typ
-
   type 'a enum_value
 
   (** {3 Constructors } *)
@@ -73,11 +62,7 @@ module type Schema = sig
   type deprecated = NotDeprecated | Deprecated of string option
 
   val enum_value :
-    ?doc:string ->
-    ?deprecated:deprecated ->
-    string ->
-    value:'a ->
-    'a enum_value
+    ?doc:string -> ?deprecated:deprecated -> string -> value:'a -> 'a enum_value
 
   val obj :
     ?doc:string ->
@@ -87,7 +72,6 @@ module type Schema = sig
 
   module Arg : sig
     type _ arg
-
     type _ arg_typ
 
     type (_, _) arg_list =
@@ -104,12 +88,13 @@ module type Schema = sig
       'a arg
 
     type 'a fixpoint = {
-      obj: 'src 't 'args.
-          ?doc:string
-          -> string
-          -> fields:('a -> ('t, 'args) arg_list)
-          -> coerce:'args
-          -> 't option arg_typ
+      obj :
+        'src 't 'args.
+        ?doc:string ->
+        string ->
+        fields:('a -> ('t, 'args) arg_list) ->
+        coerce:'args ->
+        't option arg_typ;
     }
 
     val fix : ('a fixpoint -> 'a) -> 'a
@@ -132,24 +117,16 @@ module type Schema = sig
 
     (* Argument constructors *)
     val int : int option arg_typ
-
     val string : string option arg_typ
-
     val bool : bool option arg_typ
-
     val float : float option arg_typ
-
     val guid : string option arg_typ
-
     val list : 'a arg_typ -> 'a list option arg_typ
-
     val non_null : 'a option arg_typ -> 'a arg_typ
-
-    val force: 'a option arg_typ -> unit
+    val force : 'a option arg_typ -> unit
   end
 
   type variable_map = Graphql_parser.const_value StringMap.t
-
   type fragment_map = Graphql_parser.fragment StringMap.t
 
   type 'ctx resolve_info = {
@@ -191,17 +168,15 @@ module type Schema = sig
     ?doc:string -> string -> values:'a enum_value list -> ('ctx, 'a option) typ
 
   val scalar :
-    (?doc:string ->
-     string ->
-     coerce:('a -> Yojson.Basic.t) ->
-     ('ctx, 'a option) typ)
+    ?doc:string ->
+    string ->
+    coerce:('a -> Yojson.Basic.t) ->
+    ('ctx, 'a option) typ
 
   val list : ('ctx, 'src) typ -> ('ctx, 'src list option) typ
-
   val non_null : ('ctx, 'src option) typ -> ('ctx, 'src) typ
 
   type ('ctx, 'a) abstract_value
-
   type ('ctx, 'a) abstract_typ = ('ctx, ('ctx, 'a) abstract_value option) typ
 
   val union : ?doc:string -> string -> ('ctx, 'a) abstract_typ
@@ -231,15 +206,19 @@ module type Schema = sig
     ('ctx, 'a) abstract_value
 
   type 'a fixpoint = {
-    obj: 'ctx 'src 'typ 'b. ?doc:string -> string ->
+    obj :
+      'ctx 'src 'typ 'b.
+      ?doc:string ->
+      string ->
       fields:('a -> ('ctx, 'src) field list) ->
       ('ctx, 'src option) typ;
-
     union : 'ctx. ?doc:string -> string -> ('ctx, 'a) abstract_typ;
-
-    interface : 'ctx 'src. ?doc:string -> string ->
+    interface :
+      'ctx 'src.
+      ?doc:string ->
+      string ->
       fields:('a -> abstract_field list) ->
-      ('ctx, 'src) abstract_typ
+      ('ctx, 'src) abstract_typ;
   }
 
   val fix : ('a fixpoint -> 'a) -> 'a
@@ -247,29 +226,24 @@ module type Schema = sig
   (** {3 Built-in scalars} *)
 
   val int : ('ctx, int option) typ
-
   val string : ('ctx, string option) typ
-
   val guid : ('ctx, string option) typ
-
   val bool : ('ctx, bool option) typ
-
   val float : ('ctx, float option) typ
 
   type variables = (string * Graphql_parser.const_value) list
-
-  type 'a response = (('a, Yojson.Basic.t) result)
+  type 'a response = ('a, Yojson.Basic.t) result
 
   val execute :
-    ('ctx schema ->
-     'ctx ->
-     ?variables:variables ->
-     ?operation_name:string ->
-     Graphql_parser.document ->
-     [ `Response of Yojson.Basic.t
-     | `Stream of Yojson.Basic.t response Io.Stream.t ]
-     response
-     Io.t)
+    'ctx schema ->
+    'ctx ->
+    ?variables:variables ->
+    ?operation_name:string ->
+    Graphql_parser.document ->
+    [ `Response of Yojson.Basic.t
+    | `Stream of Yojson.Basic.t response Io.Stream.t ]
+    response
+    Io.t
   (** [execute schema ctx variables doc] evaluates the [doc] against [schema]
       with the given context [ctx] and [variables]. *)
 end

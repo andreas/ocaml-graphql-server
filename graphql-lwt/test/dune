@@ -1,5 +1,5 @@
 (executable
- (libraries graphql-lwt alcotest lwt.unix)
+ (libraries graphql-lwt alcotest lwt.unix yojson)
  (name lwt_test))
 
 (alias
