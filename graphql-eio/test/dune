@@ -1,0 +1,4 @@
+(test
+ (name eio_test)
+ (package graphql-eio)
+ (libraries graphql-eio alcotest eio_main))

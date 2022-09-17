@@ -1,0 +1,25 @@
+opam-version: "2.0"
+maintainer: "Andreas Garnaes <andreas.garnaes@gmail.com>"
+authors: "Andreas Garnaes <andreas.garnaes@gmail.com>"
+homepage: "https://github.com/andreas/ocaml-graphql-server"
+doc: "https://andreas.github.io/ocaml-graphql-server/"
+bug-reports: "https://github.com/andreas/ocaml-graphql-server/issues"
+dev-repo: "git+https://github.com/andreas/ocaml-graphql-server.git"
+
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+]
+
+depends: [
+  "ocaml" {>= "4.03.0"}
+  "dune" {>= "1.1"}
+  "graphql" {>= "0.13.0"}
+  "alcotest" {with-test}
+  "eio"
+]
+
+synopsis: "Build GraphQL schemas with Lwt support"
+
+description: """
+`graphql-eio` adds support for EIO to `graphql`, so you can use Eio in your GraphQL schema resolver functions."""

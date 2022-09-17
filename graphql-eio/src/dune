@@ -1,0 +1,4 @@
+(library
+ (name graphql_eio)
+ (public_name graphql-eio)
+ (libraries graphql eio))
