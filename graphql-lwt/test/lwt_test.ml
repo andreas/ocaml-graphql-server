@@ -1,15 +1,7 @@
 open Lwt
 
 let yojson =
-  (module struct
-    type t = Yojson.Basic.t
-
-    let pp formatter t =
-      Format.pp_print_text formatter (Yojson.Basic.pretty_to_string t)
-
-    let equal = ( = )
-  end : Alcotest.TESTABLE
-    with type t = Yojson.Basic.t)
+  (module Yojson.Basic : Alcotest.TESTABLE with type t = Yojson.Basic.t)
 
 let test_query schema ctx query expected =
   Lwt_main.run

@@ -1,4 +1,20 @@
-0.13.0 2019-09.21
+0.14.0 2022-07-08
+---------------------------------
+
+- Support `__typename` on subscriptions (#178)
+- Handle unknown fields for subscriptions (#178)
+- Add ocamlformat (#177)
+- Handle missing variables as null (#184)
+- Show default value in introspection query (#194)
+- Support block strings in the parser (#198)
+- Handle skip/include directives on fragment spreads (#200)
+- Improved handling of recursive arguments and objects (#199)
+- Fix websocket conflict (#206)
+- Update deprecated Fmt functions (#206)
+- Use Yojson `t` types instead of deprecated `json` type (#208)
+- Raise minimum `rresult` version (#209)
+
+0.13.0 2019-09-21
 ---------------------------------
 
 - Support for custom errors (#166)
