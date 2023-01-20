@@ -84,7 +84,7 @@ module Params = struct
 
   let post_params_exn req body =
     let headers = Cohttp.Request.headers req in
-    match Cohttp.Header.get headers "Content-Type" with
+    match Cohttp.Header.get_media_type headers with
     | Some "application/graphql" -> of_graphql_body body
     | Some "application/json" -> of_json_body_exn body
     | _ -> empty
