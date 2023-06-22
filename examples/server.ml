@@ -1,4 +1,3 @@
-open Lwt.Infix
 open Graphql_lwt
 
 type role = User | Admin
@@ -41,18 +40,6 @@ let user =
             ~typ:(list (non_null user))
             ~resolve:(fun _ p -> Some p.friends);
         ])))
-
-let rec consume_stream stream =
-  Lwt.catch
-    (fun () ->
-      Lwt_stream.next stream >>= fun x ->
-      let (Ok x | Error x) = x in
-      Printf.eprintf "stream response: '%s'\n%!" (Yojson.Basic.to_string x);
-      if Lwt_stream.is_closed stream then Lwt.return_unit
-      else consume_stream stream)
-    (function
-      | Lwt_stream.Closed | Lwt_stream.Empty -> Lwt.return_unit
-      | _ -> Lwt.return_unit)
 
 let set_interval s f destroy =
   let rec set_interval_loop s f n =
@@ -109,7 +96,7 @@ let schema =
         ])
 
 module Graphql_cohttp_lwt =
-  Graphql_cohttp.Make (Graphql_lwt.Schema) (Cohttp_lwt_unix.IO)
+  Graphql_cohttp.Make (Graphql_lwt.Schema) (Cohttp_lwt_unix.Server.IO)
     (Cohttp_lwt.Body)
 
 let () =
