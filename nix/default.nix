@@ -1,77 +1,111 @@
-{ lib, stdenv, ocamlPackages, doCheck ? true }:
+{ lib, stdenv, ocamlPackages, nix-filter, doCheck ? true }:
 
 with ocamlPackages;
 
 let
-  genSrc = { dirs, files }: lib.filterGitSource {
-    src = ./..;
-    inherit dirs;
-    files = files ++ [ "dune-project" ];
-  };
   buildPkg = args: buildDunePackage ({
     version = "0.13.0-dev";
     doCheck = doCheck;
   } // args);
 
+  graphqlPkgs =
+    rec {
+      graphql_parser = buildPkg {
+        pname = "graphql_parser";
+        src = with nix-filter; filter {
+          root = ./..;
+          include = [
+            "dune-project"
+            "graphql_parser"
+            "graphql_parser.opam"
+          ];
+        };
+
+        checkInputs = [ alcotest ];
+        nativeBuildInputs = [ menhir ];
+        propagatedBuildInputs = [
+          menhir
+          fmt
+          re
+        ];
+      };
+
+      graphql = buildPkg {
+        pname = "graphql";
+        src = with nix-filter; filter {
+          root = ./..;
+          include = [
+            "dune-project"
+            "graphql"
+            "graphql.opam"
+          ];
+        };
+        checkInputs = [ alcotest ];
+        propagatedBuildInputs = [
+          graphql_parser
+          yojson
+          rresult
+          seq
+        ];
+      };
+
+      graphql-lwt = buildPkg {
+        pname = "graphql-lwt";
+        src = with nix-filter; filter {
+          root = ./..;
+          include = [
+            "dune-project"
+            "graphql-lwt"
+            "graphql-lwt.opam"
+          ];
+        };
+
+        checkInputs = [ alcotest ];
+
+        inherit doCheck;
+        propagatedBuildInputs = [
+          graphql
+          lwt
+        ];
+      };
+
+      graphql-async = buildPkg {
+        pname = "graphql-async";
+        src = with nix-filter; filter {
+          root = ./..;
+          include = [
+            "dune-project"
+            "graphql-async"
+            "graphql-async.opam"
+          ];
+        };
+        doCheck = false;
+        propagatedBuildInputs = [
+          graphql
+          async
+        ];
+      };
+    };
+
 in
 
-rec {
-  graphql_parser = buildPkg {
-    pname = "graphql_parser";
-    src = genSrc {
-      dirs = [ "graphql_parser" ];
-      files = [ "graphql_parser.opam" ];
+graphqlPkgs // (if lib.versionOlder "5.0" ocaml.version then {
+  graphql-eio = buildPkg {
+    pname = "graphql-eio";
+    src = with nix-filter; filter {
+      root = ./..;
+      include = [
+        "dune-project"
+        "graphql-eio"
+        "graphql-eio.opam"
+      ];
     };
 
-    checkInputs = [ alcotest ];
-    propagatedBuildInputs = [
-      menhir
-      fmt
-      re
-    ];
-  };
-
-  graphql = buildPkg {
-    pname = "graphql";
-    src = genSrc {
-      dirs = [ "graphql" ];
-      files = [ "graphql.opam" ];
-    };
-    checkInputs = [ alcotest ];
-    propagatedBuildInputs = [
-      graphql_parser
-      yojson
-      rresult
-      seq
-    ];
-  };
-
-  graphql-lwt = buildPkg {
-    pname = "graphql-lwt";
-    src = genSrc {
-      dirs = [ "graphql-lwt" ];
-      files = [ "graphql-lwt.opam" ];
-    };
-
-    checkInputs = [ alcotest ];
-
-    inherit doCheck;
     propagatedBuildInputs = [
       graphql
-      lwt
+      eio_main
     ];
+    checkInputs = [ alcotest ];
   };
 
-  graphql-async = buildPkg {
-    pname = "graphql-async";
-    src = genSrc {
-      dirs = [ "graphql-async" ];
-      files = [ "graphql-async.opam" ];
-    };
-    doCheck = false;
-    propagatedBuildInputs = [
-      graphql
-      async
-    ];
-  };
-}
+} else { })

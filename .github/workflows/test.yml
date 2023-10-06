@@ -9,13 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ocamlVersion: [4_12, 4_13, 4_14, 5_00]
+        ocamlVersion: [4_14, 5_0, 5_1]
     steps:
       - uses: actions/checkout@v3
       - uses: cachix/install-nix-action@v23
-      - uses: cachix/cachix-action@v12
         with:
-          name: anmonteiro
-          signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+          extra_nix_config: |
+            extra-substituters = https://anmonteiro.nix-cache.workers.dev
+            extra-trusted-public-keys = ocaml.nix-cache.com-1:/xI2h2+56rwFfKyyFVbkJSeGqSIYMC/Je+7XXqGKDIY=
       - name: "Run nix-build"
         run: nix-build ./nix/ci/test.nix --argstr ocamlVersion ${{ matrix.ocamlVersion }}

@@ -6,7 +6,7 @@ let
     url = with lock.nodes.nixpkgs.locked;"https://github.com/${owner}/${repo}";
     inherit (lock.nodes.nixpkgs.locked) rev;
   };
-  pkgs = import "${src}/boot.nix" {
+  pkgs = import src {
     extraOverlays = [
       (self: super: {
         ocamlPackages = super.ocaml-ng."ocamlPackages_${ocamlVersion}";
@@ -14,10 +14,15 @@ let
     ];
   };
 
-  inherit (pkgs) lib stdenv fetchTarball ocamlPackages;
+  nix-filter-src = fetchGit {
+    url = with lock.nodes.nix-filter.locked; "https://github.com/${owner}/${repo}";
+    inherit (lock.nodes.nix-filter.locked) rev;
+  };
+  nix-filter = import "${nix-filter-src}";
 
 in
 
 pkgs.callPackage ./.. {
   doCheck = true;
+  inherit nix-filter;
 }
