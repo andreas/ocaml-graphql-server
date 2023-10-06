@@ -70,6 +70,9 @@ module type Schema = sig
     fields:('ctx, 'src) field list ->
     ('ctx, 'src option) typ
 
+  type variable_map = Graphql_parser.const_value StringMap.t
+  type fragment_map = Graphql_parser.fragment StringMap.t
+
   module Arg : sig
     type _ arg
     type _ arg_typ
@@ -124,10 +127,11 @@ module type Schema = sig
     val list : 'a arg_typ -> 'a list option arg_typ
     val non_null : 'a option arg_typ -> 'a arg_typ
     val force : 'a option arg_typ -> unit
-  end
 
-  type variable_map = Graphql_parser.const_value StringMap.t
-  type fragment_map = Graphql_parser.fragment StringMap.t
+    (* Helpers *)
+    val value_to_const_value :
+      variable_map -> Graphql_parser.value -> Graphql_parser.const_value
+  end
 
   type 'ctx resolve_info = {
     ctx : 'ctx;
