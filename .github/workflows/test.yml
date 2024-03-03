@@ -11,7 +11,7 @@ jobs:
       matrix:
         ocamlVersion: [4_14, 5_0, 5_1]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v24
         with:
           extra_nix_config: |
