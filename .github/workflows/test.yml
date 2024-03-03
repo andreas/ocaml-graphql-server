@@ -12,7 +12,7 @@ jobs:
         ocamlVersion: [4_14, 5_0, 5_1]
     steps:
       - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v23
+      - uses: cachix/install-nix-action@v24
         with:
           extra_nix_config: |
             extra-substituters = https://anmonteiro.nix-cache.workers.dev
