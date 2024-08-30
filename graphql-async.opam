@@ -5,6 +5,7 @@ homepage: "https://github.com/andreas/ocaml-graphql-server"
 doc: "https://andreas.github.io/ocaml-graphql-server/"
 bug-reports: "https://github.com/andreas/ocaml-graphql-server/issues"
 dev-repo: "git+https://github.com/andreas/ocaml-graphql-server.git"
+license: "MIT"
 
 build: [
   ["dune" "build" "-p" name "-j" jobs]
@@ -19,6 +20,7 @@ depends: [
   "alcotest" {with-test}
   "async_unix" {with-test & >= "v0.9.0"}
   "yojson" {with-test & >= "1.6.0"}
+  "ppx_sexp_conv" {>= "v0.16.0"}
 ]
 
 synopsis: "Build GraphQL schemas with Async support"

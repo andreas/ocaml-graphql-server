@@ -5,6 +5,7 @@ homepage: "https://github.com/andreas/ocaml-graphql-server"
 doc: "https://andreas.github.io/ocaml-graphql-server/"
 bug-reports: "https://github.com/andreas/ocaml-graphql-server/issues"
 dev-repo: "git+https://github.com/andreas/ocaml-graphql-server.git"
+license: "MIT"
 
 build: [
   ["dune" "build" "-p" name "-j" jobs]
@@ -14,9 +15,9 @@ build: [
 depends: [
   "ocaml" {>= "4.03.0"}
   "dune" {>= "1.1"}
-  "menhir" {build}
+  "menhir" {build & >= "20220210"}
   "alcotest" {with-test & >= "0.8.1"}
-  "fmt"
+  "fmt" {>= "0.8.7"}
   "re" {>= "1.5.0"}
 ]
 
