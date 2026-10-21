@@ -24,6 +24,23 @@ let get_block_string_indentation (s : string) : int =
   done;
   match !common_indent with None -> 0 | Some num -> num
 
+let split_lines (s : string) : string list =
+  let lines = ref [] in
+  let b = Buffer.create 32 in
+  let i = ref 0 in
+  let n = String.length s in
+  while !i < n do
+    ( match s.[!i] with
+    | ('\r' as c) | ('\n' as c) ->
+        if c == '\r' && try s.[!i + 1] == '\n' with _ -> false then incr i;
+        lines := Buffer.contents b :: !lines;
+        Buffer.clear b
+    | c -> Buffer.add_char b c );
+    incr i
+  done;
+  lines := Buffer.contents b :: !lines;
+  List.rev !lines
+
 exception NotBlank
 
 let is_blank (s : string) : bool =
@@ -33,14 +50,7 @@ let is_blank (s : string) : bool =
   with NotBlank -> false
 
 let dedent_block_string_value (s : string) : string =
-  let lines =
-    (let open Re in
-    split
-      (compile
-         (alt [ seq [ char '\r'; char '\n' ]; alt [ char '\n'; char '\r' ] ]))
-      s)
-    |> Array.of_list
-  in
+  let lines = split_lines s |> Array.of_list in
   let start_line = ref 0 in
   while !start_line < Array.length lines && is_blank lines.(!start_line) do
     incr start_line

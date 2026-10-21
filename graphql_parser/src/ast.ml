@@ -77,15 +77,20 @@ module Pp = struct
   let colon : unit Fmt.t = Fmt.(const string ":")
 
   let quote_string s =
-    let open Re in
-    s
-    |> replace_string (compile (char '\\')) ~by:"\\\\"
-    |> replace_string (compile (char '"')) ~by:"\\\""
-    |> replace_string (compile (char '\b')) ~by:"\\b"
-    |> replace_string (compile (char '\012')) ~by:"\\f"
-    |> replace_string (compile (char '\n')) ~by:"\\n"
-    |> replace_string (compile (char '\r')) ~by:"\\r"
-    |> replace_string (compile (char '\t')) ~by:"\\t"
+    let b = Buffer.create (String.length s) in
+    String.iter
+      (fun c ->
+        match c with
+        | '\\' -> Buffer.add_string b "\\\\"
+        | '"' -> Buffer.add_string b "\\\""
+        | '\b' -> Buffer.add_string b "\\b"
+        | '\012' -> Buffer.add_string b "\\f"
+        | '\n' -> Buffer.add_string b "\\n"
+        | '\r' -> Buffer.add_string b "\\r"
+        | '\t' -> Buffer.add_string b "\\t"
+        | c -> Buffer.add_char b c)
+      s;
+    Buffer.contents b
 
   let rec pp_value fmt = function
     | `Null -> Fmt.string fmt "null"

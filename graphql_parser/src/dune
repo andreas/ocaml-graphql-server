@@ -7,6 +7,6 @@
 (library
  (name graphql_parser)
  (public_name graphql_parser)
- (libraries fmt re)
+ (libraries fmt)
  (flags
   (:standard -w -30)))
