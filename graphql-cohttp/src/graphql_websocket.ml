@@ -344,8 +344,7 @@ module Connection = struct
       in
       let rsp =
         Cohttp.Response.make ~status:`Switching_protocols
-          ~encoding:Cohttp.Transfer.Unknown ~headers:response_headers
-          ~flush:true ()
+          ~encoding:Cohttp.Transfer.Unknown ~headers:response_headers ()
       in
       let io_handler ic oc =
         let client = create ?read_buf ?write_buf ~mode:Server request ic oc in
