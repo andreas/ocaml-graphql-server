@@ -109,7 +109,7 @@ let schema =
         ])
 
 module Graphql_cohttp_lwt =
-  Graphql_cohttp.Make (Graphql_lwt.Schema) (Cohttp_lwt_unix.IO)
+  Graphql_cohttp.Make (Graphql_lwt.Schema) (Cohttp_lwt_unix.Server.IO)
     (Cohttp_lwt.Body)
 
 let () =
