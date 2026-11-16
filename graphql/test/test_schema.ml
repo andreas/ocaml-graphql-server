@@ -1,7 +1,6 @@
 open Graphql
 
 type role = User | Admin
-
 type user = { id : int; name : string; role : role }
 
 let users =
@@ -15,45 +14,45 @@ let role_values =
   Schema.[ enum_value "user" ~value:User; enum_value "admin" ~value:Admin ]
 
 let role = Schema.(enum "role" ~values:role_values)
-
 let input_role = Schema.Arg.(enum "role" ~values:role_values)
 
 let user =
   Schema.(
-    obj "user" ~fields:[
-        field "id" ~typ:(non_null int)
-          ~args:Arg.[]
-          ~resolve:(fun { ctx = () } p -> p.id);
-        field "name" ~typ:(non_null string)
-          ~args:Arg.[]
-          ~resolve:(fun _ p -> p.name);
-        field "role" ~typ:(non_null role)
-          ~args:Arg.[]
-          ~resolve:(fun _ p -> p.role);
-      ])
+    obj "user"
+      ~fields:
+        [
+          field "id" ~typ:(non_null int)
+            ~args:Arg.[]
+            ~resolve:(fun { ctx = () } p -> p.id);
+          field "name" ~typ:(non_null string)
+            ~args:Arg.[]
+            ~resolve:(fun _ p -> p.name);
+          field "role" ~typ:(non_null role)
+            ~args:Arg.[]
+            ~resolve:(fun _ p -> p.role);
+        ])
 
-type tree = | Node of (int * tree list) | Leaf of int
+type tree = Node of (int * tree list) | Leaf of int
 
-let node, leaf = Schema.(fix (fun recursive ->
-  recursive.obj "Node"
-    ~fields:(fun (node, _leaf) -> [
-      field "children"
-        ~typ:(non_null (list (non_null node)))
-        ~args:[]
-        ~resolve:(fun { ctx = () } t -> match t with | Node (_, xs) -> xs | Leaf _ -> []);
-      field "element"
-        ~typ:(non_null int)
-        ~args:[]
-        ~resolve:(fun { ctx = () } t -> match t with Node (el, _) | Leaf el -> el)
-    ]),
-  recursive.obj "Leaf"
-    ~fields:(fun (_node, _leaf) -> [
-      field "element"
-        ~typ:(non_null int)
-        ~args:[]
-        ~resolve:(fun { ctx = () } (t:int) -> t)
-    ])
-  ))
+let node, leaf =
+  Schema.(
+    fix (fun recursive ->
+        ( recursive.obj "Node" ~fields:(fun (node, _leaf) ->
+              [
+                field "children"
+                  ~typ:(non_null (list (non_null node)))
+                  ~args:[]
+                  ~resolve:(fun { ctx = () } t ->
+                    match t with Node (_, xs) -> xs | Leaf _ -> []);
+                field "element" ~typ:(non_null int) ~args:[]
+                  ~resolve:(fun { ctx = () } t ->
+                    match t with Node (el, _) | Leaf el -> el);
+              ]),
+          recursive.obj "Leaf" ~fields:(fun (_node, _leaf) ->
+              [
+                field "element" ~typ:(non_null int) ~args:[]
+                  ~resolve:(fun { ctx = () } (t : int) -> t);
+              ]) )))
 
 (* Not available in List before OCaml 4.07 *)
 let list_to_seq n l =
@@ -69,8 +68,7 @@ let schema =
     schema
       [
         field "tree" ~typ:(non_null node) ~args:[] ~resolve:(fun _ () ->
-          Node (0, [ Node (1, [Leaf 2]) ]));
-
+            Node (0, [ Node (1, [ Leaf 2 ]) ]));
         field "users"
           ~typ:(non_null (list (non_null user)))
           ~args:Arg.[]

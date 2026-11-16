@@ -1,10 +1,8 @@
 module type HttpBody = sig
   type t
-
   type +'a io
 
   val to_string : t -> string io
-
   val of_string : string -> t
 end
 
@@ -12,7 +10,6 @@ module type S = sig
   module IO : Cohttp.S.IO
 
   type body
-
   type 'ctx schema
 
   type response_action =
@@ -31,9 +28,7 @@ end
 
 module Option = struct
   let bind t ~f = match t with None -> None | Some x -> f x
-
   let map t ~f = bind t ~f:(fun x -> Some (f x))
-
   let first_some t t' = match t with None -> t' | Some _ -> t
 end
 
@@ -101,8 +96,8 @@ module Params = struct
       | Some query ->
           Ok
             ( query,
-              ( params.variables
-                :> (string * Graphql_parser.const_value) list option ),
+              (params.variables
+                :> (string * Graphql_parser.const_value) list option),
               params.operation_name )
       | None -> Error "Must provide query string"
     with Yojson.Json_error msg -> Error msg
@@ -126,8 +121,7 @@ struct
     'conn -> Cohttp.Request.t -> Body.t -> response_action Io.t
 
   let respond_string ~status ~body () =
-    Io.return
-      (`Response (Cohttp.Response.make ~status (), Body.of_string body))
+    Io.return (`Response (Cohttp.Response.make ~status (), Body.of_string body))
 
   let static_file_response path =
     match Assets.read path with
@@ -156,7 +150,7 @@ struct
             respond_string ~status:`Bad_request ~body ()
         | Error err ->
             let body = Yojson.Basic.to_string err in
-            respond_string ~status:`Bad_request ~body () )
+            respond_string ~status:`Bad_request ~body ())
 
   let make_callback :
       (Cohttp.Request.t -> 'ctx) -> 'ctx Schema.schema -> 'conn callback =
@@ -177,8 +171,7 @@ struct
           && Cohttp.Header.get headers "Upgrade" = Some "websocket"
         then
           let handle_conn =
-            Websocket_transport.handle
-              (execute_query (make_context req) schema)
+            Websocket_transport.handle (execute_query (make_context req) schema)
           in
           Io.return (Ws.upgrade_connection req handle_conn)
         else execute_request schema (make_context req) req body

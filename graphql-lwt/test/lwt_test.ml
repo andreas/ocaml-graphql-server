@@ -1,26 +1,25 @@
 open Lwt
 
 let yojson =
-  ( module Yojson.Basic : Alcotest.TESTABLE
-    with type t = Yojson.Basic.t )
+  (module Yojson.Basic : Alcotest.TESTABLE with type t = Yojson.Basic.t)
 
 let test_query schema ctx query expected =
   Lwt_main.run
-    ( match Graphql_parser.parse query with
+    (match Graphql_parser.parse query with
     | Error err -> Lwt.fail_with err
     | Ok doc ->
-        (Graphql_lwt.Schema.execute schema ctx doc >>= function
-         | Ok (`Response data) -> Lwt.return data
-         | Ok (`Stream (stream, _)) ->
-             Lwt_stream.to_list stream >|= fun lst ->
-             `List
-               (List.fold_right
-                  (fun x acc ->
-                    match x with Ok data -> data :: acc | _ -> acc)
-                  lst [])
-         | Error err -> Lwt.return err)
+        ( Graphql_lwt.Schema.execute schema ctx doc >>= function
+          | Ok (`Response data) -> Lwt.return data
+          | Ok (`Stream (stream, _)) ->
+              Lwt_stream.to_list stream >|= fun lst ->
+              `List
+                (List.fold_right
+                   (fun x acc ->
+                     match x with Ok data -> data :: acc | _ -> acc)
+                   lst [])
+          | Error err -> Lwt.return err )
         >|= fun result ->
-        Alcotest.check yojson "invalid execution result" expected result )
+        Alcotest.check yojson "invalid execution result" expected result)
 
 let schema =
   Graphql_lwt.Schema.(
@@ -50,21 +49,21 @@ let suite =
       fun () ->
         test_query schema () "{ direct_string io_int  }"
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [ ("direct_string", `String "foo"); ("io_int", `Int 42) ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [ ("direct_string", `String "foo"); ("io_int", `Int 42) ] );
+             ]) );
     ( "subscription",
       `Quick,
       fun () ->
         test_query schema () "subscription { int_stream }"
           (`List
-            [
-              `Assoc [ ("data", `Assoc [ ("int_stream", `Int 1) ]) ];
-              `Assoc [ ("data", `Assoc [ ("int_stream", `Int 2) ]) ];
-              `Assoc [ ("data", `Assoc [ ("int_stream", `Int 3) ]) ];
-            ]) );
+             [
+               `Assoc [ ("data", `Assoc [ ("int_stream", `Int 1) ]) ];
+               `Assoc [ ("data", `Assoc [ ("int_stream", `Int 2) ]) ];
+               `Assoc [ ("data", `Assoc [ ("int_stream", `Int 3) ]) ];
+             ]) );
   ]
 
 let () = Alcotest.run "graphql-server" [ ("lwt", suite) ]

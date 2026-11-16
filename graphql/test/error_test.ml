@@ -18,18 +18,18 @@ let suite =
         let query = "{ nullable }" in
         test_query schema () query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ("message", `String "boom");
-                        ("path", `List [ `String "nullable" ]);
-                      ];
-                  ] );
-              ("data", `Assoc [ ("nullable", `Null) ]);
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ("message", `String "boom");
+                         ("path", `List [ `String "nullable" ]);
+                       ];
+                   ] );
+               ("data", `Assoc [ ("nullable", `Null) ]);
+             ]) );
     ( "non-nullable error",
       `Quick,
       fun () ->
@@ -45,28 +45,30 @@ let suite =
         let query = "{ non_nullable }" in
         test_query schema () query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ("message", `String "boom");
-                        ("path", `List [ `String "non_nullable" ]);
-                      ];
-                  ] );
-              ("data", `Null);
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ("message", `String "boom");
+                         ("path", `List [ `String "non_nullable" ]);
+                       ];
+                   ] );
+               ("data", `Null);
+             ]) );
     ( "nested nullable error",
       `Quick,
       fun () ->
         let obj_with_non_nullable_field =
           Schema.(
-            obj "obj" ~fields: [
-                io_field "non_nullable" ~typ:(non_null int)
-                  ~args:Arg.[]
-                  ~resolve:(fun _ () -> Error "boom");
-              ])
+            obj "obj"
+              ~fields:
+                [
+                  io_field "non_nullable" ~typ:(non_null int)
+                    ~args:Arg.[]
+                    ~resolve:(fun _ () -> Error "boom");
+                ])
         in
         let schema =
           Schema.(
@@ -80,31 +82,33 @@ let suite =
         let query = "{ nullable { non_nullable } }" in
         test_query schema () query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ("message", `String "boom");
-                        ( "path",
-                          `List [ `String "nullable"; `String "non_nullable" ]
-                        );
-                      ];
-                  ] );
-              ("data", `Assoc [ ("nullable", `Null) ]);
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ("message", `String "boom");
+                         ( "path",
+                           `List [ `String "nullable"; `String "non_nullable" ]
+                         );
+                       ];
+                   ] );
+               ("data", `Assoc [ ("nullable", `Null) ]);
+             ]) );
     ( "error in list",
       `Quick,
       fun () ->
         let foo =
           Schema.(
-            obj "Foo" ~fields:[
-                io_field "id" ~typ:int
-                  ~args:Arg.[]
-                  ~resolve:(fun _ (id, should_fail) ->
-                    if should_fail then Error "boom" else Ok (Some id));
-              ])
+            obj "Foo"
+              ~fields:
+                [
+                  io_field "id" ~typ:int
+                    ~args:Arg.[]
+                    ~resolve:(fun _ (id, should_fail) ->
+                      if should_fail then Error "boom" else Ok (Some id));
+                ])
         in
         let schema =
           Schema.(
@@ -119,26 +123,26 @@ let suite =
         let query = "{ foos { id } }" in
         test_query schema () query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ("message", `String "boom");
-                        ("path", `List [ `String "foos"; `Int 2; `String "id" ]);
-                      ];
-                  ] );
-              ( "data",
-                `Assoc
-                  [
-                    ( "foos",
-                      `List
-                        [
-                          `Assoc [ ("id", `Int 0) ];
-                          `Assoc [ ("id", `Int 1) ];
-                          `Assoc [ ("id", `Null) ];
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ("message", `String "boom");
+                         ("path", `List [ `String "foos"; `Int 2; `String "id" ]);
+                       ];
+                   ] );
+               ( "data",
+                 `Assoc
+                   [
+                     ( "foos",
+                       `List
+                         [
+                           `Assoc [ ("id", `Int 0) ];
+                           `Assoc [ ("id", `Int 1) ];
+                           `Assoc [ ("id", `Null) ];
+                         ] );
+                   ] );
+             ]) );
   ]

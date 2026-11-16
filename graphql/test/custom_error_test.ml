@@ -18,16 +18,13 @@ module CustomErrorsSchema =
       type +'a t = 'a
 
       let bind t f = f t
-
       let return t = t
 
       module Stream = struct
         type 'a t = 'a Seq.t
 
         let map t f = Seq.map f t
-
         let iter t f = Seq.iter f t
-
         let close _t = ()
       end
     end)
@@ -48,7 +45,7 @@ let test_query schema ctx ?variables ?operation_name query expected =
               | Seq.Cons (Ok _, _) -> `List (list_of_seq stream)
               | Seq.Cons (Error err, _) -> err
               | Seq.Nil -> `Null
-            with _ -> `String "caught stream exn" )
+            with _ -> `String "caught stream exn")
         | Error err -> err
       in
       Alcotest.check yojson "invalid execution result" expected result
@@ -74,35 +71,35 @@ let suite =
         let query = "{ string_error }" in
         test_query schema () query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ("message", `String "error string");
-                        ("path", `List [ `String "string_error" ]);
-                      ];
-                  ] );
-              ("data", `Assoc [ ("string_error", `Null) ]);
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ("message", `String "error string");
+                         ("path", `List [ `String "string_error" ]);
+                       ];
+                   ] );
+               ("data", `Assoc [ ("string_error", `Null) ]);
+             ]) );
     ( "message with extensions",
       `Quick,
       fun () ->
         let query = "{ extensions_error }" in
         test_query schema () query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ("message", `String "");
-                        ("path", `List [ `String "extensions_error" ]);
-                        ("extensions", `Assoc [ ("custom", `String "json") ]);
-                      ];
-                  ] );
-              ("data", `Assoc [ ("extensions_error", `Null) ]);
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ("message", `String "");
+                         ("path", `List [ `String "extensions_error" ]);
+                         ("extensions", `Assoc [ ("custom", `String "json") ]);
+                       ];
+                   ] );
+               ("data", `Assoc [ ("extensions_error", `Null) ]);
+             ]) );
   ]

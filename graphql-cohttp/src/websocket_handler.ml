@@ -78,7 +78,9 @@ struct
     match frame.Graphql_websocket.Frame.opcode with
     | Ping | Pong | Close | Ctrl _ | Nonctrl _ -> IO.return ()
     | Continuation | Text | Binary -> (
-        let json = Yojson.Basic.from_string frame.Graphql_websocket.Frame.content in
+        let json =
+          Yojson.Basic.from_string frame.Graphql_websocket.Frame.content
+        in
         match client_message_of_payload json with
         | Ok Gql_connection_init ->
             Ws.send t.conn (create_message Gql_connection_ack)
@@ -95,13 +97,12 @@ struct
                 IO.Stream.iter stream (fun response ->
                     let (Ok payload | Error payload) = response in
                     Ws.send t.conn (create_message ~id ~payload Gql_data))
-                >>= fun () -> Ws.send t.conn (create_message ~id Gql_complete)
-            )
+                >>= fun () -> Ws.send t.conn (create_message ~id Gql_complete))
         | Ok (Gql_stop { id }) ->
-            ( try
-                let close = Hashtbl.find t.subscriptions id in
-                close ()
-              with Not_found -> () );
+            (try
+               let close = Hashtbl.find t.subscriptions id in
+               close ()
+             with Not_found -> ());
             IO.return ()
         | Ok Gql_connection_terminate ->
             Hashtbl.iter (fun _id close -> close ()) t.subscriptions;
@@ -111,7 +112,7 @@ struct
         | Error msg ->
             let id = Json.(json |> member "id" |> to_string) in
             let payload = `Assoc [ ("message", `String msg) ] in
-            Ws.send t.conn (create_message ~id ~payload Gql_error) )
+            Ws.send t.conn (create_message ~id ~payload Gql_error))
 
   let handle execute_query conn =
     let subscriptions = Hashtbl.create 8 in

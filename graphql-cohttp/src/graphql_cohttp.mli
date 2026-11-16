@@ -1,10 +1,8 @@
 module type HttpBody = sig
   type t
-
   type +'a io
 
   val to_string : t -> string io
-
   val of_string : string -> t
 end
 
@@ -12,7 +10,6 @@ module type S = sig
   module IO : Cohttp.S.IO
 
   type body
-
   type 'ctx schema
 
   type response_action =

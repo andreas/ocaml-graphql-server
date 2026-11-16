@@ -30,7 +30,6 @@ module Frame : sig
       | Nonctrl of int
 
     val to_string : t -> string
-
     val pp : Format.formatter -> t -> unit
   end
 
@@ -50,7 +49,6 @@ module Frame : sig
     t
 
   val close : int -> t
-
   val show : t -> string
 end
 
@@ -72,11 +70,8 @@ module Connection : sig
       t
 
     val send : t -> Frame.t -> unit IO.t
-
     val send_multiple : t -> Frame.t list -> unit IO.t
-
     val recv : t -> Frame.t IO.t
-
     val req : t -> Cohttp.Request.t
 
     val upgrade_connection :
