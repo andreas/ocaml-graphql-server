@@ -10,7 +10,7 @@ module Schema =
 
         let map t f =
           Async_kernel.Pipe.map' t ~f:(fun q ->
-              Async_kernel.Deferred.Queue.map q ~f)
+              Async_kernel.Deferred.Queue.map ~how:`Sequential q ~f)
 
         let iter t f = Async_kernel.Pipe.iter t ~f
 
