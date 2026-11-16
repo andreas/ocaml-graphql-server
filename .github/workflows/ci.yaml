@@ -13,25 +13,18 @@ jobs:
           - ubuntu-latest
           - macos-latest
 
-        ocaml-version:
-          - 4.04.x
-          - 4.05.x
-          - 4.06.x
-          - 4.07.x
-          - 4.08.x
-          - 4.09.x
-          - 4.10.x
-          - 4.11.x
-          - 4.12.x
+        ocaml-compiler:
+          - "4.14"
+          - "5"
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v7
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
