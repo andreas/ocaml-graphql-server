@@ -1,4 +1,5 @@
 open Lwt.Infix
+
 module Graphql_cohttp_lwt =
   Graphql_cohttp.Make (Graphql_lwt.Schema) (Cohttp_lwt_unix.IO)
     (Cohttp_lwt.Body)
@@ -42,8 +43,8 @@ let default_response_body =
 
 let test_case ~req ~req_body ~rsp ~rsp_body =
   Lwt_main.run
-    ( Graphql_cohttp_lwt.execute_request schema () req req_body
-    >>= check_response_action ~rsp ~rsp_body )
+    (Graphql_cohttp_lwt.execute_request schema () req req_body
+    >>= check_response_action ~rsp ~rsp_body)
 
 let suite =
   [
@@ -106,13 +107,13 @@ let suite =
           Cohttp_lwt.Body.of_string
             (Yojson.Basic.to_string
                (`Assoc
-                 [
-                   ( "query",
-                     `String
-                       "query A { hello(name: \"world\") } query B { \
-                        hello(name: \"fail\") }" );
-                   ("operationName", `String "A");
-                 ]))
+                  [
+                    ( "query",
+                      `String
+                        "query A { hello(name: \"world\") } query B { \
+                         hello(name: \"fail\") }" );
+                    ("operationName", `String "A");
+                  ]))
         in
         test_case
           ~req:
@@ -128,12 +129,12 @@ let suite =
           Cohttp_lwt.Body.of_string
             (Yojson.Basic.to_string
                (`Assoc
-                 [
-                   ( "query",
-                     `String
-                       "query A { hello(name: \"world\") } query B { \
-                        hello(name: \"fail\") }" );
-                 ]))
+                  [
+                    ( "query",
+                      `String
+                        "query A { hello(name: \"world\") } query B { \
+                         hello(name: \"fail\") }" );
+                  ]))
         in
         let query = Some [ ("operationName", [ "A" ]) ] in
         let uri = Uri.with_uri ~query default_uri in
@@ -149,12 +150,12 @@ let suite =
           Cohttp_lwt.Body.of_string
             (Yojson.Basic.to_string
                (`Assoc
-                 [
-                   ( "query",
-                     `String "query A($name: String!) { hello(name: $name) }"
-                   );
-                   ("variables", `Assoc [ ("name", `String "world") ]);
-                 ]))
+                  [
+                    ( "query",
+                      `String "query A($name: String!) { hello(name: $name) }"
+                    );
+                    ("variables", `Assoc [ ("name", `String "world") ]);
+                  ]))
         in
         test_case
           ~req:
@@ -170,11 +171,11 @@ let suite =
           Cohttp_lwt.Body.of_string
             (Yojson.Basic.to_string
                (`Assoc
-                 [
-                   ( "query",
-                     `String "query A($name: String!) { hello(name: $name) }"
-                   );
-                 ]))
+                  [
+                    ( "query",
+                      `String "query A($name: String!) { hello(name: $name) }"
+                    );
+                  ]))
         in
         let query =
           Some
@@ -198,8 +199,8 @@ let suite =
         in
         test_case
           ~req:
-            (Cohttp.Request.make ~meth:`POST ~headers:json_with_charset_content_type
-               default_uri)
+            (Cohttp.Request.make ~meth:`POST
+               ~headers:json_with_charset_content_type default_uri)
           ~req_body
           ~rsp:(Cohttp.Response.make ~status:`OK ())
           ~rsp_body:default_response_body );

@@ -13,7 +13,6 @@ module Schema =
               Async_kernel.Deferred.Queue.map q ~f)
 
         let iter t f = Async_kernel.Pipe.iter t ~f
-
         let close = Async_kernel.Pipe.close_read
       end
     end)
@@ -21,6 +20,5 @@ module Schema =
       type t = string
 
       let message_of_field_error t = t
-
       let extensions_of_field_error _t = None
     end)

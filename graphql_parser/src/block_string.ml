@@ -5,7 +5,7 @@ let get_block_string_indentation (s : string) : int =
   let common_indent = ref None in
   let i = ref 0 in
   while !i < String.length s do
-    ( match s.[!i] with
+    (match s.[!i] with
     | ('\r' as c) | ('\n' as c) ->
         if c == '\r' && try s.[!i + 1] == '\n' with _ -> false then incr i;
         is_first_line := false;
@@ -19,7 +19,7 @@ let get_block_string_indentation (s : string) : int =
           match !common_indent with
           | None -> true
           | Some common_indent -> !indent < common_indent
-        then common_indent := Some !indent );
+        then common_indent := Some !indent);
     incr i
   done;
   match !common_indent with None -> 0 | Some num -> num
@@ -35,10 +35,10 @@ let is_blank (s : string) : bool =
 let dedent_block_string_value (s : string) : string =
   let lines =
     (let open Re in
-    split
-      (compile
-         (alt [ seq [ char '\r'; char '\n' ]; alt [ char '\n'; char '\r' ] ]))
-      s)
+     split
+       (compile
+          (alt [ seq [ char '\r'; char '\n' ]; alt [ char '\n'; char '\r' ] ]))
+       s)
     |> Array.of_list
   in
   let start_line = ref 0 in
@@ -55,11 +55,11 @@ let dedent_block_string_value (s : string) : string =
   while !i < !end_line do
     let line = lines.(!i) in
     Buffer.add_string b
-      ( match (!i, common_indent == 0) with
+      (match (!i, common_indent == 0) with
       | 0, _ | _, true -> line
       | _, false ->
           let start = min (String.length line) common_indent in
-          String.sub line start (String.length line - start) );
+          String.sub line start (String.length line - start));
     incr i;
     match !i != !end_line with true -> Buffer.add_char b '\n' | false -> ()
   done;

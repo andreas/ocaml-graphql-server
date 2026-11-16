@@ -22,29 +22,29 @@ let suite =
         in
         test_query schema query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ( "__schema",
-                      `Assoc
-                        [
-                          ( "queryType",
-                            `Assoc
-                              [
-                                ( "fields",
-                                  `List
-                                    [
-                                      `Assoc
-                                        [
-                                          ("isDeprecated", `Bool false);
-                                          ("deprecationReason", `Null);
-                                        ];
-                                    ] );
-                              ] );
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "__schema",
+                       `Assoc
+                         [
+                           ( "queryType",
+                             `Assoc
+                               [
+                                 ( "fields",
+                                   `List
+                                     [
+                                       `Assoc
+                                         [
+                                           ("isDeprecated", `Bool false);
+                                           ("deprecationReason", `Null);
+                                         ];
+                                     ] );
+                               ] );
+                         ] );
+                   ] );
+             ]) );
     ( "__schema: default deprecation",
       `Quick,
       fun () ->
@@ -63,29 +63,29 @@ let suite =
         in
         test_query schema query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ( "__schema",
-                      `Assoc
-                        [
-                          ( "queryType",
-                            `Assoc
-                              [
-                                ( "fields",
-                                  `List
-                                    [
-                                      `Assoc
-                                        [
-                                          ("isDeprecated", `Bool false);
-                                          ("deprecationReason", `Null);
-                                        ];
-                                    ] );
-                              ] );
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "__schema",
+                       `Assoc
+                         [
+                           ( "queryType",
+                             `Assoc
+                               [
+                                 ( "fields",
+                                   `List
+                                     [
+                                       `Assoc
+                                         [
+                                           ("isDeprecated", `Bool false);
+                                           ("deprecationReason", `Null);
+                                         ];
+                                     ] );
+                               ] );
+                         ] );
+                   ] );
+             ]) );
     ( "__schema: deprecated-without-reason",
       `Quick,
       fun () ->
@@ -105,29 +105,29 @@ let suite =
         in
         test_query schema query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ( "__schema",
-                      `Assoc
-                        [
-                          ( "queryType",
-                            `Assoc
-                              [
-                                ( "fields",
-                                  `List
-                                    [
-                                      `Assoc
-                                        [
-                                          ("isDeprecated", `Bool true);
-                                          ("deprecationReason", `Null);
-                                        ];
-                                    ] );
-                              ] );
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "__schema",
+                       `Assoc
+                         [
+                           ( "queryType",
+                             `Assoc
+                               [
+                                 ( "fields",
+                                   `List
+                                     [
+                                       `Assoc
+                                         [
+                                           ("isDeprecated", `Bool true);
+                                           ("deprecationReason", `Null);
+                                         ];
+                                     ] );
+                               ] );
+                         ] );
+                   ] );
+             ]) );
     ( "__schema: deprecated with reason",
       `Quick,
       fun () ->
@@ -148,30 +148,30 @@ let suite =
         in
         test_query schema query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ( "__schema",
-                      `Assoc
-                        [
-                          ( "queryType",
-                            `Assoc
-                              [
-                                ( "fields",
-                                  `List
-                                    [
-                                      `Assoc
-                                        [
-                                          ("isDeprecated", `Bool true);
-                                          ( "deprecationReason",
-                                            `String "deprecation reason" );
-                                        ];
-                                    ] );
-                              ] );
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "__schema",
+                       `Assoc
+                         [
+                           ( "queryType",
+                             `Assoc
+                               [
+                                 ( "fields",
+                                   `List
+                                     [
+                                       `Assoc
+                                         [
+                                           ("isDeprecated", `Bool true);
+                                           ( "deprecationReason",
+                                             `String "deprecation reason" );
+                                         ];
+                                     ] );
+                               ] );
+                         ] );
+                   ] );
+             ]) );
     ( "__schema: deduplicates argument types",
       `Quick,
       fun () ->
@@ -183,8 +183,7 @@ let suite =
                   ~args:
                     Arg.
                       [
-                        arg "x" ~typ:(non_null int);
-                        arg "y" ~typ:(non_null int);
+                        arg "x" ~typ:(non_null int); arg "y" ~typ:(non_null int);
                       ]
                   ~resolve:(fun _ _ x y -> x + y);
               ])
@@ -192,22 +191,22 @@ let suite =
         let query = "{ __schema { types { name } } }" in
         test_query schema query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ( "__schema",
-                      `Assoc
-                        [
-                          ( "types",
-                            `List
-                              [
-                                `Assoc [ ("name", `String "Int") ];
-                                `Assoc [ ("name", `String "query") ];
-                              ] );
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "__schema",
+                       `Assoc
+                         [
+                           ( "types",
+                             `List
+                               [
+                                 `Assoc [ ("name", `String "Int") ];
+                                 `Assoc [ ("name", `String "query") ];
+                               ] );
+                         ] );
+                   ] );
+             ]) );
     ( "__schema: defaultValue for args",
       `Quick,
       fun () ->
@@ -230,37 +229,37 @@ let suite =
         in
         test_query schema query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ( "__type",
-                      `Assoc
-                        [
-                          ( "fields",
-                            `List
-                              [
-                                `Assoc
-                                  [
-                                    ( "args",
-                                      `List
-                                        [
-                                          `Assoc
-                                            [
-                                              ("name", `String "y");
-                                              ("defaultValue", `Null);
-                                            ];
-                                          `Assoc
-                                            [
-                                              ("name", `String "x");
-                                              ("defaultValue", `String "\"s\"");
-                                            ];
-                                        ] );
-                                  ];
-                              ] );
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "__type",
+                       `Assoc
+                         [
+                           ( "fields",
+                             `List
+                               [
+                                 `Assoc
+                                   [
+                                     ( "args",
+                                       `List
+                                         [
+                                           `Assoc
+                                             [
+                                               ("name", `String "y");
+                                               ("defaultValue", `Null);
+                                             ];
+                                           `Assoc
+                                             [
+                                               ("name", `String "x");
+                                               ("defaultValue", `String "\"s\"");
+                                             ];
+                                         ] );
+                                   ];
+                               ] );
+                         ] );
+                   ] );
+             ]) );
     ( "__type",
       `Quick,
       fun () ->
@@ -278,14 +277,14 @@ let suite =
         in
         test_query Test_schema.schema query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ("role_type", `Assoc [ ("name", `String "role") ]);
-                    ("user_type", `Assoc [ ("name", `String "user") ]);
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ("role_type", `Assoc [ ("name", `String "role") ]);
+                     ("user_type", `Assoc [ ("name", `String "user") ]);
+                   ] );
+             ]) );
     ( "__typename",
       `Quick,
       fun () ->
@@ -308,8 +307,7 @@ let suite =
           __typename
         }
       |}
-          (`Assoc
-            [ ("data", `Assoc [ ("__typename", `String "MyMutation") ]) ]);
+          (`Assoc [ ("data", `Assoc [ ("__typename", `String "MyMutation") ]) ]);
         test_query schema
           {|
         subscription {
@@ -317,6 +315,6 @@ let suite =
         }
       |}
           (`Assoc
-            [ ("data", `Assoc [ ("__typename", `String "MySubscription") ]) ])
+             [ ("data", `Assoc [ ("__typename", `String "MySubscription") ]) ])
     );
   ]

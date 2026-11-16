@@ -107,9 +107,7 @@ module Bits = struct
     done
 
   let is_bit_set idx v = (v lsr idx) land 1 = 1
-
   let set_bit v idx b = if b then v lor (1 lsl idx) else v land lnot (1 lsl idx)
-
   let int_value shift len v = (v lsr shift) land ((1 lsl len) - 1)
 end
 
@@ -133,11 +131,8 @@ module Connection = struct
       t
 
     val send : t -> Frame.t -> unit IO.t
-
     val send_multiple : t -> Frame.t list -> unit IO.t
-
     val recv : t -> Frame.t IO.t
-
     val req : t -> Cohttp.Request.t
 
     val upgrade_connection :
@@ -152,7 +147,6 @@ module Connection = struct
     module IO = IO
 
     let ( >>= ) = IO.( >>= )
-
     let is_client mode = mode <> Server
 
     let rec read_exactly ic remaining buf =
@@ -199,20 +193,20 @@ module Connection = struct
       (* Payload len is guaranteed to fit in 7 bits *)
       EndianBytes.BigEndian.set_int16 scratch 0 hdr;
       Buffer.add_subbytes buf scratch 0 2;
-      ( match len with
+      (match len with
       | n when n < 126 -> ()
       | n when n < 1 lsl 16 ->
           EndianBytes.BigEndian.set_int16 scratch 0 n;
           Buffer.add_subbytes buf scratch 0 2
       | n ->
           EndianBytes.BigEndian.set_int64 scratch 0 Int64.(of_int n);
-          Buffer.add_subbytes buf scratch 0 8 );
-      ( match mode with
+          Buffer.add_subbytes buf scratch 0 8);
+      (match mode with
       | Server -> ()
       | Client random_string ->
           let mask = random_string 4 in
           Buffer.add_string buf mask;
-          if len > 0 then Bits.xor mask content );
+          if len > 0 then Bits.xor mask content);
       Buffer.add_bytes buf content
 
     let close_with_code mode buf oc code =
@@ -235,17 +229,17 @@ module Connection = struct
           let length = Bits.int_value 0 7 hdr_part2 in
           let opcode = Frame.Opcode.of_enum opcode in
           Buffer.clear buf;
-          ( match length with
-          | i when i < 126 -> IO.return i
-          | 126 -> (
-              read_uint16 ic buf >>= function
-              | Some i -> IO.return i
-              | None -> IO.return @@ -1 )
-          | 127 -> (
-              read_int64 ic buf >>= function
-              | Some i -> IO.return i
-              | None -> IO.return @@ -1 )
-          | _ -> IO.return @@ -1 )
+          (match length with
+            | i when i < 126 -> IO.return i
+            | 126 -> (
+                read_uint16 ic buf >>= function
+                | Some i -> IO.return i
+                | None -> IO.return @@ -1)
+            | 127 -> (
+                read_int64 ic buf >>= function
+                | Some i -> IO.return i
+                | None -> IO.return @@ -1)
+            | _ -> IO.return @@ -1)
           >>= fun payload_len ->
           if payload_len = -1 then
             raise (Protocol_error ("payload len = " ^ string_of_int length))
@@ -256,18 +250,18 @@ module Connection = struct
             close_with_code mode buf oc 1002 >>= fun () ->
             raise (Protocol_error "control frame too big")
           else
-            ( if frame_masked then (
-              Buffer.clear buf;
-              read_exactly ic 4 buf >>= function
-              | None -> raise (Protocol_error "could not read mask")
-              | Some mask -> IO.return mask )
-            else IO.return String.empty )
+            (if frame_masked then (
+               Buffer.clear buf;
+               read_exactly ic 4 buf >>= function
+               | None -> raise (Protocol_error "could not read mask")
+               | Some mask -> IO.return mask)
+             else IO.return String.empty)
             >>= fun mask ->
             if payload_len = 0 then
               IO.return @@ Frame.create ~opcode ~extension ~final ()
             else
-              ( Buffer.clear buf;
-                read_exactly ic payload_len buf )
+              (Buffer.clear buf;
+               read_exactly ic payload_len buf)
               >>= fun payload ->
               match payload with
               | None -> raise (Protocol_error "could not read payload")
@@ -277,7 +271,7 @@ module Connection = struct
                   let frame =
                     Frame.of_bytes ~opcode ~extension ~final payload
                   in
-                  IO.return frame )
+                  IO.return frame)
 
     type t = {
       buffer : Buffer.t;
@@ -311,14 +305,14 @@ module Connection = struct
           IO.return fr
       | Frame.Opcode.Close ->
           (* Immediately echo and pass this last message to the user *)
-          ( if String.length fr.Frame.content >= 2 then
-            send t
-            @@ Frame.create ~opcode:Frame.Opcode.Close
-                 ~content:
-                   String.(
-                     sub ~start:0 ~stop:2 fr.Frame.content |> Sub.to_string)
-                 ()
-          else send t @@ Frame.close 1000 )
+          (if String.length fr.Frame.content >= 2 then
+             send t
+             @@ Frame.create ~opcode:Frame.Opcode.Close
+                  ~content:
+                    String.(
+                      sub ~start:0 ~stop:2 fr.Frame.content |> Sub.to_string)
+                  ()
+           else send t @@ Frame.close 1000)
           >>= fun () -> IO.return fr
       | _ -> IO.return fr
 
@@ -338,9 +332,9 @@ module Connection = struct
       let hash = b64_encoded_sha1sum (key ^ websocket_uuid) in
       let response_headers =
         Cohttp.Header.of_list
-          ( ("Upgrade", "websocket") :: ("Connection", "Upgrade")
+          (("Upgrade", "websocket") :: ("Connection", "Upgrade")
           :: ("Sec-WebSocket-Accept", hash)
-          :: subprotocol )
+          :: subprotocol)
       in
       let rsp =
         Cohttp.Response.make ~status:`Switching_protocols

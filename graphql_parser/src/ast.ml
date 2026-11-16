@@ -20,7 +20,6 @@ type value =
   | `Assoc of (string * value) list ]
 
 type directive = { name : string; arguments : (string * value) list }
-
 type fragment_spread = { name : string; directives : directive list }
 
 type selection =
@@ -68,12 +67,10 @@ type operation = {
 }
 
 type definition = Operation of operation | Fragment of fragment
-
 type document = definition list
 
 module Pp = struct
   let comma : unit Fmt.t = Fmt.(const string ",")
-
   let colon : unit Fmt.t = Fmt.(const string ":")
 
   let quote_string s =
@@ -124,9 +121,8 @@ module Pp = struct
               directives f.directives selection_set f.selection_set
         | None ->
             Fmt.fmt "%s%a%a%a" fmt f.name arguments f.arguments directives
-              f.directives selection_set f.selection_set )
-    | FragmentSpread f ->
-        Fmt.fmt "... %s %a" fmt f.name directives f.directives
+              f.directives selection_set f.selection_set)
+    | FragmentSpread f -> Fmt.fmt "... %s %a" fmt f.name directives f.directives
     | InlineFragment f -> (
         match f.type_condition with
         | Some condition ->
@@ -134,11 +130,11 @@ module Pp = struct
               selection_set f.selection_set
         | None ->
             Fmt.fmt "... %a %a" fmt directives f.directives selection_set
-              f.selection_set )
+              f.selection_set)
 
   and selection_set fmt =
     omit_empty_list
-      Fmt.(braces (hvbox ~indent:2 (cut ++ (list pp_selection))))
+      Fmt.(braces (hvbox ~indent:2 (cut ++ list pp_selection)))
       fmt
 
   let rec pp_typ fmt = function

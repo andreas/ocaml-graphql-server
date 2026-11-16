@@ -20,7 +20,6 @@ type value =
   | `Assoc of (string * value) list ]
 
 type directive = { name : string; arguments : (string * value) list }
-
 type fragment_spread = { name : string; directives : directive list }
 
 type selection =
@@ -68,9 +67,7 @@ type operation = {
 }
 
 type definition = Operation of operation | Fragment of fragment
-
 type document = definition list
 
 val parse : string -> (document, string) result
-
 val pp_document : document Fmt.t

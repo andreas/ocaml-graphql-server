@@ -8,18 +8,17 @@ let suite =
         let query = "{ users { id } }" in
         test_query query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ( "users",
-                      `List
-                        [
-                          `Assoc [ ("id", `Int 1) ];
-                          `Assoc [ ("id", `Int 2) ];
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "users",
+                       `List
+                         [
+                           `Assoc [ ("id", `Int 1) ]; `Assoc [ ("id", `Int 2) ];
+                         ] );
+                   ] );
+             ]) );
     ( "mutation",
       `Quick,
       fun () ->
@@ -28,19 +27,19 @@ let suite =
         in
         test_query query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ( "add_user",
-                      `List
-                        [
-                          `Assoc [ ("name", `String "Alice") ];
-                          `Assoc [ ("name", `String "Bob") ];
-                          `Assoc [ ("name", `String "Charlie") ];
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "add_user",
+                       `List
+                         [
+                           `Assoc [ ("name", `String "Alice") ];
+                           `Assoc [ ("name", `String "Bob") ];
+                           `Assoc [ ("name", `String "Charlie") ];
+                         ] );
+                   ] );
+             ]) );
     ( "__typename",
       `Quick,
       fun () ->
@@ -53,11 +52,11 @@ let suite =
         let query = "fragment x on y { z }" in
         test_query query
           (`Assoc
-            [
-              ( "errors",
-                `List [ `Assoc [ ("message", `String "No operation found") ] ]
-              );
-            ]) );
+             [
+               ( "errors",
+                 `List [ `Assoc [ ("message", `String "No operation found") ] ]
+               );
+             ]) );
     ( "select operation (one operation, no operation name)",
       `Quick,
       fun () ->
@@ -76,23 +75,23 @@ let suite =
         let query = "query a { a: __typename }" in
         test_query query ~operation_name:"b"
           (`Assoc
-            [
-              ( "errors",
-                `List [ `Assoc [ ("message", `String "Operation not found") ] ]
-              );
-            ]) );
+             [
+               ( "errors",
+                 `List [ `Assoc [ ("message", `String "Operation not found") ] ]
+               );
+             ]) );
     ( "select operation (multiple operations, no operation name)",
       `Quick,
       fun () ->
         let query = "query a { a: __typename } query b { b: __typename }" in
         test_query query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [ `Assoc [ ("message", `String "Operation name required") ] ]
-              );
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [ `Assoc [ ("message", `String "Operation name required") ] ]
+               );
+             ]) );
     ( "select operation (multiple operations, matching operation name)",
       `Quick,
       fun () ->
@@ -105,47 +104,47 @@ let suite =
         let query = "query a { a: __typename } query b { b: __typename }" in
         test_query query ~operation_name:"c"
           (`Assoc
-            [
-              ( "errors",
-                `List [ `Assoc [ ("message", `String "Operation not found") ] ]
-              );
-            ]) );
+             [
+               ( "errors",
+                 `List [ `Assoc [ ("message", `String "Operation not found") ] ]
+               );
+             ]) );
     ( "undefined field on query root",
       `Quick,
       fun () ->
         let query = "{ foo { bar } }" in
         test_query query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ( "message",
-                          `String "Field 'foo' is not defined on type 'query'"
-                        );
-                      ];
-                  ] );
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ( "message",
+                           `String "Field 'foo' is not defined on type 'query'"
+                         );
+                       ];
+                   ] );
+             ]) );
     ( "undefined field on object type",
       `Quick,
       fun () ->
         let query = "{ users { id foo } }" in
         test_query query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ( "message",
-                          `String "Field 'foo' is not defined on type 'user'"
-                        );
-                      ];
-                  ] );
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ( "message",
+                           `String "Field 'foo' is not defined on type 'user'"
+                         );
+                       ];
+                   ] );
+             ]) );
     ( "fragments cannot form cycles",
       `Quick,
       fun () ->
@@ -170,16 +169,16 @@ let suite =
         in
         test_query query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ("message", `String "Fragment cycle detected: F1, F2");
-                      ];
-                  ] );
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ("message", `String "Fragment cycle detected: F1, F2");
+                       ];
+                   ] );
+             ]) );
     ( "fragments combine nested fields",
       `Quick,
       fun () ->
@@ -200,31 +199,30 @@ let suite =
         in
         test_query query
           (`Assoc
-            [
-              ( "data",
-                `Assoc
-                  [
-                    ( "users",
-                      `List
-                        [
-                          `Assoc
-                            [
-                              ("role", `String "admin");
-                              ("name", `String "Alice");
-                            ];
-                          `Assoc
-                            [
-                              ("role", `String "user");
-                              ("name", `String "Bob");
-                            ];
-                          `Assoc
-                            [
-                              ("role", `String "user");
-                              ("name", `String "Charlie");
-                            ];
-                        ] );
-                  ] );
-            ]) );
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "users",
+                       `List
+                         [
+                           `Assoc
+                             [
+                               ("role", `String "admin");
+                               ("name", `String "Alice");
+                             ];
+                           `Assoc
+                             [
+                               ("role", `String "user"); ("name", `String "Bob");
+                             ];
+                           `Assoc
+                             [
+                               ("role", `String "user");
+                               ("name", `String "Charlie");
+                             ];
+                         ] );
+                   ] );
+             ]) );
     ( "introspection query should be accepted",
       `Quick,
       fun () ->
@@ -328,37 +326,42 @@ let suite =
         | Ok doc -> (
             match Graphql.Schema.execute Test_schema.schema () doc with
             | Ok _ -> ()
-            | Error err -> failwith (Yojson.Basic.pretty_to_string err) ) );
-
+            | Error err -> failwith (Yojson.Basic.pretty_to_string err)) );
     ( "recursive schema",
       `Quick,
       fun () ->
         let query = "query a { tree { children { element } } }" in
         test_query query
           (`Assoc
-            [
-              ( "data",
-                  `Assoc [ ("tree", `Assoc [ "children", `List [
-                    `Assoc ["element", `Int 1] ] ]) ]); ]));
-
+             [
+               ( "data",
+                 `Assoc
+                   [
+                     ( "tree",
+                       `Assoc
+                         [
+                           ("children", `List [ `Assoc [ ("element", `Int 1) ] ]);
+                         ] );
+                   ] );
+             ]) );
     ( "subscription",
       `Quick,
       fun () ->
         let query = "subscription { subscribe_to_user { id name } }" in
         test_query query
           (`List
-            [
-              `Assoc
-                [
-                  ( "data",
-                    `Assoc
-                      [
-                        ( "subscribe_to_user",
-                          `Assoc [ ("id", `Int 1); ("name", `String "Alice") ]
-                        );
-                      ] );
-                ];
-            ]) );
+             [
+               `Assoc
+                 [
+                   ( "data",
+                     `Assoc
+                       [
+                         ( "subscribe_to_user",
+                           `Assoc [ ("id", `Int 1); ("name", `String "Alice") ]
+                         );
+                       ] );
+                 ];
+             ]) );
     ( "subscription returns an error",
       `Quick,
       fun () ->
@@ -367,18 +370,18 @@ let suite =
         in
         test_query query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ("message", `String "stream error");
-                        ("path", `List [ `String "subscribe_to_user" ]);
-                      ];
-                  ] );
-              ("data", `Null);
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ("message", `String "stream error");
+                         ("path", `List [ `String "subscribe_to_user" ]);
+                       ];
+                   ] );
+               ("data", `Null);
+             ]) );
     ( "subscriptions: exn inside the stream",
       `Quick,
       fun () ->
@@ -394,44 +397,44 @@ let suite =
         in
         test_query query
           (`List
-            [
-              `Assoc
-                [
-                  ( "data",
-                    `Assoc
-                      [
-                        ( "subscribe_to_user",
-                          `Assoc [ ("id", `Int 1); ("name", `String "Alice") ]
-                        );
-                      ] );
-                ];
-              `Assoc
-                [
-                  ( "data",
-                    `Assoc
-                      [
-                        ( "subscribe_to_user",
-                          `Assoc [ ("id", `Int 2); ("name", `String "Bob") ] );
-                      ] );
-                ];
-            ]) );
+             [
+               `Assoc
+                 [
+                   ( "data",
+                     `Assoc
+                       [
+                         ( "subscribe_to_user",
+                           `Assoc [ ("id", `Int 1); ("name", `String "Alice") ]
+                         );
+                       ] );
+                 ];
+               `Assoc
+                 [
+                   ( "data",
+                     `Assoc
+                       [
+                         ( "subscribe_to_user",
+                           `Assoc [ ("id", `Int 2); ("name", `String "Bob") ] );
+                       ] );
+                 ];
+             ]) );
     ( "subscription field that doesn't exist",
       `Quick,
       fun () ->
         let query = "subscription { dont_exist { id name } }" in
         test_query query
           (`Assoc
-            [
-              ( "errors",
-                `List
-                  [
-                    `Assoc
-                      [
-                        ( "message",
-                          `String
-                            "Field 'dont_exist' is not defined on type \
-                             'subscription'" );
-                      ];
-                  ] );
-            ]) );
+             [
+               ( "errors",
+                 `List
+                   [
+                     `Assoc
+                       [
+                         ( "message",
+                           `String
+                             "Field 'dont_exist' is not defined on type \
+                              'subscription'" );
+                       ];
+                   ] );
+             ]) );
   ]

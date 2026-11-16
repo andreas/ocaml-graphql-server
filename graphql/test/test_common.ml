@@ -1,6 +1,5 @@
 let yojson =
-  ( module Yojson.Basic : Alcotest.TESTABLE
-    with type t = Yojson.Basic.t )
+  (module Yojson.Basic : Alcotest.TESTABLE with type t = Yojson.Basic.t)
 
 let list_of_seq seq =
   let rec loop seq =
@@ -26,7 +25,7 @@ let test_query schema ctx ?variables ?operation_name query expected =
               | Seq.Cons (Ok _, _) -> `List (list_of_seq stream)
               | Seq.Cons (Error err, _) -> err
               | Seq.Nil -> `Null
-            with _ -> `String "caught stream exn" )
+            with _ -> `String "caught stream exn")
         | Error err -> err
       in
       Alcotest.check yojson "invalid execution result" expected result
