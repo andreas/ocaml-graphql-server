@@ -143,6 +143,7 @@ module Connection = struct
     val upgrade_connection :
       ?read_buf:Buffer.t ->
       ?write_buf:Buffer.t ->
+      ?protocols:string list ->
       Cohttp.Request.t ->
       (t -> unit IO.t) ->
       [> `Expert of Cohttp.Response.t * (IO.ic -> IO.oc -> unit IO.t) ]
@@ -322,7 +323,23 @@ module Connection = struct
           >>= fun () -> IO.return fr
       | _ -> IO.return fr
 
-    let upgrade_connection ?read_buf ?write_buf request handle_conn =
+    (* The client lists its subprotocols in one or several
+       Sec-WebSocket-Protocol headers, separated by commas, in order of
+       preference (RFC 6455, sections 4.1 and 11.3.4). Cohttp before 5.0
+       returns repeated headers in reverse order, so the preference is only
+       kept within each header there. *)
+    let select_protocol ~protocols headers =
+      let offered =
+        Cohttp.Header.get_multi headers "sec-websocket-protocol"
+        |> List.map (fun v -> List.map String.trim (String.cuts ~sep:"," v))
+        |> List.flatten
+      in
+      match List.filter (fun p -> List.mem p protocols) offered with
+      | [] -> []
+      | p :: _ -> [ ("Sec-WebSocket-Protocol", p) ]
+
+    let upgrade_connection ?read_buf ?write_buf ?(protocols = []) request
+        handle_conn =
       let headers = Cohttp.Request.headers request in
       let key =
         match Cohttp.Header.get headers "sec-websocket-key" with
@@ -330,11 +347,7 @@ module Connection = struct
             failwith "upgrade_connection: missing header `sec-websocket-key`"
         | Some key -> key
       in
-      let subprotocol =
-        match Cohttp.Header.get headers "sec-websocket-protocol" with
-        | None -> []
-        | Some p -> [ ("Sec-WebSocket-Protocol", p) ]
-      in
+      let subprotocol = select_protocol ~protocols headers in
       let hash = b64_encoded_sha1sum (key ^ websocket_uuid) in
       let response_headers =
         Cohttp.Header.of_list

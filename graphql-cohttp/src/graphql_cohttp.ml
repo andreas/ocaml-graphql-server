@@ -185,7 +185,11 @@ struct
                 Websocket_transport.handle
                   (execute_query (make_context req) schema)
               in
-              Io.return (Ws.upgrade_connection req handle_conn) )
+              (* Websocket_transport implements the protocol of
+                 subscriptions-transport-ws. *)
+              Io.return
+                (Ws.upgrade_connection ~protocols:[ "graphql-ws" ] req
+                   handle_conn) )
         else execute_request schema (make_context req) req body
     | `GET, [ "graphql"; path ], _ -> static_file_response path
     | `POST, [ "graphql" ], _ ->

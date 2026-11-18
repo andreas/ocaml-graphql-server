@@ -82,9 +82,17 @@ module Connection : sig
     val upgrade_connection :
       ?read_buf:Buffer.t ->
       ?write_buf:Buffer.t ->
+      ?protocols:string list ->
       Cohttp.Request.t ->
       (t -> unit IO.t) ->
       [> `Expert of Cohttp.Response.t * (IO.ic -> IO.oc -> unit IO.t) ]
+    (** [upgrade_connection ~protocols req handle_conn] is the response that
+        accepts the websocket upgrade requested by [req], and then runs
+        [handle_conn] on the connection. The response selects the first
+        subprotocol offered by the client that is in [protocols] (default
+        [[]]), and selects none if there is no such subprotocol.
+
+        @raise Failure if [req] has no [Sec-WebSocket-Key] header. *)
   end
 
   module Make (IO : Cohttp.S.IO) : S with module IO = IO

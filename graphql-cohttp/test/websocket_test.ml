@@ -23,6 +23,19 @@ let check_header rsp name expected =
     name expected
     (Cohttp.Header.get (Cohttp.Response.headers rsp) name)
 
+module Ws = Graphql_websocket.Connection.Make (Cohttp_lwt_unix.Server.IO)
+
+(* Subprotocol selected by [Ws.upgrade_connection ?protocols] when the client
+   offers [offered]. *)
+let selected_protocol ?protocols offered =
+  let req =
+    upgrade_request
+      [ ("Sec-WebSocket-Key", key); ("Sec-WebSocket-Protocol", offered) ]
+  in
+  match Ws.upgrade_connection ?protocols req (fun _ -> Lwt.return_unit) with
+  | `Expert (rsp, _) ->
+      Cohttp.Header.get (Cohttp.Response.headers rsp) "Sec-WebSocket-Protocol"
+
 let suite =
   [
     ( "upgrade to websocket",
@@ -52,6 +65,46 @@ let suite =
         | `Response _ -> Alcotest.fail "Got response, expected expert"
         | `Expert (rsp, _) ->
             check_header rsp "Sec-WebSocket-Protocol" (Some "graphql-ws") );
+    ( "upgrade to websocket with several subprotocols",
+      `Quick,
+      fun () ->
+        let req =
+          upgrade_request
+            [
+              ("Sec-WebSocket-Key", key);
+              ("Sec-WebSocket-Protocol", "graphql-transport-ws, graphql-ws");
+              ("Sec-WebSocket-Protocol", "foo");
+            ]
+        in
+        match upgrade req with
+        | `Response _ -> Alcotest.fail "Got response, expected expert"
+        | `Expert (rsp, _) ->
+            check_header rsp "Sec-WebSocket-Protocol" (Some "graphql-ws") );
+    ( "upgrade to websocket with an unsupported subprotocol",
+      `Quick,
+      fun () ->
+        let req =
+          upgrade_request
+            [
+              ("Sec-WebSocket-Key", key);
+              ("Sec-WebSocket-Protocol", "graphql-transport-ws");
+            ]
+        in
+        match upgrade req with
+        | `Response _ -> Alcotest.fail "Got response, expected expert"
+        | `Expert (rsp, _) -> check_header rsp "Sec-WebSocket-Protocol" None );
+    ( "subprotocol in the order of the client",
+      `Quick,
+      fun () ->
+        Alcotest.(check (option string))
+          "selected" (Some "a")
+          (selected_protocol ~protocols:[ "b"; "a" ] "c, a, b") );
+    ( "no subprotocol by default",
+      `Quick,
+      fun () ->
+        Alcotest.(check (option string))
+          "selected" None
+          (selected_protocol "graphql-ws") );
     ( "upgrade to websocket without key",
       `Quick,
       fun () ->

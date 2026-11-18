@@ -3,6 +3,8 @@ Unreleased
 
 - Support cohttp 6 in `graphql-cohttp`
 - Answer 400 to a websocket upgrade without `Sec-WebSocket-Key` in `graphql-cohttp`
+- Select the `graphql-ws` websocket subprotocol instead of echoing the ones of the client in `graphql-cohttp`
+- `Graphql_websocket.Connection.S.upgrade_connection` takes `?protocols`, the supported subprotocols. Without it, no subprotocol is selected (it used to echo the ones of the client)
 
 0.14.0 2022-07-08
 ---------------------------------
