@@ -2,6 +2,7 @@ Unreleased
 ---------------------------------
 
 - Support cohttp 6 in `graphql-cohttp`
+- Answer 400 to a websocket upgrade without `Sec-WebSocket-Key` in `graphql-cohttp`
 
 0.14.0 2022-07-08
 ---------------------------------

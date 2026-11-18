@@ -175,12 +175,17 @@ struct
         if
           Cohttp.Header.get headers "Connection" = Some "Upgrade"
           && Cohttp.Header.get headers "Upgrade" = Some "websocket"
-        then
-          let handle_conn =
-            Websocket_transport.handle
-              (execute_query (make_context req) schema)
-          in
-          Io.return (Ws.upgrade_connection req handle_conn)
+        then (
+          match Cohttp.Header.get headers "Sec-WebSocket-Key" with
+          | None ->
+              respond_string ~status:`Bad_request
+                ~body:"Missing Sec-WebSocket-Key header" ()
+          | Some _ ->
+              let handle_conn =
+                Websocket_transport.handle
+                  (execute_query (make_context req) schema)
+              in
+              Io.return (Ws.upgrade_connection req handle_conn) )
         else execute_request schema (make_context req) req body
     | `GET, [ "graphql"; path ], _ -> static_file_response path
     | `POST, [ "graphql" ], _ ->

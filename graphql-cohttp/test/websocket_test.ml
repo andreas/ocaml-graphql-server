@@ -52,4 +52,13 @@ let suite =
         | `Response _ -> Alcotest.fail "Got response, expected expert"
         | `Expert (rsp, _) ->
             check_header rsp "Sec-WebSocket-Protocol" (Some "graphql-ws") );
+    ( "upgrade to websocket without key",
+      `Quick,
+      fun () ->
+        match upgrade (upgrade_request []) with
+        | `Expert _ -> Alcotest.fail "Got expert, expected response"
+        | `Response (rsp, _) ->
+            Alcotest.(check int)
+              "status" 400
+              (Cohttp.Code.code_of_status (Cohttp.Response.status rsp)) );
   ]
