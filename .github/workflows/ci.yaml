@@ -1,8 +1,18 @@
 name: CI
 
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+# One group per pull request, so that a new push cancels the obsolete
+# runs, and one group per commit otherwise, so that every commit of
+# master is tested.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
