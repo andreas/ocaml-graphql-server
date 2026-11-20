@@ -39,7 +39,9 @@ module Handshake = struct
     has_token headers "connection" "upgrade"
     && has_token headers "upgrade" "websocket"
 
-  type error = Invalid_key
+  let version = "13"
+
+  type error = Unsupported_version | Invalid_key
 
   let valid_key = function
     | [ key ] -> (
@@ -49,9 +51,10 @@ module Handshake = struct
     | _ -> false
 
   let check headers =
-    if valid_key (Cohttp.Header.get_multi headers "sec-websocket-key") then
-      Ok ()
-    else Error Invalid_key
+    let get = Cohttp.Header.get_multi headers in
+    if get "sec-websocket-version" <> [ version ] then Error Unsupported_version
+    else if not (valid_key (get "sec-websocket-key")) then Error Invalid_key
+    else Ok ()
 end
 
 module Frame = struct

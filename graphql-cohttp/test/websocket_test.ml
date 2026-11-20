@@ -6,12 +6,14 @@ let key = "dGhlIHNhbXBsZSBub25jZQ=="
 let expected_accept = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
 
 (* Upgrade request with the [Connection] header [connection], the [Upgrade]
-   header [upgrade], and [headers]. *)
-let upgrade_request ?(connection = "Upgrade") ?(upgrade = "websocket") headers
-    =
+   header [upgrade], one [Sec-WebSocket-Version] header for each element of
+   [versions], and [headers]. *)
+let upgrade_request ?(connection = "Upgrade") ?(upgrade = "websocket")
+    ?(versions = [ "13" ]) headers =
+  let versions = List.map (fun v -> ("Sec-WebSocket-Version", v)) versions in
   let headers =
-    Cohttp.Header.of_list
-      ([ ("Connection", connection); ("Upgrade", upgrade) ] @ headers)
+    [ ("Connection", connection); ("Upgrade", upgrade) ] @ versions @ headers
+    |> Cohttp.Header.of_list
   in
   Cohttp.Request.make ~meth:`GET ~headers (Uri.of_string "/graphql")
 
@@ -36,14 +38,18 @@ let check_is_upgrade expected connection upgrade =
        (Cohttp.Header.of_list
           [ ("Connection", connection); ("Upgrade", upgrade) ]))
 
-(* Checks that the upgrade request [req] is rejected with [status]. *)
-let check_rejected status req =
+(* Checks that the upgrade request [req] is rejected with [status] and
+   [headers]. *)
+let check_rejected ?(headers = []) status req =
   match upgrade req with
   | `Expert _ -> Alcotest.fail "Got expert, expected response"
   | `Response (rsp, _) ->
       Alcotest.(check int)
         "status" status
-        (Cohttp.Code.code_of_status (Cohttp.Response.status rsp))
+        (Cohttp.Code.code_of_status (Cohttp.Response.status rsp));
+      List.iter
+        (fun (name, value) -> check_header rsp name (Some value))
+        headers
 
 module Ws = Graphql_websocket.Connection.Make (Cohttp_lwt_unix.Server.IO)
 
@@ -168,4 +174,21 @@ let suite =
       fun () ->
         check_rejected 400
           (upgrade_request [ ("Sec-WebSocket-Key", "not base64!") ]) );
+    ( "upgrade to websocket without version",
+      `Quick,
+      fun () ->
+        check_rejected 426
+          (upgrade_request ~versions:[] [ ("Sec-WebSocket-Key", key) ]) );
+    ( "upgrade to websocket with version 8",
+      `Quick,
+      fun () ->
+        check_rejected
+          ~headers:
+            [
+              ("Upgrade", "websocket");
+              ("Connection", "Upgrade");
+              ("Sec-WebSocket-Version", "13");
+            ]
+          426
+          (upgrade_request ~versions:[ "8" ] [ ("Sec-WebSocket-Key", key) ]) );
   ]

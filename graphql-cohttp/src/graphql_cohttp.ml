@@ -126,9 +126,9 @@ struct
   type 'conn callback =
     'conn -> Cohttp.Request.t -> Body.t -> response_action Io.t
 
-  let respond_string ~status ~body () =
-    Io.return
-      (`Response (Cohttp.Response.make ~status (), Body.of_string body))
+  let respond_string ?headers ~status ~body () =
+    let rsp = Cohttp.Response.make ?headers ~status () in
+    Io.return (`Response (rsp, Body.of_string body))
 
   let static_file_response path =
     match Assets.read path with
@@ -175,6 +175,18 @@ struct
     | `GET, [ "graphql" ], false ->
         if Handshake.is_upgrade headers then (
           match Handshake.check headers with
+          | Error Handshake.Unsupported_version ->
+              (* RFC 6455, section 4.4, and RFC 9110, section 15.5.22 *)
+              let rsp_headers =
+                Cohttp.Header.of_list
+                  [
+                    ("Upgrade", "websocket");
+                    ("Connection", "Upgrade");
+                    ("Sec-WebSocket-Version", Handshake.version);
+                  ]
+              in
+              respond_string ~headers:rsp_headers ~status:`Upgrade_required
+                ~body:"Unsupported Sec-WebSocket-Version" ()
           | Error Handshake.Invalid_key ->
               respond_string ~status:`Bad_request
                 ~body:"Invalid Sec-WebSocket-Key header" ()

@@ -7,6 +7,7 @@ Unreleased
 - `Graphql_websocket.Connection.S.upgrade_connection` takes `?protocols`, the supported subprotocols. Without it, no subprotocol is selected (it used to echo the ones of the client)
 - Accept websocket upgrades with `Connection: keep-alive, Upgrade` (Firefox) or `Connection: upgrade` (nginx) in `graphql-cohttp`: the `Connection` and `Upgrade` tokens are compared ignoring case
 - New `Graphql_websocket.Handshake` module, to check the opening handshake of a client
+- Answer 426 to a websocket upgrade without `Sec-WebSocket-Version: 13` in `graphql-cohttp`
 
 0.14.0 2022-07-08
 ---------------------------------

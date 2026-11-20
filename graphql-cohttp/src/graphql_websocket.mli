@@ -24,14 +24,21 @@ module Handshake : sig
       the [Connection] header includes the token [upgrade] and the [Upgrade]
       header the token [websocket], ignoring case. *)
 
+  val version : string
+  (** [version] is ["13"], the only version of the protocol supported. *)
+
   type error =
+    | Unsupported_version
+        (** The [Sec-WebSocket-Version] header is missing, repeated, or not
+            {!version}. *)
     | Invalid_key
         (** The [Sec-WebSocket-Key] header is missing, repeated, or not the
             base64 encoding of 16 bytes. *)
 
   val check : Cohttp.Header.t -> (unit, error) result
-  (** [check headers] checks the [Sec-WebSocket-Key] header of an upgrade
-      request (see {!is_upgrade}). *)
+  (** [check headers] checks the [Sec-WebSocket-Version] and
+      [Sec-WebSocket-Key] headers of an upgrade request (see {!is_upgrade}),
+      in this order. *)
 end
 
 module Frame : sig
