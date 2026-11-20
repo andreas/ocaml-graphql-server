@@ -17,6 +17,30 @@
 
 exception Protocol_error of string
 
+(** Opening handshake of a client (RFC 6455, section 4.2.1). *)
+module Handshake : sig
+  val is_upgrade : Cohttp.Header.t -> bool
+  (** [is_upgrade headers] is [true] iff [headers] ask for a websocket upgrade:
+      the [Connection] header includes the token [upgrade] and the [Upgrade]
+      header the token [websocket], ignoring case. *)
+
+  val version : string
+  (** [version] is ["13"], the only version of the protocol supported. *)
+
+  type error =
+    | Unsupported_version
+        (** The [Sec-WebSocket-Version] header is missing, repeated, or not
+            {!version}. *)
+    | Invalid_key
+        (** The [Sec-WebSocket-Key] header is missing, repeated, or not the
+            base64 encoding of 16 bytes. *)
+
+  val check : Cohttp.Header.t -> (unit, error) result
+  (** [check headers] checks the [Sec-WebSocket-Version] and
+      [Sec-WebSocket-Key] headers of an upgrade request (see {!is_upgrade}),
+      in this order. *)
+end
+
 module Frame : sig
   module Opcode : sig
     type t =
@@ -82,9 +106,18 @@ module Connection : sig
     val upgrade_connection :
       ?read_buf:Buffer.t ->
       ?write_buf:Buffer.t ->
+      ?protocols:string list ->
       Cohttp.Request.t ->
       (t -> unit IO.t) ->
       [> `Expert of Cohttp.Response.t * (IO.ic -> IO.oc -> unit IO.t) ]
+    (** [upgrade_connection ~protocols req handle_conn] is the response that
+        accepts the websocket upgrade requested by [req], and then runs
+        [handle_conn] on the connection. The response selects the first
+        subprotocol offered by the client that is in [protocols] (default
+        [[]]), and selects none if there is no such subprotocol. It does not
+        validate [req]: use {!Handshake.check} first.
+
+        @raise Failure if [req] has no [Sec-WebSocket-Key] header. *)
   end
 
   module Make (IO : Cohttp.S.IO) : S with module IO = IO

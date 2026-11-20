@@ -23,6 +23,40 @@ let b64_encoded_sha1sum s =
 
 let websocket_uuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+module Handshake = struct
+  (* Comma separated tokens of the (possibly repeated) header [name]. *)
+  let tokens headers name =
+    Cohttp.Header.get_multi headers name
+    |> List.map (fun v -> List.map String.trim (String.cuts ~sep:"," v))
+    |> List.flatten
+
+  let has_token headers name token =
+    List.exists
+      (fun t -> String.Ascii.lowercase t = token)
+      (tokens headers name)
+
+  let is_upgrade headers =
+    has_token headers "connection" "upgrade"
+    && has_token headers "upgrade" "websocket"
+
+  let version = "13"
+
+  type error = Unsupported_version | Invalid_key
+
+  let valid_key = function
+    | [ key ] -> (
+        match Base64.decode key with
+        | Ok nonce -> String.length nonce = 16
+        | Error (`Msg _) -> false )
+    | _ -> false
+
+  let check headers =
+    let get = Cohttp.Header.get_multi headers in
+    if get "sec-websocket-version" <> [ version ] then Error Unsupported_version
+    else if not (valid_key (get "sec-websocket-key")) then Error Invalid_key
+    else Ok ()
+end
+
 module Frame = struct
   module Opcode = struct
     type t =
@@ -143,6 +177,7 @@ module Connection = struct
     val upgrade_connection :
       ?read_buf:Buffer.t ->
       ?write_buf:Buffer.t ->
+      ?protocols:string list ->
       Cohttp.Request.t ->
       (t -> unit IO.t) ->
       [> `Expert of Cohttp.Response.t * (IO.ic -> IO.oc -> unit IO.t) ]
@@ -322,7 +357,19 @@ module Connection = struct
           >>= fun () -> IO.return fr
       | _ -> IO.return fr
 
-    let upgrade_connection ?read_buf ?write_buf request handle_conn =
+    (* The client lists its subprotocols in one or several
+       Sec-WebSocket-Protocol headers, separated by commas, in order of
+       preference (RFC 6455, sections 4.1 and 11.3.4). Cohttp before 5.0
+       returns repeated headers in reverse order, so the preference is only
+       kept within each header there. *)
+    let select_protocol ~protocols headers =
+      let offered = Handshake.tokens headers "sec-websocket-protocol" in
+      match List.filter (fun p -> List.mem p protocols) offered with
+      | [] -> []
+      | p :: _ -> [ ("Sec-WebSocket-Protocol", p) ]
+
+    let upgrade_connection ?read_buf ?write_buf ?(protocols = []) request
+        handle_conn =
       let headers = Cohttp.Request.headers request in
       let key =
         match Cohttp.Header.get headers "sec-websocket-key" with
@@ -330,11 +377,7 @@ module Connection = struct
             failwith "upgrade_connection: missing header `sec-websocket-key`"
         | Some key -> key
       in
-      let subprotocol =
-        match Cohttp.Header.get headers "sec-websocket-protocol" with
-        | None -> []
-        | Some p -> [ ("Sec-WebSocket-Protocol", p) ]
-      in
+      let subprotocol = select_protocol ~protocols headers in
       let hash = b64_encoded_sha1sum (key ^ websocket_uuid) in
       let response_headers =
         Cohttp.Header.of_list
@@ -344,8 +387,7 @@ module Connection = struct
       in
       let rsp =
         Cohttp.Response.make ~status:`Switching_protocols
-          ~encoding:Cohttp.Transfer.Unknown ~headers:response_headers
-          ~flush:true ()
+          ~encoding:Cohttp.Transfer.Unknown ~headers:response_headers ()
       in
       let io_handler ic oc =
         let client = create ?read_buf ?write_buf ~mode:Server request ic oc in

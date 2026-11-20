@@ -260,7 +260,8 @@ let schema = Schema.(schema [
   ...
 ])
 
-module Graphql_cohttp_lwt = Graphql_cohttp.Make (Schema) (Cohttp_lwt.Body)
+module Graphql_cohttp_lwt =
+  Graphql_cohttp.Make (Schema) (Cohttp_lwt_unix.Server.IO) (Cohttp_lwt.Body)
 
 let () =
   let callback = Graphql_cohttp_lwt.make_callback (fun _req -> ()) schema in

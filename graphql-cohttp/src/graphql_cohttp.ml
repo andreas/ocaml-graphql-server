@@ -113,6 +113,7 @@ module Make
     (Io : Cohttp.S.IO with type 'a t = 'a Schema.Io.t)
     (Body : HttpBody with type +'a io := 'a Schema.Io.t) =
 struct
+  module Handshake = Graphql_websocket.Handshake
   module Ws = Graphql_websocket.Connection.Make (Io)
   module Websocket_transport = Websocket_handler.Make (Schema.Io) (Ws)
 
@@ -125,9 +126,9 @@ struct
   type 'conn callback =
     'conn -> Cohttp.Request.t -> Body.t -> response_action Io.t
 
-  let respond_string ~status ~body () =
-    Io.return
-      (`Response (Cohttp.Response.make ~status (), Body.of_string body))
+  let respond_string ?headers ~status ~body () =
+    let rsp = Cohttp.Response.make ?headers ~status () in
+    Io.return (`Response (rsp, Body.of_string body))
 
   let static_file_response path =
     match Assets.read path with
@@ -172,15 +173,33 @@ struct
     match (req.meth, path_parts, accept_html) with
     | `GET, [ "graphql" ], true -> static_file_response "index.html"
     | `GET, [ "graphql" ], false ->
-        if
-          Cohttp.Header.get headers "Connection" = Some "Upgrade"
-          && Cohttp.Header.get headers "Upgrade" = Some "websocket"
-        then
-          let handle_conn =
-            Websocket_transport.handle
-              (execute_query (make_context req) schema)
-          in
-          Io.return (Ws.upgrade_connection req handle_conn)
+        if Handshake.is_upgrade headers then (
+          match Handshake.check headers with
+          | Error Handshake.Unsupported_version ->
+              (* RFC 6455, section 4.4, and RFC 9110, section 15.5.22 *)
+              let rsp_headers =
+                Cohttp.Header.of_list
+                  [
+                    ("Upgrade", "websocket");
+                    ("Connection", "Upgrade");
+                    ("Sec-WebSocket-Version", Handshake.version);
+                  ]
+              in
+              respond_string ~headers:rsp_headers ~status:`Upgrade_required
+                ~body:"Unsupported Sec-WebSocket-Version" ()
+          | Error Handshake.Invalid_key ->
+              respond_string ~status:`Bad_request
+                ~body:"Invalid Sec-WebSocket-Key header" ()
+          | Ok () ->
+              let handle_conn =
+                Websocket_transport.handle
+                  (execute_query (make_context req) schema)
+              in
+              (* Websocket_transport implements the protocol of
+                 subscriptions-transport-ws. *)
+              Io.return
+                (Ws.upgrade_connection ~protocols:[ "graphql-ws" ] req
+                   handle_conn) )
         else execute_request schema (make_context req) req body
     | `GET, [ "graphql"; path ], _ -> static_file_response path
     | `POST, [ "graphql" ], _ ->

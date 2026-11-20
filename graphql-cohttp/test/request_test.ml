@@ -1,7 +1,4 @@
 open Lwt.Infix
-module Graphql_cohttp_lwt =
-  Graphql_cohttp.Make (Graphql_lwt.Schema) (Cohttp_lwt_unix.IO)
-    (Cohttp_lwt.Body)
 
 let schema =
   Graphql_lwt.Schema.(
