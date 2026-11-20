@@ -23,6 +23,15 @@ module Handshake : sig
   (** [is_upgrade headers] is [true] iff [headers] ask for a websocket upgrade:
       the [Connection] header includes the token [upgrade] and the [Upgrade]
       header the token [websocket], ignoring case. *)
+
+  type error =
+    | Invalid_key
+        (** The [Sec-WebSocket-Key] header is missing, repeated, or not the
+            base64 encoding of 16 bytes. *)
+
+  val check : Cohttp.Header.t -> (unit, error) result
+  (** [check headers] checks the [Sec-WebSocket-Key] header of an upgrade
+      request (see {!is_upgrade}). *)
 end
 
 module Frame : sig
@@ -98,7 +107,8 @@ module Connection : sig
         accepts the websocket upgrade requested by [req], and then runs
         [handle_conn] on the connection. The response selects the first
         subprotocol offered by the client that is in [protocols] (default
-        [[]]), and selects none if there is no such subprotocol.
+        [[]]), and selects none if there is no such subprotocol. It does not
+        validate [req]: use {!Handshake.check} first.
 
         @raise Failure if [req] has no [Sec-WebSocket-Key] header. *)
   end

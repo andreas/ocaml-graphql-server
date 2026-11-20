@@ -36,6 +36,15 @@ let check_is_upgrade expected connection upgrade =
        (Cohttp.Header.of_list
           [ ("Connection", connection); ("Upgrade", upgrade) ]))
 
+(* Checks that the upgrade request [req] is rejected with [status]. *)
+let check_rejected status req =
+  match upgrade req with
+  | `Expert _ -> Alcotest.fail "Got expert, expected response"
+  | `Response (rsp, _) ->
+      Alcotest.(check int)
+        "status" status
+        (Cohttp.Code.code_of_status (Cohttp.Response.status rsp))
+
 module Ws = Graphql_websocket.Connection.Make (Cohttp_lwt_unix.Server.IO)
 
 (* Subprotocol selected by [Ws.upgrade_connection ?protocols] when the client
@@ -142,11 +151,21 @@ let suite =
           (selected_protocol "graphql-ws") );
     ( "upgrade to websocket without key",
       `Quick,
+      fun () -> check_rejected 400 (upgrade_request []) );
+    ( "upgrade to websocket with two keys",
+      `Quick,
       fun () ->
-        match upgrade (upgrade_request []) with
-        | `Expert _ -> Alcotest.fail "Got expert, expected response"
-        | `Response (rsp, _) ->
-            Alcotest.(check int)
-              "status" 400
-              (Cohttp.Code.code_of_status (Cohttp.Response.status rsp)) );
+        check_rejected 400
+          (upgrade_request
+             [ ("Sec-WebSocket-Key", key); ("Sec-WebSocket-Key", key) ]) );
+    ( "upgrade to websocket with a key of 3 bytes",
+      `Quick,
+      fun () ->
+        check_rejected 400 (upgrade_request [ ("Sec-WebSocket-Key", "Zm9v") ])
+    );
+    ( "upgrade to websocket with a key that is not base64",
+      `Quick,
+      fun () ->
+        check_rejected 400
+          (upgrade_request [ ("Sec-WebSocket-Key", "not base64!") ]) );
   ]

@@ -113,6 +113,7 @@ module Make
     (Io : Cohttp.S.IO with type 'a t = 'a Schema.Io.t)
     (Body : HttpBody with type +'a io := 'a Schema.Io.t) =
 struct
+  module Handshake = Graphql_websocket.Handshake
   module Ws = Graphql_websocket.Connection.Make (Io)
   module Websocket_transport = Websocket_handler.Make (Schema.Io) (Ws)
 
@@ -172,12 +173,12 @@ struct
     match (req.meth, path_parts, accept_html) with
     | `GET, [ "graphql" ], true -> static_file_response "index.html"
     | `GET, [ "graphql" ], false ->
-        if Graphql_websocket.Handshake.is_upgrade headers then (
-          match Cohttp.Header.get headers "Sec-WebSocket-Key" with
-          | None ->
+        if Handshake.is_upgrade headers then (
+          match Handshake.check headers with
+          | Error Handshake.Invalid_key ->
               respond_string ~status:`Bad_request
-                ~body:"Missing Sec-WebSocket-Key header" ()
-          | Some _ ->
+                ~body:"Invalid Sec-WebSocket-Key header" ()
+          | Ok () ->
               let handle_conn =
                 Websocket_transport.handle
                   (execute_query (make_context req) schema)

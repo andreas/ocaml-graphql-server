@@ -38,6 +38,20 @@ module Handshake = struct
   let is_upgrade headers =
     has_token headers "connection" "upgrade"
     && has_token headers "upgrade" "websocket"
+
+  type error = Invalid_key
+
+  let valid_key = function
+    | [ key ] -> (
+        match Base64.decode key with
+        | Ok nonce -> String.length nonce = 16
+        | Error (`Msg _) -> false )
+    | _ -> false
+
+  let check headers =
+    if valid_key (Cohttp.Header.get_multi headers "sec-websocket-key") then
+      Ok ()
+    else Error Invalid_key
 end
 
 module Frame = struct
