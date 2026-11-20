@@ -17,6 +17,14 @@
 
 exception Protocol_error of string
 
+(** Opening handshake of a client (RFC 6455, section 4.2.1). *)
+module Handshake : sig
+  val is_upgrade : Cohttp.Header.t -> bool
+  (** [is_upgrade headers] is [true] iff [headers] ask for a websocket upgrade:
+      the [Connection] header includes the token [upgrade] and the [Upgrade]
+      header the token [websocket], ignoring case. *)
+end
+
 module Frame : sig
   module Opcode : sig
     type t =

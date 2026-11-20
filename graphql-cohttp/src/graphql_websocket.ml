@@ -23,6 +23,23 @@ let b64_encoded_sha1sum s =
 
 let websocket_uuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+module Handshake = struct
+  (* Comma separated tokens of the (possibly repeated) header [name]. *)
+  let tokens headers name =
+    Cohttp.Header.get_multi headers name
+    |> List.map (fun v -> List.map String.trim (String.cuts ~sep:"," v))
+    |> List.flatten
+
+  let has_token headers name token =
+    List.exists
+      (fun t -> String.Ascii.lowercase t = token)
+      (tokens headers name)
+
+  let is_upgrade headers =
+    has_token headers "connection" "upgrade"
+    && has_token headers "upgrade" "websocket"
+end
+
 module Frame = struct
   module Opcode = struct
     type t =
@@ -329,11 +346,7 @@ module Connection = struct
        returns repeated headers in reverse order, so the preference is only
        kept within each header there. *)
     let select_protocol ~protocols headers =
-      let offered =
-        Cohttp.Header.get_multi headers "sec-websocket-protocol"
-        |> List.map (fun v -> List.map String.trim (String.cuts ~sep:"," v))
-        |> List.flatten
-      in
+      let offered = Handshake.tokens headers "sec-websocket-protocol" in
       match List.filter (fun p -> List.mem p protocols) offered with
       | [] -> []
       | p :: _ -> [ ("Sec-WebSocket-Protocol", p) ]

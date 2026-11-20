@@ -172,10 +172,7 @@ struct
     match (req.meth, path_parts, accept_html) with
     | `GET, [ "graphql" ], true -> static_file_response "index.html"
     | `GET, [ "graphql" ], false ->
-        if
-          Cohttp.Header.get headers "Connection" = Some "Upgrade"
-          && Cohttp.Header.get headers "Upgrade" = Some "websocket"
-        then (
+        if Graphql_websocket.Handshake.is_upgrade headers then (
           match Cohttp.Header.get headers "Sec-WebSocket-Key" with
           | None ->
               respond_string ~status:`Bad_request

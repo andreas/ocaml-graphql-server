@@ -5,10 +5,13 @@ let key = "dGhlIHNhbXBsZSBub25jZQ=="
 
 let expected_accept = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
 
-let upgrade_request headers =
+(* Upgrade request with the [Connection] header [connection], the [Upgrade]
+   header [upgrade], and [headers]. *)
+let upgrade_request ?(connection = "Upgrade") ?(upgrade = "websocket") headers
+    =
   let headers =
     Cohttp.Header.of_list
-      ([ ("Connection", "Upgrade"); ("Upgrade", "websocket") ] @ headers)
+      ([ ("Connection", connection); ("Upgrade", upgrade) ] @ headers)
   in
   Cohttp.Request.make ~meth:`GET ~headers (Uri.of_string "/graphql")
 
@@ -22,6 +25,16 @@ let check_header rsp name expected =
   Alcotest.(check (option string))
     name expected
     (Cohttp.Header.get (Cohttp.Response.headers rsp) name)
+
+(* Checks that [Handshake.is_upgrade] is [expected] for a request with the
+   headers [Connection: connection] and [Upgrade: upgrade]. *)
+let check_is_upgrade expected connection upgrade =
+  Alcotest.(check bool)
+    (connection ^ " / " ^ upgrade)
+    expected
+    (Graphql_websocket.Handshake.is_upgrade
+       (Cohttp.Header.of_list
+          [ ("Connection", connection); ("Upgrade", upgrade) ]))
 
 module Ws = Graphql_websocket.Connection.Make (Cohttp_lwt_unix.Server.IO)
 
@@ -51,6 +64,28 @@ let suite =
             check_header rsp "Connection" (Some "Upgrade");
             check_header rsp "Sec-WebSocket-Accept" (Some expected_accept);
             check_header rsp "Sec-WebSocket-Protocol" None );
+    ( "upgrade to websocket with a Connection token list",
+      `Quick,
+      fun () ->
+        (* As sent by Firefox, with an Upgrade value in another case. *)
+        let req =
+          upgrade_request ~connection:"keep-alive, Upgrade"
+            ~upgrade:"WebSocket"
+            [ ("Sec-WebSocket-Key", key) ]
+        in
+        match upgrade req with
+        | `Response _ -> Alcotest.fail "Got response, expected expert"
+        | `Expert (rsp, _) ->
+            check_header rsp "Sec-WebSocket-Accept" (Some expected_accept) );
+    ( "detection of upgrade requests",
+      `Quick,
+      fun () ->
+        (* As sent by nginx with its usual configuration. *)
+        check_is_upgrade true "upgrade" "websocket";
+        check_is_upgrade true "Upgrade, keep-alive" "WEBSOCKET";
+        check_is_upgrade false "keep-alive" "websocket";
+        check_is_upgrade false "Upgrade" "h2c";
+        check_is_upgrade false "Upgrade" "websockets" );
     ( "upgrade to websocket with subprotocol",
       `Quick,
       fun () ->
